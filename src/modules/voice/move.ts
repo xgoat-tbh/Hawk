@@ -59,6 +59,12 @@ export default defineCommand({
       }
 
       const destVc = destMember.voice.channel;
+      const botMember = guild.members.me;
+      if (botMember && !destVc.permissionsFor(botMember).has([PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.MoveMembers])) {
+        await respond.error(`I lack permission to move members into **${destVc.name}**.`);
+        return;
+      }
+
       const access = await checkVoiceAccess(guild.id, member, 'move', destVc.id);
       if (!access.allowed) {
         await respond.denied(access.reason || 'Voice command access denied.');
@@ -89,6 +95,12 @@ export default defineCommand({
     }
 
     const destVc = destVcResult.value.channel;
+    const botMember = guild.members.me;
+    if (botMember && !destVc.permissionsFor(botMember).has([PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.MoveMembers])) {
+      await respond.error(`I lack permission to move members into **${destVc.name}**.`);
+      return;
+    }
+
     const access = await checkVoiceAccess(guild.id, member, 'move', destVc.id);
     if (!access.allowed) {
       await respond.denied(access.reason || 'Voice command access denied.');

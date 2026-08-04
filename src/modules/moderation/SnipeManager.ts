@@ -1,4 +1,4 @@
-import type { Message } from 'discord.js';
+import type { Message, PartialMessage } from 'discord.js';
 
 export interface SnipeData {
   content: string;
@@ -12,7 +12,8 @@ export interface SnipeData {
 const MAX_SNIPE_ENTRIES = 100;
 const snipeCache = new Map<string, SnipeData>();
 
-export function recordDeletedMessage(message: Message): void {
+export function recordDeletedMessage(message: Message | PartialMessage): void {
+  if (message.partial) return;
   if (!message.author || message.author.bot || message.author.system) return;
   if (!message.guild || !message.channel) return;
 

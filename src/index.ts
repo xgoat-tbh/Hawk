@@ -49,7 +49,14 @@ async function bootstrap() {
 
   const { loadCommands } = await import('./core/commands/CommandLoader.js');
   const path = await import('node:path');
-  const modulesDir = path.join(process.cwd(), 'src', 'modules');
+  const fs = await import('node:fs/promises');
+  const url = await import('node:url');
+  const currentDir = path.dirname(url.fileURLToPath(import.meta.url));
+  let modulesDir = path.join(currentDir, 'modules');
+  const dirExists = await fs.stat(modulesDir).then(s => s.isDirectory()).catch(() => false);
+  if (!dirExists) {
+    modulesDir = path.join(process.cwd(), 'src', 'modules');
+  }
   await loadCommands(modulesDir);
   consoleLog('info', 'startup', `Loaded ${getCommandCount()} commands across all modules.`);
 
@@ -161,6 +168,16 @@ async function bootstrap() {
 
   process.on('uncaughtException', (error) => {
     consoleLog('critical', 'uncaught_exception', `Uncaught Exception: ${error.stack ?? error.message}`);
+  });
+
+  // Start HTTP health-check server for Render free tier web service hosting
+  const http = await import('node:http');
+  const port = process.env.PORT || 3000;
+  http.createServer((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', bot: client.user?.tag || 'starting', uptime: Math.floor(process.uptime()) }));
+  }).listen(port, () => {
+    consoleLog('info', 'startup', `HTTP health-check server listening on port ${port}`);
   });
 
   await client.login(env.botToken);

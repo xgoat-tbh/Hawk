@@ -1,0 +1,32 @@
+{
+  "name": "hawk",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Private, prefix-based, resource-optimized Discord bot",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "test": "tsx --test tests/**/*.test.ts",
+    "migrate": "tsx src/core/database/migrations/runner.ts"
+  },
+  "dependencies": {
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0",
+    "fuse.js": "^7.1.0",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/node": "^22.15.0",
+    "eslint": "^9.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.25.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

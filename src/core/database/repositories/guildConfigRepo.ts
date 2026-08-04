@@ -13,7 +13,7 @@ export async function getPrefix(guildId: string): Promise<string> {
     const rows = await db`SELECT prefix FROM guild_config WHERE guild_id = ${guildId}`;
     const prefix = rows[0]?.prefix ?? constants.defaultPrefix;
 
-    if (prefixCache.size >= 50) {
+    if (prefixCache.size >= 10000) {
       const firstKey = prefixCache.keys().next().value;
       if (firstKey !== undefined) prefixCache.delete(firstKey);
     }

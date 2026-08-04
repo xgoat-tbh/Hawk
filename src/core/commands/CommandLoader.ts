@@ -28,7 +28,7 @@ export async function loadCommands(modulesDir: string): Promise<number> {
     }
 
     for (const file of files) {
-      if (file === 'index.ts' || file === 'index.js') continue;
+      if (file === 'index.ts' || file === 'index.js' || file.endsWith('.d.ts') || file.endsWith('.map')) continue;
       if (!file.endsWith('.ts') && !file.endsWith('.js')) continue;
 
       // Skip non-command helper/handler files starting with '_' or helper suffixes

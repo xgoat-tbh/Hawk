@@ -75,10 +75,13 @@ export default defineCommand({
       if (eligible.length === 0) continue;
 
       const deleted = await textChannel.bulkDelete(eligible, true).catch(() => null);
-      if (!deleted) break;
+      if (!deleted || deleted.size === 0) break;
 
       deletedCount += deleted.size;
       if (deleted.size < eligible.length) break; // Older than 14 days reached
+
+      // Rate limit backoff pause between bulk delete batches
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     const replyMsg = await respond.success(`Purged **${deletedCount}** messages.`);
