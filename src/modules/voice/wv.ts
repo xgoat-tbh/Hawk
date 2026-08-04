@@ -1,0 +1,57 @@
+import type { GuildMember } from 'discord.js';
+import { defineCommand } from '../../types/command.js';
+import type { CommandContext } from '../../types/command.js';
+import { resolveUser } from '../../core/resolver/UserResolver.js';
+import { mentionChannel } from '../../core/utils/formatters.js';
+import { checkVoiceAccess } from './vconfigEvaluator.js';
+
+export default defineCommand({
+  name: 'wv',
+  aliases: ['whichvc'],
+  module: 'voice',
+  description: 'Check which voice channel a user is in.',
+  usage: 'wv [user]',
+  examples: ['wv', 'wv @User', 'wv 123456789012345678'],
+  permitOnly: true,
+  cooldown: 3,
+
+  async execute(ctx: CommandContext): Promise<void> {
+    const { parsed, guild, member, respond, replyTarget } = ctx;
+
+    let targetMember: GuildMember;
+
+    if (parsed.args.length > 0) {
+      // Explicit argument provided
+      const result = await resolveUser(parsed.args.join(' '), guild);
+      if (!result.success) {
+        await respond.error(result.error);
+        return;
+      }
+      if (!result.value.member) {
+        await respond.error('That user is not a member of this server.');
+        return;
+      }
+      targetMember = result.value.member;
+    } else if (replyTarget) {
+      // Reply-based resolution
+      targetMember = replyTarget;
+    } else {
+      // Default to command author
+      targetMember = member;
+    }
+
+    const voiceState = targetMember.voice;
+    if (!voiceState.channel) {
+      await respond.send(`* **${targetMember.user.username}** is not in a voice channel.`);
+      return;
+    }
+
+    const access = await checkVoiceAccess(guild.id, member, 'wv', voiceState.channel.id);
+    if (!access.allowed) {
+      await respond.denied(access.reason || 'Voice command access denied.');
+      return;
+    }
+
+    await respond.send(`**${targetMember.user.username}** is in **${mentionChannel(voiceState.channel.id)}**`);
+  },
+});

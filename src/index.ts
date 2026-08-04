@@ -1,0 +1,172 @@
+import { Events } from 'discord.js';
+import { env } from './core/config/environment.js';
+import { createClient, updateBotActivity } from './client/BotClient.js';
+import { getCommandCount } from './core/commands/CommandRegistry.js';
+import { getPrefix } from './core/database/repositories/guildConfigRepo.js';
+import { classifyMessage, handleBotMention, MessageType } from './services/MentionHandler.js';
+import { handleMessage } from './core/commands/CommandExecutor.js';
+import { runMigrations } from './core/database/migrations/runner.js';
+import { validateConnection } from './core/database/pool.js';
+import { logEvent } from './core/logging/WebhookLogger.js';
+import { consoleLog } from './core/logging/ConsoleLogger.js';
+import { isNoPrefixEnabled, loadNoPrefixCache } from './core/config/NoPrefixConfig.js';
+import { loadAfkCache } from './core/database/repositories/afkRepo.js';
+import { handleAfkMessage } from './modules/general/_afkHandler.js';
+import { handleStickyResurface } from './modules/sticky/_stickyHandler.js';
+import {
+  handleSuggestionPanelResurface,
+  initializeSuggestionPanels,
+  handleSuggestionButton,
+  handleSuggestionModal,
+  handleSuggestionReactionAdd,
+  handleSuggestionReactionRemove,
+} from './modules/suggestion/_suggestionHandler.js';
+import {
+  handleConfessionPanelResurface,
+  initializeConfessionPanels,
+  handleConfessionButton,
+  handleConfessionModal,
+} from './modules/confession/_confessionHandler.js';
+import { handleMediaFilter } from './modules/media/_mediaHandler.js';
+import { handleHelpSelect } from './modules/general/_helpHandler.js';
+import { handleDragmeInteraction } from './modules/voice/_dragmeHandler.js';
+import { handleFmvVoiceStateUpdate } from './modules/voice/FmvManager.js';
+import { recordDeletedMessage } from './modules/moderation/SnipeManager.js';
+
+async function bootstrap() {
+  const startTime = Date.now();
+  consoleLog('info', 'startup', 'Starting Hawk Discord Bot...');
+
+  try {
+    await validateConnection();
+    consoleLog('info', 'database', 'PostgreSQL database connection verified.');
+    const applied = await runMigrations();
+    consoleLog('info', 'database', `Database migrations up to date (${applied} new applied).`);
+  } catch (error) {
+    consoleLog('critical', 'database', `Database initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+
+  const { loadCommands } = await import('./core/commands/CommandLoader.js');
+  const path = await import('node:path');
+  const modulesDir = path.join(process.cwd(), 'src', 'modules');
+  await loadCommands(modulesDir);
+  consoleLog('info', 'startup', `Loaded ${getCommandCount()} commands across all modules.`);
+
+  const client = createClient();
+
+  client.on(Events.ClientReady, async () => {
+    const elapsed = Date.now() - startTime;
+    updateBotActivity(client);
+    await loadNoPrefixCache();
+    await loadAfkCache();
+    await initializeSuggestionPanels(client);
+    await initializeConfessionPanels(client);
+    consoleLog('info', 'startup', `Logged in as ${client.user?.tag} \u2014 ${getCommandCount()} commands loaded \u2014 ${elapsed}ms startup`);
+    logEvent('info', 'startup', `Bot started: ${client.user?.tag}`, { commands: getCommandCount(), startupMs: elapsed, environment: env.nodeEnv, guilds: client.guilds.cache.size });
+  });
+
+  client.on('messageCreate', async (message) => {
+    if (!message.guild) return;
+    try {
+      if (!message.author.bot) {
+        const prefix = await getPrefix(message.guild.id);
+        const type = classifyMessage(message, prefix);
+        switch (type) {
+          case MessageType.PrefixCommand:
+            await handleMessage(message);
+            break;
+          case MessageType.BotMention:
+            await handleBotMention(message, prefix);
+            break;
+          case MessageType.Normal:
+            if (isNoPrefixEnabled(message.guild.id, message.author.id)) {
+              await handleMessage(message);
+            }
+            break;
+        }
+      }
+
+      await handleAfkMessage(message);
+      await handleStickyResurface(message);
+      await handleSuggestionPanelResurface(message);
+      await handleConfessionPanelResurface(message);
+      await handleMediaFilter(message);
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in messageCreate: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  client.on('messageDelete', async (message) => {
+    try {
+      recordDeletedMessage(message as any);
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in messageDelete: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  client.on('voiceStateUpdate', async (oldState, newState) => {
+    try {
+      await handleFmvVoiceStateUpdate(oldState, newState);
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in voiceStateUpdate: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  client.on('messageReactionAdd', async (reaction, user) => {
+    try {
+      await handleSuggestionReactionAdd(reaction, user);
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in messageReactionAdd: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  client.on('messageReactionRemove', async (reaction, user) => {
+    try {
+      await handleSuggestionReactionRemove(reaction, user);
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in messageReactionRemove: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  client.on('interactionCreate', async (interaction) => {
+    try {
+      if (interaction.isStringSelectMenu()) {
+        await handleHelpSelect(interaction);
+      } else if (interaction.isButton()) {
+        const id = interaction.customId;
+        if (id.startsWith('sug_')) {
+          await handleSuggestionButton(interaction);
+        } else if (id.startsWith('conf_')) {
+          await handleConfessionButton(interaction);
+        } else if (id.startsWith('dragme_')) {
+          await handleDragmeInteraction(interaction);
+        }
+      } else if (interaction.isModalSubmit()) {
+        const id = interaction.customId;
+        if (id.startsWith('sug_')) {
+          await handleSuggestionModal(interaction);
+        } else if (id.startsWith('conf_')) {
+          await handleConfessionModal(interaction);
+        }
+      }
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in interactionCreate: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    consoleLog('critical', 'unhandled_rejection', `Unhandled Promise Rejection: ${reason instanceof Error ? reason.stack : String(reason)}`);
+  });
+
+  process.on('uncaughtException', (error) => {
+    consoleLog('critical', 'uncaught_exception', `Uncaught Exception: ${error.stack ?? error.message}`);
+  });
+
+  await client.login(env.botToken);
+}
+
+bootstrap().catch((error) => {
+  console.error('Fatal bootstrap error:', error);
+  process.exit(1);
+});

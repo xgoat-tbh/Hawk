@@ -1,0 +1,62 @@
+// ── Environment Configuration ───────────────────────────────
+
+export interface EnvironmentConfig {
+  botToken: string;
+  databaseUrl: string;
+  devWebhookUrl: string;
+  mainGuildId: string;
+  testGuildId: string;
+  emojiGuildId: string;
+  botOwnerId: string;
+  botAdminIds: string[];
+  nodeEnv: 'development' | 'production';
+}
+
+// ── Guild Configuration (persisted in DB) ───────────────────
+
+export interface GuildConfig {
+  guildId: string;
+  prefix: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ── Branding Configuration ──────────────────────────────────
+
+export interface BrandingConfig {
+  footerText: string;
+  defaultColor: number;
+  emojis: EmojiConfig;
+}
+
+export interface EmojiConfig {
+  success: string;
+  error: string;
+  warning: string;
+  info: string;
+  loading: string;
+  denied: string;
+  upvote: string;
+  downvote: string;
+  accepted: string;
+  considered: string;
+  voice: string;
+  gaming: string;
+  suggestion: string;
+  confession: string;
+  sticky: string;
+  moderation: string;
+  welcome: string;
+  media: string;
+  general: string;
+  owner: string;
+  [key: string]: string;
+}
+
+// ── Module Definition ───────────────────────────────────────
+
+export interface ModuleDefinition {
+  name: string;
+  description: string;
+  enabled: boolean;
+}
