@@ -16,7 +16,7 @@ function optional(key: string, fallback: string): string {
 export const env: EnvironmentConfig = {
   botToken: required('BOT_TOKEN'),
   databaseUrl: required('DATABASE_URL'),
-  devWebhookUrl: required('DEV_WEBHOOK_URL'),
+  devWebhookUrl: optional('DEV_WEBHOOK_URL', ''),
   mainGuildId: required('MAIN_GUILD_ID'),
   testGuildId: required('TEST_GUILD_ID'),
   emojiGuildId: optional('EMOJI_GUILD_ID', ''),
