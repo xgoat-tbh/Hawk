@@ -146,6 +146,10 @@ test('Ship command calculates deterministic compatibility score and generates sh
   assert.equal(shipCmd.name, 'ship');
   assert.ok(shipCmd.aliases.includes('match'));
   assert.ok(shipCmd.aliases.includes('love'));
+
+  const { getShipMode } = await import('../src/core/database/repositories/shipRepo.js');
+  const defaultMode = await getShipMode('guild_mock_123');
+  assert.equal(defaultMode, 'global');
 });
 
 

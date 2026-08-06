@@ -6,6 +6,10 @@ import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
 import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
 import { sanitize } from '../../core/utils/validators.js';
+import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
+import { AuthorityLevel } from '../../types/permission.js';
+import { getShipMode, setShipMode } from '../../core/database/repositories/shipRepo.js';
+import { hasPermit } from '../../core/database/repositories/permissionRepo.js';
 
 export function calculateCompatibility(id1: string, id2: string): number {
   if (id1 === id2) return 100;
@@ -86,9 +90,9 @@ export default defineCommand({
   name: 'ship',
   aliases: ['match', 'love', 'shipping', 'affinity'],
   module: 'general',
-  description: 'Calculate love compatibility percentage between two users.',
-  usage: 'ship <@user1> [@user2]',
-  examples: ['ship @User', 'ship @User1 @User2'],
+  description: 'Calculate love compatibility percentage between two users, or configure server access mode (global / staff).',
+  usage: 'ship <@user1> [@user2] | ship mode <global|staff>',
+  examples: ['ship @User', 'ship @User1 @User2', 'ship mode global', 'ship mode staff'],
   permissions: [],
   botPermissions: [PermissionsBitField.Flags.SendMessages],
   cooldown: 3,
@@ -97,10 +101,71 @@ export default defineCommand({
     const { parsed, guild, member, respond, channel } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?ship <@user1> [@user2]`');
+      await respond.error('Usage: `?ship <@user1> [@user2]` or `?ship mode <global|staff>`');
       return;
     }
 
+    const firstArg = parsed.args[0].toLowerCase();
+
+    // ── Subcommand: mode / access configuration ───────────────
+    if (firstArg === 'mode' || firstArg === 'access' || firstArg === 'config') {
+      const authority = getAuthorityLevel(member.id, guild.ownerId);
+      const isElevated =
+        authority >= AuthorityLevel.ServerAdmin ||
+        member.permissions.has(PermissionsBitField.Flags.ManageGuild) ||
+        member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+      if (!isElevated) {
+        await respond.denied('Only server administrators or bot owners can configure ship command access mode.');
+        return;
+      }
+
+      if (parsed.args.length === 1) {
+        const currentMode = await getShipMode(guild.id);
+        await respond.info(`Ship command access mode in this server is currently set to **\`${currentMode.toUpperCase()}\`**.`);
+        return;
+      }
+
+      const targetMode = parsed.args[1].toLowerCase();
+      if (targetMode === 'global' || targetMode === 'public' || targetMode === 'everyone') {
+        await setShipMode(guild.id, 'global');
+        await respond.success('Ship command access set to **GLOBAL**. Everyone in this server can use the ship command.');
+      } else if (targetMode === 'staff' || targetMode === 'staffonly' || targetMode === 'restrict') {
+        await setShipMode(guild.id, 'staff');
+        await respond.success('Ship command access set to **STAFF-ONLY**. Only staff members and permitted users/roles can use the ship command.');
+      } else {
+        await respond.error('Invalid mode. Valid options are `global` or `staff`. Example: `?ship mode global`');
+      }
+      return;
+    }
+
+    // ── Access Control Enforcement ────────────────────────────
+    const currentMode = await getShipMode(guild.id);
+    if (currentMode === 'staff') {
+      const authority = getAuthorityLevel(member.id, guild.ownerId);
+      const isStaff =
+        authority >= AuthorityLevel.Normal &&
+        (authority > AuthorityLevel.Normal ||
+          member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+          member.permissions.has(PermissionsBitField.Flags.ManageGuild) ||
+          member.permissions.has(PermissionsBitField.Flags.ManageRoles) ||
+          member.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
+          member.permissions.has(PermissionsBitField.Flags.ManageMessages) ||
+          member.permissions.has(PermissionsBitField.Flags.MoveMembers) ||
+          member.permissions.has(PermissionsBitField.Flags.ModerateMembers) ||
+          member.permissions.has(PermissionsBitField.Flags.BanMembers) ||
+          member.permissions.has(PermissionsBitField.Flags.KickMembers));
+
+      const memberRoleIds = Array.from(member.roles.cache.keys());
+      const hasCustomPermit = await hasPermit(guild.id, member.id, memberRoleIds, 'ship', 'general');
+
+      if (!isStaff && !hasCustomPermit) {
+        await respond.denied('The ship command is currently set to **Staff-Only** in this server. An administrator can change this using `?ship mode global` or grant access via `?access add @role ship`.');
+        return;
+      }
+    }
+
+    // ── Main Shipping Execution ───────────────────────────────
     let u1: User;
     let u2: User;
 
