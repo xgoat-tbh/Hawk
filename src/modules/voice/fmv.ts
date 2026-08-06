@@ -21,7 +21,9 @@ export default defineCommand({
   cooldown: 5,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { parsed, guild, member, respond, channel } = ctx;
+    const { parsed, guild, member, respond, channel, message } = ctx;
+
+    respond.enableAutoClean(5000);
 
     if (parsed.args.length === 0) {
       await respond.error('Usage: `fmv <@user>` or `fmv cancel [@user]`');
@@ -113,6 +115,7 @@ export default defineCommand({
     });
 
     const noticeMessage = await (channel as GuildTextBasedChannel).send(initialPayload);
+    message.delete().catch(() => {});
 
     try {
       await createFmvRequest({

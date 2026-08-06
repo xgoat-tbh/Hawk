@@ -21,6 +21,13 @@ export interface FmvState {
 const activeRequests = new Map<string, FmvState>(); // id -> FmvState
 const FMV_TTL = 60_000; // 60 seconds
 
+function scheduleMessageDeletion(msg: Message | undefined | null, delayMs = 5000): void {
+  if (!msg || typeof msg.delete !== 'function') return;
+  setTimeout(() => {
+    msg.delete().catch(() => {});
+  }, delayMs);
+}
+
 export function getActiveFmvRequest(guildId: string, targetId: string): FmvState | undefined {
   return activeRequests.get(`${guildId}_${targetId}`);
 }
@@ -81,6 +88,7 @@ export async function createFmvRequest(options: {
         text: '⚪ **Force Move**\n\nThe force-move request expired.',
       });
       await state.requestMessage.edit(payload);
+      scheduleMessageDeletion(state.requestMessage, 5000);
     } catch {
       // Message may have been deleted
     }
@@ -127,12 +135,14 @@ export async function createFmvRequest(options: {
             text: `🟢 **Force Move**\n\n<@${state.targetId}> was moved to <#${destinationChannelId}>.`,
           });
           await state.requestMessage.edit(donePayload);
+          scheduleMessageDeletion(state.requestMessage, 5000);
         } catch {
           state.status = 'FAILED';
           const failPayload = buildV2Container({
             text: `⚪ **Force Move**\n\nFailed to move <@${state.targetId}> to <#${destinationChannelId}>.`,
           });
           await state.requestMessage.edit(failPayload).catch(() => {});
+          scheduleMessageDeletion(state.requestMessage, 5000);
         }
 
         logEvent('info', 'command_execution', `FMV executed for ${targetMember.user.tag}`, {
@@ -192,6 +202,7 @@ export async function cancelFmvRequest(options: {
           text: '⚪ **Force Move**\n\nThe force-move request was cancelled.',
         });
         await req.requestMessage.edit(payload);
+        scheduleMessageDeletion(req.requestMessage, 5000);
       } catch {
         // Message deleted
       }
@@ -218,6 +229,7 @@ export async function cancelFmvRequest(options: {
             text: '⚪ **Force Move**\n\nThe force-move request was cancelled.',
           });
           await req.requestMessage.edit(payload);
+          scheduleMessageDeletion(req.requestMessage, 5000);
         } catch {
           // Message deleted
         }
@@ -265,6 +277,7 @@ export async function handleFmvVoiceStateUpdate(oldState: VoiceState, newState: 
         text: `⚪ **Force Move**\n\nDestination voice channel is no longer available.`,
       });
       await req.requestMessage.edit(failPayload).catch(() => {});
+      scheduleMessageDeletion(req.requestMessage, 5000);
       return;
     }
 
@@ -274,6 +287,7 @@ export async function handleFmvVoiceStateUpdate(oldState: VoiceState, newState: 
       text: `🟢 **Force Move**\n\n<@${req.targetId}> was moved to <#${req.destinationChannelId}>.`,
     });
     await req.requestMessage.edit(donePayload).catch(() => {});
+    scheduleMessageDeletion(req.requestMessage, 5000);
 
     logEvent('info', 'command_execution', `FMV executed on voiceStateUpdate for ${newState.member.user.tag}`, {
       guild: guildId,
@@ -288,6 +302,7 @@ export async function handleFmvVoiceStateUpdate(oldState: VoiceState, newState: 
       text: `⚪ **Force Move**\n\nCould not move <@${req.targetId}> to destination.`,
     });
     await req.requestMessage.edit(failPayload).catch(() => {});
+    scheduleMessageDeletion(req.requestMessage, 5000);
 
     logEvent('error', 'command_failure', `FMV failed on voiceStateUpdate for ${req.targetId}: ${msg}`, {
       guild: guildId,
