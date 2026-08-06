@@ -29,6 +29,8 @@ import {
 } from './modules/confession/_confessionHandler.js';
 import { handleMediaFilter } from './modules/media/_mediaHandler.js';
 import { handleHelpSelect } from './modules/general/_helpHandler.js';
+import { handlePingRefresh } from './modules/general/pingUI.js';
+import { handleInfoInteraction } from './modules/general/infoUI.js';
 import { handleDragmeInteraction } from './modules/voice/_dragmeHandler.js';
 import { handleFmvVoiceStateUpdate } from './modules/voice/FmvManager.js';
 import { recordDeletedMessage } from './modules/moderation/SnipeManager.js';
@@ -148,6 +150,10 @@ async function bootstrap() {
           await handleConfessionButton(interaction);
         } else if (id.startsWith('dragme_')) {
           await handleDragmeInteraction(interaction);
+        } else if (id.startsWith('ping_refresh_')) {
+          await handlePingRefresh(interaction);
+        } else if (id.startsWith('info_')) {
+          await handleInfoInteraction(interaction);
         }
       } else if (interaction.isModalSubmit()) {
         const id = interaction.customId;

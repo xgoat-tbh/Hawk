@@ -9,6 +9,7 @@ import { checkVoiceAccess } from './vconfigEvaluator.js';
 
 export default defineCommand({
   name: 'mv',
+  aliases: ['pull'],
   module: 'voice',
   description: 'Move multiple users to your current voice channel.',
   usage: 'mv <users...>',

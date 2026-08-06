@@ -8,7 +8,7 @@ import { checkVoiceAccess } from './vconfigEvaluator.js';
 
 export default defineCommand({
   name: 'shiftvc',
-  aliases: ['moveall'],
+  aliases: ['moveall', 'svc'],
   module: 'voice',
   description: 'Move all members from one voice channel to another.',
   usage: 'shiftvc <destination> OR shiftvc <source>, <destination>',

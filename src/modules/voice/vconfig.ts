@@ -25,10 +25,11 @@ export default defineCommand({
   name: 'vconfig',
   module: 'voice',
   description: 'Configure voice command channel access (whitelist/blacklist) per role.',
-  usage: 'vconfig <voice-command|all> <wl|bl> <@role|all> | vconfig list | vconfig remove <command|all> <wl|bl> <@role>',
+  usage: 'vconfig <voice-command|all> <wl|bl> <@role|?all> [all|?all] | vconfig list | vconfig remove <command|all> <wl|bl> <@role|?all>',
   examples: [
     'vconfig dragme wl @Moderator',
     'vconfig all bl @TrialMod',
+    'vconfig all wl ?all ?all',
     'vconfig list',
     'vconfig remove dragme wl @Moderator',
   ],
@@ -40,7 +41,7 @@ export default defineCommand({
     const { guild, member, channel, parsed, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?vconfig <voice-command|all> <wl|bl> <@role|all>` or `?vconfig list`');
+      await respond.error('Usage: `?vconfig <voice-command|all> <wl|bl> <@role|?all>` or `?vconfig list`');
       return;
     }
 
@@ -74,7 +75,7 @@ export default defineCommand({
     // ── Subcommand: remove ────────────────────────────────────
     if (sub === 'remove' || sub === 'delete') {
       if (parsed.args.length < 4) {
-        await respond.error('Usage: `?vconfig remove <voice-command|all> <wl|bl> <@role>`');
+        await respond.error('Usage: `?vconfig remove <voice-command|all> <wl|bl> <@role|?all>`');
         return;
       }
 
@@ -113,7 +114,7 @@ export default defineCommand({
 
     // ── Main Configuration Flow: ?vconfig <cmd|all> <wl|bl> <role> ──
     if (parsed.args.length < 3) {
-      await respond.error('Usage: `?vconfig <voice-command|all> <wl|bl> <@role>`');
+      await respond.error('Usage: `?vconfig <voice-command|all> <wl|bl> <@role|?all>`');
       return;
     }
 
@@ -149,8 +150,9 @@ export default defineCommand({
     const mode = modeArg as 'wl' | 'bl';
     const modeText = mode === 'wl' ? 'WHITELIST' : 'BLACKLIST';
 
-    // If 'all' channels passed as 4th argument, bypass select menu
-    if (parsed.args[3]?.toLowerCase() === 'all' || parsed.args[3] === '*') {
+    // If 'all' or '?all' channels passed as 4th argument, bypass select menu
+    const fourthArg = parsed.args[3]?.toLowerCase();
+    if (fourthArg === 'all' || fourthArg === '?all' || fourthArg === '*') {
       await saveVConfigRule(guild.id, targetCmdName, targetRole.id, mode, ['all']);
       await respond.success(
         `Configured **${modeText}** for \`${targetCmdName}\` on ${mentionRole(targetRole.id)} across **ALL voice channels**.`

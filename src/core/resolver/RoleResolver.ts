@@ -13,6 +13,12 @@ export function resolveRole(input: string, guild: Guild): ResolutionResult<Resol
   const trimmed = input.trim();
   if (!trimmed) return { success: false, error: 'No role specified.' };
 
+  const lower = trimmed.toLowerCase();
+  if (lower === '?all' || lower === 'all' || lower === '@everyone' || lower === '*') {
+    const everyoneRole = guild.roles.everyone;
+    return { success: true, value: { id: everyoneRole.id, name: everyoneRole.name, role: everyoneRole } };
+  }
+
   // Mention or snowflake ID
   const mentionMatch = /^<@&(\d{17,20})>$/.exec(trimmed);
   const idInput = mentionMatch ? mentionMatch[1] : trimmed;

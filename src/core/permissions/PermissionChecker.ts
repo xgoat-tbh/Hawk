@@ -7,7 +7,7 @@ import { env } from '../config/environment.js';
 import * as permissionRepo from '../database/repositories/permissionRepo.js';
 
 export function getAuthorityLevel(userId: string, guildOwnerId: string): AuthorityLevel {
-  if (userId === env.botOwnerId) return AuthorityLevel.Owner;
+  if (env.botOwnerIds.includes(userId) || userId === env.botOwnerId) return AuthorityLevel.Owner;
   if (env.botAdminIds.includes(userId)) return AuthorityLevel.BotAdmin;
   if (userId === guildOwnerId) return AuthorityLevel.ServerAdmin;
   return AuthorityLevel.Normal;

@@ -20,7 +20,8 @@ export const env: EnvironmentConfig = {
   mainGuildId: required('MAIN_GUILD_ID'),
   testGuildId: required('TEST_GUILD_ID'),
   emojiGuildId: optional('EMOJI_GUILD_ID', ''),
-  botOwnerId: required('BOT_OWNER_ID'),
+  botOwnerId: required('BOT_OWNER_ID').split(',')[0].trim(),
+  botOwnerIds: required('BOT_OWNER_ID').split(',').map(id => id.trim()).filter(Boolean),
   botAdminIds: optional('BOT_ADMIN_IDS', '').split(',').map(id => id.trim()).filter(Boolean),
   nodeEnv: (optional('NODE_ENV', 'development') as 'development' | 'production'),
 };

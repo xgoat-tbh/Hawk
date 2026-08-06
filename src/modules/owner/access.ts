@@ -24,6 +24,7 @@ export default defineCommand({
     'access list',
     'access add @User wv',
     'access add @Role voice',
+    'access add ?all voice',
     'access add @User all',
     'access remove @User wv',
   ],
@@ -35,7 +36,7 @@ export default defineCommand({
     const { parsed, guild, member, channel, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `access list` | `access add <@user|@role> <scope>` | `access remove <@user|@role> <scope>`');
+      await respond.error('Usage: `access list` | `access add <@user|@role|?all> <scope>` | `access remove <@user|@role|?all> <scope>`');
       return;
     }
 

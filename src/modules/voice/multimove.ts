@@ -10,6 +10,7 @@ import { checkVoiceAccess } from './vconfigEvaluator.js';
 
 export default defineCommand({
   name: 'multimove',
+  aliases: ['mmv'],
   module: 'voice',
   description: 'Move multiple users to a specified destination.',
   usage: 'multimove <users...> <destination>',

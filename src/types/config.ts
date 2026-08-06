@@ -8,6 +8,7 @@ export interface EnvironmentConfig {
   testGuildId: string;
   emojiGuildId: string;
   botOwnerId: string;
+  botOwnerIds: string[];
   botAdminIds: string[];
   nodeEnv: 'development' | 'production';
 }

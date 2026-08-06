@@ -19,7 +19,7 @@ export default defineCommand({
     const { parsed, guild, respond } = ctx;
 
     if (parsed.args.length < 2) {
-      await respond.error('Usage: `restrict <@user|@role> <command|module:name>`');
+      await respond.error('Usage: `restrict <@user|@role|?all> <command|module:name>`');
       return;
     }
 
