@@ -40,6 +40,7 @@ import {
   handleWelcomeButton,
   handleWelcomeModal,
 } from './modules/welcome/_welcomeHandler.js';
+import { handleNukeInteraction } from './modules/moderation/_nukeHandler.js';
 
 async function bootstrap() {
   const startTime = Date.now();
@@ -178,6 +179,8 @@ async function bootstrap() {
           await handleInfoInteraction(interaction);
         } else if (id.startsWith('welcome_')) {
           await handleWelcomeButton(interaction);
+        } else if (id.startsWith('nuke_')) {
+          await handleNukeInteraction(interaction);
         }
       } else if (interaction.isModalSubmit()) {
         const id = interaction.customId;
