@@ -34,6 +34,12 @@ import { handleInfoInteraction } from './modules/general/infoUI.js';
 import { handleDragmeInteraction } from './modules/voice/_dragmeHandler.js';
 import { handleFmvVoiceStateUpdate } from './modules/voice/FmvManager.js';
 import { recordDeletedMessage } from './modules/moderation/SnipeManager.js';
+import {
+  handleMemberJoin,
+  handleMemberLeave,
+  handleWelcomeButton,
+  handleWelcomeModal,
+} from './modules/welcome/_welcomeHandler.js';
 
 async function bootstrap() {
   const startTime = Date.now();
@@ -138,6 +144,22 @@ async function bootstrap() {
     }
   });
 
+  client.on('guildMemberAdd', async (member) => {
+    try {
+      await handleMemberJoin(member);
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in guildMemberAdd: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+  client.on('guildMemberRemove', async (member) => {
+    try {
+      await handleMemberLeave(member);
+    } catch (error) {
+      consoleLog('error', 'unhandled_exception', `Unhandled error in guildMemberRemove: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
   client.on('interactionCreate', async (interaction) => {
     try {
       if (interaction.isStringSelectMenu()) {
@@ -154,6 +176,8 @@ async function bootstrap() {
           await handlePingRefresh(interaction);
         } else if (id.startsWith('info_')) {
           await handleInfoInteraction(interaction);
+        } else if (id.startsWith('welcome_')) {
+          await handleWelcomeButton(interaction);
         }
       } else if (interaction.isModalSubmit()) {
         const id = interaction.customId;
@@ -161,6 +185,8 @@ async function bootstrap() {
           await handleSuggestionModal(interaction);
         } else if (id.startsWith('conf_')) {
           await handleConfessionModal(interaction);
+        } else if (id.startsWith('welcome_modal_')) {
+          await handleWelcomeModal(interaction);
         }
       }
     } catch (error) {
