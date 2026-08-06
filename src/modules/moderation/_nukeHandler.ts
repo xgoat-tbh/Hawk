@@ -1,4 +1,5 @@
 import {
+  PermissionsBitField,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -46,6 +47,20 @@ export async function handleNukeInteraction(interaction: ButtonInteraction): Pro
   if (user.id !== invokerId) {
     await interaction.reply({
       content: 'Only the command invoker can confirm or cancel this channel nuke request.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const member = interaction.member;
+  const isAdministrator =
+    member &&
+    'permissions' in member &&
+    (member.permissions as Readonly<PermissionsBitField>).has(PermissionsBitField.Flags.Administrator);
+
+  if (!isAdministrator && user.id !== guild.ownerId) {
+    await interaction.reply({
+      content: 'You must have Administrator permission to execute a channel nuke.',
       flags: MessageFlags.Ephemeral,
     });
     return;
