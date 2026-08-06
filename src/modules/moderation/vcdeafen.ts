@@ -6,6 +6,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'vcdeafen',
+  aliases: ['vd', 'voicedeafen', 'vdeaf'],
   module: 'moderation',
   description: 'Server deafen one or multiple members in voice.',
   usage: 'vcdeafen <targets...>',

@@ -8,6 +8,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'rolein',
+  aliases: ['rin', 'rolemembers'],
   module: 'moderation',
   description: 'Toggle a role for all members who currently possess a target role.',
   usage: 'rolein <target_population_role> <role_to_toggle>',

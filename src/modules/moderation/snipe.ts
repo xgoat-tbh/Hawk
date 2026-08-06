@@ -6,6 +6,7 @@ import { branding } from '../../core/config/branding.js';
 
 export default defineCommand({
   name: 'snipe',
+  aliases: ['s', 'snip'],
   module: 'moderation',
   description: 'Retrieve the most recently deleted message in this channel.',
   usage: 'snipe',

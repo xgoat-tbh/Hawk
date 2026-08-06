@@ -26,6 +26,7 @@ export function parseSlowmodeDuration(input: string): number | null {
 
 export default defineCommand({
   name: 'slowmode',
+  aliases: ['sm', 'slow', 'cooldown'],
   module: 'moderation',
   description: 'Set Discord native slowmode on current text channel.',
   usage: 'slowmode <duration|off>',

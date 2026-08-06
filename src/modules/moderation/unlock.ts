@@ -8,6 +8,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'unlock',
+  aliases: ['ul', 'unlockchannel'],
   module: 'moderation',
   description: 'Unlock a channel by restoring SendMessages permission according to target mode.',
   usage: 'unlock [@Role|all]',

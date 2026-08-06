@@ -95,4 +95,32 @@ test('RoleResolver resolves ?all and all directly to @everyone role without fuzz
   }
 });
 
+test('Moderation commands have memorable short aliases', async () => {
+  const hideCmd = (await import('../src/modules/moderation/hide.js')).default;
+  const unhideCmd = (await import('../src/modules/moderation/unhide.js')).default;
+  const lockCmd = (await import('../src/modules/moderation/lock.js')).default;
+  const unlockCmd = (await import('../src/modules/moderation/unlock.js')).default;
+  const purgeCmd = (await import('../src/modules/moderation/purge.js')).default;
+  const slowmodeCmd = (await import('../src/modules/moderation/slowmode.js')).default;
+  const snipeCmd = (await import('../src/modules/moderation/snipe.js')).default;
+  const roleCmd = (await import('../src/modules/moderation/role.js')).default;
+  const uroleCmd = (await import('../src/modules/moderation/urole.js')).default;
+  const vcmuteCmd = (await import('../src/modules/moderation/vcmute.js')).default;
+  const vcslamCmd = (await import('../src/modules/moderation/vcslam.js')).default;
+
+  assert.ok(hideCmd.aliases.includes('h'));
+  assert.ok(unhideCmd.aliases.includes('uh'));
+  assert.ok(lockCmd.aliases.includes('l'));
+  assert.ok(unlockCmd.aliases.includes('ul'));
+  assert.ok(purgeCmd.aliases.includes('c'));
+  assert.ok(purgeCmd.aliases.includes('clear'));
+  assert.ok(slowmodeCmd.aliases.includes('sm'));
+  assert.ok(snipeCmd.aliases.includes('s'));
+  assert.ok(roleCmd.aliases.includes('r'));
+  assert.ok(uroleCmd.aliases.includes('ur'));
+  assert.ok(vcmuteCmd.aliases.includes('vm'));
+  assert.ok(vcslamCmd.aliases.includes('slam'));
+});
+
+
 

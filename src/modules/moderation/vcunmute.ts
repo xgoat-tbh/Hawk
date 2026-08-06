@@ -6,6 +6,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'vcunmute',
+  aliases: ['vum', 'voiceunmute', 'vunmute'],
   module: 'moderation',
   description: 'Server unmute one or multiple members in voice.',
   usage: 'vcunmute <targets...>',

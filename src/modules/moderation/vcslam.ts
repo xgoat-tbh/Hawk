@@ -8,7 +8,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'vcslam',
-  aliases: ['vcraidcontrol', 'vcmutedeafen'],
+  aliases: ['slam', 'vslam', 'vcraidcontrol', 'vcmutedeafen'],
   module: 'moderation',
   description: 'Mass server-mute and deafen all members in a voice channel to stop VC raids or nuisances (exempts staff).',
   usage: 'vcslam [voice_channel]',

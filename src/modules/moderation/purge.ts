@@ -7,6 +7,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'purge',
+  aliases: ['c', 'clear', 'clean', 'prune'],
   module: 'moderation',
   description: 'Purge recent messages matching an optional filter.',
   usage: 'purge <amount> [bot|human|@user|embeds|links|images]',

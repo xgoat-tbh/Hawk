@@ -8,6 +8,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'roleall',
+  aliases: ['rall', 'massrole'],
   module: 'moderation',
   description: 'Toggle a role across all human or all bot accounts in the server.',
   usage: 'roleall <human|bot> <role>',

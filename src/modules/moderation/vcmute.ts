@@ -6,6 +6,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'vcmute',
+  aliases: ['vm', 'voicemute', 'vmute'],
   module: 'moderation',
   description: 'Server mute one or multiple members in voice.',
   usage: 'vcmute <targets...>',

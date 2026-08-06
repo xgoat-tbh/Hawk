@@ -8,6 +8,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'lock',
+  aliases: ['l', 'lockchannel'],
   module: 'moderation',
   description: 'Lock a channel by denying SendMessages permission according to target mode.',
   usage: 'lock [@Role|all]',

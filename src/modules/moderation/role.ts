@@ -9,6 +9,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'role',
+  aliases: ['r', 'addrole', 'giverole'],
   module: 'moderation',
   description: 'Toggle one or multiple roles for a target user.',
   usage: 'role <user> <roles...>',

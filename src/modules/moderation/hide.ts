@@ -7,6 +7,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'hide',
+  aliases: ['h', 'hidechannel'],
   module: 'moderation',
   description: 'Hide a channel by denying ViewChannel permission according to target mode.',
   usage: 'hide [@Role|all]',
