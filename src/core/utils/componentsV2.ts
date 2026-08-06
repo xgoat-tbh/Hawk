@@ -6,7 +6,6 @@ import {
   ActionRowBuilder,
   MessageFlags,
 } from 'discord.js';
-import { branding } from '../config/branding.js';
 
 export interface ComponentV2Options {
   accentColor?: number;
@@ -22,7 +21,10 @@ export interface ComponentV2Payload {
 }
 
 export function buildV2Container(options: ComponentV2Options): ComponentV2Payload {
-  const container = new ContainerBuilder().setAccentColor(options.accentColor ?? branding.defaultColor);
+  const container = new ContainerBuilder();
+  if (options.accentColor !== undefined) {
+    container.setAccentColor(options.accentColor);
+  }
 
   if (options.text) {
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent(options.text));

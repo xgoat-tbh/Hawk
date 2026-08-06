@@ -107,7 +107,10 @@ export class ResponseBuilder {
     footer?: string;
     thumbnail?: string;
   }): Promise<Message> {
-    const embed = new EmbedBuilder().setColor(options.color ?? branding.defaultColor);
+    const embed = new EmbedBuilder();
+    if (options.color !== undefined) {
+      embed.setColor(options.color);
+    }
     if (options.title) embed.setTitle(sanitize(options.title));
     if (options.description) embed.setDescription(truncate(sanitize(options.description), 4000));
     if (options.footer || branding.footerText) embed.setFooter({ text: sanitize(options.footer ?? branding.footerText) });

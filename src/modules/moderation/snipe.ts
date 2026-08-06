@@ -2,7 +2,6 @@ import { PermissionsBitField, EmbedBuilder } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getSnipe } from './SnipeManager.js';
-import { branding } from '../../core/config/branding.js';
 
 export default defineCommand({
   name: 'snipe',
@@ -27,7 +26,6 @@ export default defineCommand({
     const embed = new EmbedBuilder()
       .setAuthor({ name: snipe.authorTag })
       .setDescription(snipe.content || '[No Text Content]')
-      .setColor(branding.defaultColor)
       .setTimestamp(snipe.deletedAt);
 
     if (snipe.attachments.length > 0) {

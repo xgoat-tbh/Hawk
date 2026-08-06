@@ -1,5 +1,4 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { branding } from '../../core/config/branding.js';
 
 export function buildConfessionPanel(): { embeds: EmbedBuilder[]; components: ActionRowBuilder<ButtonBuilder>[] } {
   const embed = new EmbedBuilder()
@@ -7,8 +6,7 @@ export function buildConfessionPanel(): { embeds: EmbedBuilder[]; components: Ac
     .setDescription(
       'Share your thoughts, stories, or confessions completely anonymously.\n\n' +
       'Click **Submit Confession** below to open the modal submission form. Your identity is never shown on the public post.',
-    )
-    .setColor(branding.defaultColor);
+    );
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
@@ -30,6 +28,5 @@ export function buildAnonymousConfessionEmbed(content: string): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle('🤫 Anonymous Confession')
     .setDescription(content)
-    .setColor(branding.defaultColor)
     .setTimestamp();
 }
