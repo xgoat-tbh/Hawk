@@ -109,7 +109,8 @@ test('Moderation commands have memorable short aliases', async () => {
   const vcslamCmd = (await import('../src/modules/moderation/vcslam.js')).default;
 
   assert.ok(hideCmd.aliases.includes('h'));
-  assert.ok(unhideCmd.aliases.includes('uh'));
+  assert.ok(unhideCmd.aliases.includes('unh'));
+  assert.equal(unhideCmd.aliases.includes('uh'), false);
   assert.ok(lockCmd.aliases.includes('l'));
   assert.ok(unlockCmd.aliases.includes('ul'));
   assert.ok(purgeCmd.aliases.includes('c'));

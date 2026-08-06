@@ -7,7 +7,7 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'unhide',
-  aliases: ['uh', 'unh', 'unhidechannel', 'show'],
+  aliases: ['unh', 'unhidechannel', 'show'],
   module: 'moderation',
   description: 'Unhide a channel by restoring ViewChannel permission according to target mode.',
   usage: 'unhide [@Role|all]',
