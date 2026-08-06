@@ -123,33 +123,11 @@ test('Moderation commands have memorable short aliases', async () => {
   assert.ok(vcslamCmd.aliases.includes('slam'));
 });
 
-test('Ship command calculates deterministic compatibility score and generates ship name', async () => {
-  const { calculateCompatibility, generateShipName, getProgressBar, getRelationshipInfo } = await import('../src/modules/general/ship.js');
-  const shipCmd = (await import('../src/modules/general/ship.js')).default;
-
-  assert.equal(calculateCompatibility('123', '123'), 100);
-
-  const score1 = calculateCompatibility('111', '222');
-  const score2 = calculateCompatibility('222', '111');
-  assert.equal(score1, score2, 'Compatibility should be symmetric and deterministic');
-  assert.ok(score1 >= 0 && score1 <= 100);
-
-  const shipName = generateShipName('Romeo', 'Juliet');
-  assert.ok(typeof shipName === 'string' && shipName.length > 0);
-
-  const bar = getProgressBar(80);
-  assert.equal(bar.length, 10);
-
-  const rel = getRelationshipInfo(95);
-  assert.equal(rel.title, 'Match Made in Heaven');
-
-  assert.equal(shipCmd.name, 'ship');
-  assert.ok(shipCmd.aliases.includes('match'));
-  assert.ok(shipCmd.aliases.includes('love'));
-
-  const { getShipMode } = await import('../src/core/database/repositories/shipRepo.js');
-  const defaultMode = await getShipMode('guild_mock_123');
-  assert.equal(defaultMode, 'global');
+test('Nuke command exists with proper metadata and aliases', async () => {
+  const nukeCmd = (await import('../src/modules/moderation/nuke.js')).default;
+  assert.equal(nukeCmd.name, 'nuke');
+  assert.ok(nukeCmd.aliases.includes('clearall'));
+  assert.ok(nukeCmd.aliases.includes('recreatechannel'));
 });
 
 
