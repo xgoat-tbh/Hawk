@@ -26,12 +26,12 @@ import {
   castVote,
   removeVote,
   getSuggestionByMessageId,
+  updateSuggestionMessageId,
 } from '../../core/database/repositories/suggestionRepo.js';
 import { buildSuggestionPayload, buildSuggestionPanelPayload } from './suggestionUI.js';
 import { getEmoji } from '../../core/config/branding.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
-import { getDb } from '../../core/database/pool.js';
 
 const activePanelMessages = new Map<string, string>(); // guildId -> messageId
 const suggestionPanelChannels = new Set<string>(); // channelId
@@ -138,11 +138,10 @@ export async function handleSuggestionModal(interaction: ModalSubmitInteraction)
 
     // Update DB record with real message ID
     try {
-      const db = getDb();
-      await db`UPDATE suggestion_records SET message_id = ${suggestionMsg.id} WHERE id = ${suggestion.id}`;
+      await updateSuggestionMessageId(suggestion.id, suggestionMsg.id);
       suggestion.messageId = suggestionMsg.id;
-    } catch {
-      // Ignore DB update errors if any
+    } catch (error) {
+      consoleLog('error', 'database', `Failed to update suggestion message_id: ${error}`);
     }
 
     // 4. Add initial upvote/downvote reactions to suggestion message

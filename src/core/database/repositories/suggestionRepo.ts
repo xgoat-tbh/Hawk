@@ -132,6 +132,11 @@ export async function getSuggestionById(suggestionId: number): Promise<Suggestio
   return mapSuggestionRow(rows[0]);
 }
 
+export async function updateSuggestionMessageId(suggestionId: number, messageId: string): Promise<void> {
+  const db = getDb();
+  await db`UPDATE suggestions SET message_id = ${messageId} WHERE id = ${suggestionId}`;
+}
+
 export async function updateSuggestionStatus(
   suggestionId: number,
   status: SuggestionStatus,

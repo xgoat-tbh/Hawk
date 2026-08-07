@@ -2,7 +2,7 @@ import { PermissionsBitField } from 'discord.js';
 import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
-import { updateSuggestionStatus } from '../../core/database/repositories/suggestionRepo.js';
+import { updateSuggestionStatus, updateSuggestionMessageId } from '../../core/database/repositories/suggestionRepo.js';
 import { buildSuggestionPayload, resolveSuggestionTarget } from './suggestionUI.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
@@ -45,7 +45,21 @@ export default defineCommand({
     // Update existing Discord message in suggestion channel
     const channel = (await guild.channels.fetch(updated.channelId).catch(() => null)) as GuildTextBasedChannel | null;
     if (channel) {
-      const msg = await channel.messages.fetch(updated.messageId).catch(() => null);
+      let msg = await channel.messages.fetch(updated.messageId).catch(() => null);
+      if (!msg) {
+        const recentMsgs = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+        if (recentMsgs) {
+          const match = recentMsgs.find(m =>
+            m.author.id === guild.client.user?.id &&
+            (m.content.includes(`Suggestion #${updated.number}`) || JSON.stringify(m.components).includes(`Suggestion #${updated.number}`))
+          );
+          if (match) {
+            msg = match;
+            await updateSuggestionMessageId(updated.id, match.id).catch(() => {});
+          }
+        }
+      }
+
       if (msg) {
         await msg.edit(v2Payload).catch(() => {});
       }
