@@ -12,6 +12,7 @@ import { ResponseBuilder } from '../responses/ResponseBuilder.js';
 import { logCommand, logEvent } from '../logging/WebhookLogger.js';
 import { getUserMessage, getInternalMessage, BotError } from '../errors/BotError.js';
 import { getPrefix } from '../database/repositories/guildConfigRepo.js';
+import { getGameTestChannel } from '../database/repositories/gameRepo.js';
 import { AuthorityLevel } from '../../types/permission.js';
 import { isNoPrefixEnabled } from '../config/NoPrefixConfig.js';
 
@@ -102,8 +103,18 @@ export async function handleMessage(message: Message): Promise<void> {
     }
   }
 
-  const remaining = checkCooldown(message.author.id, command.name, command.cooldown, permResult.authority);
-  if (remaining > 0) { await respond.warning(`Please wait **${remaining}s** before using this command again.`); return; }
+  let isGameTestChannel = false;
+  if (command.module === 'gaming' || command.name === 'rp') {
+    const testChannelId = await getGameTestChannel(message.guild.id);
+    if (testChannelId && guildChannel.id === testChannelId) {
+      isGameTestChannel = true;
+    }
+  }
+
+  if (!isGameTestChannel) {
+    const remaining = checkCooldown(message.author.id, command.name, command.cooldown, permResult.authority);
+    if (remaining > 0) { await respond.warning(`Please wait **${remaining}s** before using this command again.`); return; }
+  }
 
   let replyTarget: GuildMember | null = null;
   if (message.reference?.messageId) {

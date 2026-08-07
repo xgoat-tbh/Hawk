@@ -8,10 +8,10 @@ export function createClient(): Client {
     partials: [Partials.Message, Partials.Channel],
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
-      MessageManager: 0,
+      MessageManager: 200,
       GuildMemberManager: { maxSize: 10000 },
-      ReactionManager: 0,
-      ReactionUserManager: 0,
+      ReactionManager: 100,
+      ReactionUserManager: 100,
     }),
     sweepers: { ...Options.DefaultSweeperSettings, messages: { interval: 300, lifetime: 60 } },
   });

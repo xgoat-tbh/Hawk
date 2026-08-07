@@ -24,12 +24,16 @@ export default defineCommand({
     }
 
     const embed = new EmbedBuilder()
-      .setAuthor({ name: snipe.authorTag })
+      .setAuthor({ name: snipe.authorTag, iconURL: snipe.authorAvatar })
       .setDescription(snipe.content || '[No Text Content]')
       .setTimestamp(snipe.deletedAt);
 
     if (snipe.attachments.length > 0) {
       embed.addFields({ name: 'Attachments', value: snipe.attachments.join('\n') });
+      const firstImg = snipe.attachments.find(url => /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url));
+      if (firstImg) {
+        embed.setImage(firstImg);
+      }
     }
 
     await respond.raw({ embeds: [embed] });

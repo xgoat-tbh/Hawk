@@ -18,21 +18,28 @@ export default defineCommand({
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { parsed, guild, member, respond } = ctx;
+    const { parsed, guild, member, respond, message } = ctx;
     const prefix = parsed.prefix;
 
-    if (parsed.args.length === 0) {
-      await respond.error(`Usage: \`${prefix}deny <number|messageId|url> [reason...]\``);
-      return;
-    }
-
-    const suggestion = await resolveSuggestionTarget(parsed.args[0], guild.id);
+    const suggestion = await resolveSuggestionTarget(parsed.args[0] ?? '', guild.id, message);
     if (!suggestion) {
-      await respond.error(`Could not resolve a suggestion matching \`${parsed.args[0]}\`.`);
+      await respond.error(`Usage: \`${prefix}deny <number|messageId|url> [reason...]\` or reply to a suggestion message.`);
       return;
     }
 
-    const reason = parsed.args.slice(1).join(' ').trim();
+    let reason = '';
+    const firstArg = parsed.args[0];
+    const isFirstArgTarget = firstArg && (
+      firstArg.startsWith('#') ||
+      /^\d+$/.test(firstArg) ||
+      firstArg.includes('discord.com/channels')
+    );
+
+    if (isFirstArgTarget) {
+      reason = parsed.args.slice(1).join(' ').trim();
+    } else {
+      reason = parsed.args.join(' ').trim();
+    }
 
     const updated = await updateSuggestionStatus(suggestion.id, 'denied', member.id);
     if (!updated) {

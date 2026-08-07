@@ -1,4 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import type { Message } from 'discord.js';
 import type { SuggestionRecord } from '../../types/suggestion.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
 import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
@@ -70,16 +71,24 @@ export function buildSuggestionPanelPayload(): ComponentV2Payload {
 export async function resolveSuggestionTarget(
   input: string,
   guildId: string,
+  message?: Message,
 ): Promise<SuggestionRecord | null> {
-  const cleanInput = input.trim();
+  // 1. Message Reply Reference
+  if (message?.reference?.messageId) {
+    const byRef = await getSuggestionByMessageId(guildId, message.reference.messageId);
+    if (byRef) return byRef;
+  }
 
-  // 1. Message URL: https://discord.com/channels/guildId/channelId/messageId
+  const cleanInput = input ? input.trim() : '';
+  if (!cleanInput) return null;
+
+  // 2. Message URL: https://discord.com/channels/guildId/channelId/messageId
   const urlMatch = /\/channels\/\d+\/\d+\/(\d{17,20})$/.exec(cleanInput);
   if (urlMatch) {
     return await getSuggestionByMessageId(guildId, urlMatch[1]);
   }
 
-  // 2. Suggestion number: #42 or 42
+  // 3. Suggestion number: #42 or 42
   const numMatch = /^#?(\d{1,6})$/.exec(cleanInput);
   if (numMatch) {
     const num = parseInt(numMatch[1], 10);
@@ -87,7 +96,7 @@ export async function resolveSuggestionTarget(
     if (byNum) return byNum;
   }
 
-  // 3. Raw Snowflake Message ID: 123456789012345678
+  // 4. Raw Snowflake Message ID: 123456789012345678
   if (/^\d{17,20}$/.test(cleanInput)) {
     return await getSuggestionByMessageId(guildId, cleanInput);
   }

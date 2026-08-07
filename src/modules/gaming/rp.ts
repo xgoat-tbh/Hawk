@@ -77,8 +77,10 @@ export default defineCommand({
       },
     });
 
-    // Set per-identifier cooldown
-    setVcCooldown(guild.id, pingConfig.identifier, pingConfig.cooldownSeconds);
+    // Set per-identifier cooldown only if not in test channel
+    if (!isTestChannel) {
+      setVcCooldown(guild.id, pingConfig.identifier, pingConfig.cooldownSeconds);
+    }
 
     // Developer webhook logging
     logEvent('info', 'command_execution', `rp: ${ctx.member.user.tag} announced ${pingConfig.identifier} (${pingConfig.gameName})`, {

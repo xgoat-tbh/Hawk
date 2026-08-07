@@ -18,17 +18,22 @@ import { registerSuggestionPanelChannel } from './_suggestionHandler.js';
 import { mentionChannel, mentionUser, bold, inlineCode } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
+import acceptCmd from './accept.js';
+import considerCmd from './consider.js';
+import denyCmd from './deny.js';
+
 export default defineCommand({
   name: 'suggestion',
   module: 'suggestion',
-  description: 'Manage Suggestion module channel, post panel, user blacklist, or perform a module reset.',
-  usage: 'suggestion <channel|panel|blacklist|reset> [args...]',
+  description: 'Manage Suggestion module channel, panel, blacklist, status, or reset.',
+  usage: 'suggestion <channel|panel|blacklist|accept|consider|deny|reset> [args...]',
   examples: [
     'suggestion channel #suggestions',
     'suggestion panel',
-    'suggestion blacklist add @BadUser',
-    'suggestion blacklist remove @BadUser',
-    'suggestion blacklist list',
+    'suggestion accept 42 Approved',
+    'suggestion consider 42 Looking into it',
+    'suggestion deny 42 Not feasible',
+    'suggestion blacklist add @User',
     'suggestion reset confirm',
   ],
   permissions: [PermissionsBitField.Flags.ManageGuild],
@@ -39,12 +44,22 @@ export default defineCommand({
     const { parsed, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Specify a subcommand: `channel`, `panel`, `blacklist`, or `reset`.');
+      await respond.error('Specify a subcommand: `channel`, `panel`, `blacklist`, `accept`, `consider`, `deny`, or `reset`.');
       return;
     }
 
     const subcommand = parsed.args[0].toLowerCase();
     const subArgs = parsed.args.slice(1);
+
+    // Create a sub-context where parsed.args is shifted by 1
+    const subCtx: CommandContext = {
+      ...ctx,
+      parsed: {
+        ...ctx.parsed,
+        args: subArgs,
+        rawArgs: subArgs.join(' '),
+      },
+    };
 
     switch (subcommand) {
       case 'channel':
@@ -59,13 +74,25 @@ export default defineCommand({
         await handleBlacklist(ctx, subArgs);
         break;
 
+      case 'accept':
+        await acceptCmd.execute(subCtx);
+        break;
+
+      case 'consider':
+        await considerCmd.execute(subCtx);
+        break;
+
+      case 'deny':
+        await denyCmd.execute(subCtx);
+        break;
+
       case 'reset':
       case 'nuke':
         await handleReset(ctx, subArgs);
         break;
 
       default:
-        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`panel\`, \`blacklist\`, \`reset\`.`);
+        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`panel\`, \`blacklist\`, \`accept\`, \`consider\`, \`deny\`, \`reset\`.`);
         break;
     }
   },
