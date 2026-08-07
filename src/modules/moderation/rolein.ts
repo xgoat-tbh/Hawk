@@ -47,8 +47,9 @@ export default defineCommand({
     const popRole = popRoleRes.value.role;
     const toggleRole = toggleRoleRes.value.role;
 
-    // Fetch members possessing popRole
-    const membersWithPopRole = guild.members.cache.filter(m => m.roles.cache.has(popRole.id));
+    // Fetch all guild members to ensure uncached members are loaded
+    const allMembers = await guild.members.fetch().catch(() => guild.members.cache);
+    const membersWithPopRole = allMembers.filter(m => m.roles.cache.has(popRole.id));
 
     let addedCount = 0;
     let removedCount = 0;

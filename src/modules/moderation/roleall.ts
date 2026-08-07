@@ -46,7 +46,10 @@ export default defineCommand({
     }
 
     const toggleRole = roleRes.value.role;
-    const targetMembers = guild.members.cache.filter(m => isBotTarget ? m.user.bot : !m.user.bot);
+
+    // Fetch all guild members to ensure uncached members are loaded
+    const allMembers = await guild.members.fetch().catch(() => guild.members.cache);
+    const targetMembers = allMembers.filter(m => isBotTarget ? m.user.bot : !m.user.bot);
 
     let addedCount = 0;
     let removedCount = 0;
