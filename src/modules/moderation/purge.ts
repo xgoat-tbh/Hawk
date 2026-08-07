@@ -4,6 +4,8 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
   name: 'purge',
@@ -41,9 +43,22 @@ export default defineCommand({
     }
 
     const textChannel = channel as TextChannel;
-
     // Delete command invocation message first
     await message.delete().catch(() => {});
+
+    let statusMsg: Message | null = null;
+    let tracker: LiveProgressTracker | null = null;
+
+    if (amount > 50) {
+      const initialPayload = buildV2Container({
+        text: `⏳ **Purging Messages**`,
+        sections: [`**Progress:** ${renderProgressBar(0, amount)} (0/${amount})\nFilter: \`${filterArg ?? 'none'}\``],
+      });
+      statusMsg = await textChannel.send({ components: initialPayload.components, flags: initialPayload.flags }).catch(() => null);
+      if (statusMsg) {
+        tracker = new LiveProgressTracker(statusMsg, 'Purge Operations', amount);
+      }
+    }
 
     // Fetch recent message history in batches
     let deletedCount = 0;
@@ -57,9 +72,10 @@ export default defineCommand({
       const messages = Array.from(fetched.values());
       lastId = messages[messages.length - 1].id;
 
-      // Filter messages
+      // Filter messages (exclude progress status message if sent)
       const FourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
       const eligible = messages.filter(m => {
+        if (statusMsg && m.id === statusMsg.id) return false;
         if (m.createdTimestamp < FourteenDaysAgo) return false;
         if (targetUserId) return m.author.id === targetUserId;
         if (!filterArg) return true;
@@ -79,16 +95,35 @@ export default defineCommand({
       if (!deleted || deleted.size === 0) break;
 
       deletedCount += deleted.size;
+      if (tracker) {
+        await tracker.update(deletedCount, `Filter: \`${filterArg ?? 'none'}\``);
+      }
+
       if (deleted.size < eligible.length) break; // Older than 14 days reached
 
       // Rate limit backoff pause between bulk delete batches
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
-    const replyMsg = await respond.success(`Purged **${deletedCount}** messages.`);
-    setTimeout(() => {
-      replyMsg.delete().catch(() => {});
-    }, 5000);
+    if (tracker) {
+      await tracker.update(deletedCount, `Filter: \`${filterArg ?? 'none'}\``, true);
+    }
+
+    if (statusMsg) {
+      const finalPayload = buildV2Container({
+        text: `✅ **Purge Completed**`,
+        sections: [`Purged **${deletedCount}** message(s).`],
+      });
+      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+      setTimeout(() => {
+        statusMsg?.delete().catch(() => {});
+      }, 5000);
+    } else {
+      const replyMsg = await respond.success(`Purged **${deletedCount}** message(s).`);
+      setTimeout(() => {
+        replyMsg.delete().catch(() => {});
+      }, 5000);
+    }
 
     logEvent('info', 'command_execution', `Purge by ${member.user.tag}`, {
       executor: member.user.tag,

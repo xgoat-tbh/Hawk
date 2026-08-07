@@ -1,10 +1,13 @@
 import { PermissionsBitField } from 'discord.js';
+import type { GuildTextBasedChannel, Message } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
 import { mentionUser } from '../../core/utils/formatters.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
+import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
   name: 'shiftvc',
@@ -100,18 +103,35 @@ export default defineCommand({
       return;
     }
 
-    const members = sourceVc.members;
-    if (members.size === 0) {
+    const membersList = Array.from(sourceVc.members.values());
+    const totalMembers = membersList.length;
+
+    if (totalMembers === 0) {
       await respond.info(`**${sourceVc.name}** is empty.`);
       return;
     }
 
-    // ── Execute moves ────────────────────────────────────────
+    // ── Execute moves with Live Progress Bar ────────────────────────
+
+    let statusMsg: Message | null = null;
+    let tracker: LiveProgressTracker | null = null;
+
+    if (totalMembers > 3) {
+      const initialPayload = buildV2Container({
+        text: `⏳ **Shifting Voice Members** (${sourceVc.name} ➔ ${destVc.name})`,
+        sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nMoved: **0** | Failed: **0**`],
+      });
+      statusMsg = await (ctx.channel as GuildTextBasedChannel).send({ components: initialPayload.components, flags: initialPayload.flags }).catch(() => null);
+      if (statusMsg) {
+        tracker = new LiveProgressTracker(statusMsg, `ShiftVC (${sourceVc.name} ➔ ${destVc.name})`, totalMembers);
+      }
+    }
 
     let moved = 0;
     const failures: string[] = [];
 
-    for (const [, m] of members) {
+    let processed = 0;
+    for (const m of membersList) {
       try {
         await m.voice.setChannel(destVc);
         moved++;
@@ -120,22 +140,38 @@ export default defineCommand({
         consoleLog('error', 'command_failure', `shiftvc: failed to move ${m.id}`, { error: msg });
         failures.push(mentionUser(m.id));
       }
+      processed++;
+      if (tracker) {
+        await tracker.update(processed, `Moved: **${moved}** | Failed: **${failures.length}**`);
+      }
+    }
+
+    if (tracker) {
+      await tracker.update(totalMembers, `Moved: **${moved}** | Failed: **${failures.length}**`, true);
     }
 
     const parts: string[] = [];
     if (moved > 0) {
-      parts.push(`Moved **${moved}** member${moved === 1 ? '' : 's'} from **${sourceVc.name}** to **${destVc.name}**`);
+      parts.push(`Moved **${moved}** member${moved === 1 ? '' : 's'} from **${sourceVc.name}** to **${destVc.name}**.`);
     }
     if (failures.length > 0) {
       parts.push(`Could not move: ${failures.join(', ')}`);
     }
 
-    if (moved > 0 && failures.length === 0) {
-      await respond.success(parts.join('\n'));
-    } else if (moved > 0 && failures.length > 0) {
-      await respond.warning(parts.join('\n'));
+    if (statusMsg) {
+      const finalPayload = buildV2Container({
+        text: `✅ **ShiftVC Completed** (${sourceVc.name} ➔ ${destVc.name})`,
+        sections: [parts.join('\n')],
+      });
+      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
     } else {
-      await respond.error(parts.join('\n'));
+      if (moved > 0 && failures.length === 0) {
+        await respond.success(parts.join('\n'));
+      } else if (moved > 0 && failures.length > 0) {
+        await respond.warning(parts.join('\n'));
+      } else {
+        await respond.error(parts.join('\n'));
+      }
     }
   },
 });

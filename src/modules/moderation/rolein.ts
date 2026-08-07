@@ -1,10 +1,13 @@
 import { PermissionsBitField } from 'discord.js';
+import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { toggleRoleForMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
   name: 'rolein',
@@ -49,14 +52,29 @@ export default defineCommand({
 
     // Fetch all guild members to ensure uncached members are loaded
     const allMembers = await guild.members.fetch().catch(() => guild.members.cache);
-    const membersWithPopRole = allMembers.filter(m => m.roles.cache.has(popRole.id));
+    const membersWithPopRole = Array.from(allMembers.filter(m => m.roles.cache.has(popRole.id)).values());
+    const totalMembers = membersWithPopRole.length;
+
+    if (totalMembers === 0) {
+      await respond.info(`No members currently possess the role ${mentionRole(popRole.id)}.`);
+      return;
+    }
+
+    // Send initial live progress message
+    const initialPayload = buildV2Container({
+      text: `⏳ **Processing RoleIn** (${mentionRole(toggleRole.id)} for ${mentionRole(popRole.id)})`,
+      sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nAdded: **0** | Removed: **0** | Skipped: **0**`],
+    });
+    const statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
+    const tracker = statusMsg ? new LiveProgressTracker(statusMsg, `RoleIn (${popRole.name})`, totalMembers) : null;
 
     let addedCount = 0;
     let removedCount = 0;
     let skippedCount = 0;
     const affectedMembersList: import('discord.js').GuildMember[] = [];
 
-    for (const [, targetMember] of membersWithPopRole) {
+    let processed = 0;
+    for (const targetMember of membersWithPopRole) {
       const res = await toggleRoleForMember(guild, targetMember, toggleRole, member);
       if (res === 'added') {
         addedCount++;
@@ -67,6 +85,14 @@ export default defineCommand({
       } else {
         skippedCount++;
       }
+      processed++;
+      if (tracker) {
+        await tracker.update(processed, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`);
+      }
+    }
+
+    if (tracker) {
+      await tracker.update(totalMembers, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
     }
 
     let moveInfo = '';
@@ -75,9 +101,18 @@ export default defineCommand({
       moveInfo = `\n\n🔊 Moved **${moveRes.movedCount}** member(s) to **${fmvResult.destVc.name}**.`;
     }
 
-    await respond.success(
-      `RoleIn update (${mentionRole(toggleRole.id)} for members in ${mentionRole(popRole.id)}):\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
-    );
+    const finalPayload = buildV2Container({
+      text: `✅ **RoleIn Completed** (${mentionRole(toggleRole.id)} for ${mentionRole(popRole.id)})`,
+      sections: [`Added: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`],
+    });
+
+    if (statusMsg) {
+      await statusMsg.edit({ content: undefined, components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+    } else {
+      await respond.success(
+        `RoleIn update (${mentionRole(toggleRole.id)} for members in ${mentionRole(popRole.id)}):\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
+      );
+    }
 
     logEvent('info', 'command_execution', `RoleIn toggle by ${member.user.tag}`, {
       executor: member.user.tag,

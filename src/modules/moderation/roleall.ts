@@ -1,10 +1,13 @@
 import { PermissionsBitField } from 'discord.js';
+import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { toggleRoleForMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
   name: 'roleall',
@@ -49,14 +52,29 @@ export default defineCommand({
 
     // Fetch all guild members to ensure uncached members are loaded
     const allMembers = await guild.members.fetch().catch(() => guild.members.cache);
-    const targetMembers = allMembers.filter(m => isBotTarget ? m.user.bot : !m.user.bot);
+    const targetMembers = Array.from(allMembers.filter(m => isBotTarget ? m.user.bot : !m.user.bot).values());
+    const totalMembers = targetMembers.length;
+
+    if (totalMembers === 0) {
+      await respond.info(`No ${isBotTarget ? 'bot' : 'human'} members found in this server.`);
+      return;
+    }
+
+    // Send initial live progress message
+    const initialPayload = buildV2Container({
+      text: `⏳ **Processing RoleAll** (${mentionRole(toggleRole.id)} for ${isBotTarget ? 'bots' : 'humans'})`,
+      sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nAdded: **0** | Removed: **0** | Skipped: **0**`],
+    });
+    const statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
+    const tracker = statusMsg ? new LiveProgressTracker(statusMsg, `RoleAll (${isBotTarget ? 'bots' : 'humans'})`, totalMembers) : null;
 
     let addedCount = 0;
     let removedCount = 0;
     let skippedCount = 0;
     const affectedMembersList: import('discord.js').GuildMember[] = [];
 
-    for (const [, targetMember] of targetMembers) {
+    let processed = 0;
+    for (const targetMember of targetMembers) {
       const res = await toggleRoleForMember(guild, targetMember, toggleRole, member);
       if (res === 'added') {
         addedCount++;
@@ -67,6 +85,14 @@ export default defineCommand({
       } else {
         skippedCount++;
       }
+      processed++;
+      if (tracker) {
+        await tracker.update(processed, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`);
+      }
+    }
+
+    if (tracker) {
+      await tracker.update(totalMembers, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
     }
 
     let moveInfo = '';
@@ -75,9 +101,18 @@ export default defineCommand({
       moveInfo = `\n\n🔊 Moved **${moveRes.movedCount}** member(s) to **${fmvResult.destVc.name}**.`;
     }
 
-    await respond.success(
-      `RoleAll update (${mentionRole(toggleRole.id)} for ${isBotTarget ? 'bots' : 'humans'}):\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
-    );
+    const finalPayload = buildV2Container({
+      text: `✅ **RoleAll Completed** (${mentionRole(toggleRole.id)} for ${isBotTarget ? 'bots' : 'humans'})`,
+      sections: [`Added: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`],
+    });
+
+    if (statusMsg) {
+      await statusMsg.edit({ content: undefined, components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+    } else {
+      await respond.success(
+        `RoleAll update (${mentionRole(toggleRole.id)} for ${isBotTarget ? 'bots' : 'humans'}):\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
+      );
+    }
 
     logEvent('info', 'command_execution', `RoleAll toggle by ${member.user.tag}`, {
       executor: member.user.tag,
