@@ -68,8 +68,8 @@ export async function handleMessage(message: Message): Promise<void> {
 
   const respond = new ResponseBuilder(message);
 
-  // Auto-cleanup after 7 seconds for action voice commands (excluding informational lookups: wv, invc, vconfig)
-  const isAutoCleanVoiceCmd = command.module === 'voice' && !['wv', 'invc', 'vconfig'].includes(command.name);
+  // Auto-cleanup after 7 seconds for immediate action voice commands (excluding interactive/status lookups: wv, invc, vconfig, dragme, fmv)
+  const isAutoCleanVoiceCmd = command.module === 'voice' && !['wv', 'invc', 'vconfig', 'dragme', 'fmv'].includes(command.name);
   if (isAutoCleanVoiceCmd) {
     respond.enableAutoClean(7000);
   }
