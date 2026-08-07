@@ -7,15 +7,35 @@ import { getSuggestionByNumber, getSuggestionByMessageId } from '../../core/data
 export function buildSuggestionPayload(
   suggestion: SuggestionRecord,
   authorTag?: string,
+  reason?: string,
 ): ComponentV2Payload {
   const authorDisplay = authorTag ?? `<@${suggestion.authorId}>`;
 
+  let statusHeader = `**Suggestion #${suggestion.number}**`;
+  if (suggestion.status === 'accepted') {
+    statusHeader += ` | 🟢 **ACCEPTED**`;
+  } else if (suggestion.status === 'considered') {
+    statusHeader += ` | 🟡 **UNDER CONSIDERATION**`;
+  } else if (suggestion.status === 'denied') {
+    statusHeader += ` | 🔴 **DENIED**`;
+  }
+
+  const sections: string[] = [
+    suggestion.content,
+    `Suggested by ${authorDisplay}`,
+  ];
+
+  if (suggestion.status !== 'pending' && suggestion.staffId) {
+    let statusNote = `**Status:** ${suggestion.status.toUpperCase()} (by <@${suggestion.staffId}>)`;
+    if (reason) {
+      statusNote += `\n**Reason:** ${reason}`;
+    }
+    sections.push(statusNote);
+  }
+
   return buildV2Container({
-    text: `**Suggestion #${suggestion.number}**`,
-    sections: [
-      suggestion.content,
-      `Suggested by ${authorDisplay}`,
-    ],
+    text: statusHeader,
+    sections,
   });
 }
 
