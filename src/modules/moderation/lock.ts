@@ -1,4 +1,4 @@
-import { PermissionsBitField } from 'discord.js';
+import { PermissionsBitField, OverwriteType } from 'discord.js';
 import type { GuildChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
@@ -46,7 +46,7 @@ export default defineCommand({
 
       let count = 1;
       for (const [, overwrite] of (targetChannel as any).permissionOverwrites.cache) {
-        if (overwrite.type === 0 /* Role */ && overwrite.id !== everyoneRole.id) {
+        if (overwrite.type === OverwriteType.Role && overwrite.id !== everyoneRole.id) {
           await (targetChannel as any).permissionOverwrites.edit(overwrite.id, permToEdit).catch(() => {});
           count++;
         }

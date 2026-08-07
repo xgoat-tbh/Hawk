@@ -73,6 +73,7 @@ async function bootstrap() {
 
   client.on(Events.ClientReady, async () => {
     const elapsed = Date.now() - startTime;
+    (globalThis as any).hawkClient = client;
     updateBotActivity(client);
     await loadNoPrefixCache();
     await loadAfkCache();

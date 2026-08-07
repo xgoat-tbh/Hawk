@@ -1,4 +1,4 @@
-import { PermissionsBitField, TextChannel } from 'discord.js';
+import { PermissionsBitField, OverwriteType, TextChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
@@ -47,7 +47,7 @@ export default defineCommand({
 
       let count = 1;
       for (const [, overwrite] of targetChannel.permissionOverwrites.cache) {
-        if (overwrite.type === 0 /* Role */ && overwrite.id !== everyoneRole.id) {
+        if (overwrite.type === OverwriteType.Role && overwrite.id !== everyoneRole.id) {
           await targetChannel.permissionOverwrites.edit(overwrite.id, {
             ViewChannel: null,
           }).catch(() => {});
