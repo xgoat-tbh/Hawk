@@ -22,8 +22,8 @@ export class ResponseBuilder {
     return this;
   }
 
-  private scheduleClean(msg: Message | null): void {
-    if (this.autoCleanEnabled) {
+  private scheduleClean(msg: Message | null, forceClean = false): void {
+    if (this.autoCleanEnabled || forceClean) {
       this.message.delete().catch(() => {});
       if (msg && typeof msg.delete === 'function') {
         setTimeout(() => {
@@ -47,7 +47,7 @@ export class ResponseBuilder {
       content: `${getEmoji('error')} ${sanitize(text)}`,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
-    this.scheduleClean(sent);
+    this.scheduleClean(sent, true);
     return sent;
   }
 
@@ -56,7 +56,7 @@ export class ResponseBuilder {
       content: `${getEmoji('warning')} ${sanitize(text)}`,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
-    this.scheduleClean(sent);
+    this.scheduleClean(sent, true);
     return sent;
   }
 

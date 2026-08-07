@@ -102,3 +102,46 @@ function mapPingRow(row: Record<string, unknown>): GamePingConfig {
 // Backward compatibility alias functions
 export const getGame = getGamePing;
 export const deleteGame = deleteGamePing;
+
+const testChannelCache = new Map<string, string | null>(); // guildId -> channelId or null
+
+export async function setGameTestChannel(guildId: string, channelId: string | null): Promise<void> {
+  testChannelCache.set(guildId, channelId);
+  try {
+    const db = getDb();
+    if (channelId) {
+      await db`
+        INSERT INTO game_guild_configs (guild_id, test_channel_id, updated_at)
+        VALUES (${guildId}, ${channelId}, NOW())
+        ON CONFLICT (guild_id)
+        DO UPDATE SET test_channel_id = ${channelId}, updated_at = NOW()
+      `;
+    } else {
+      await db`
+        DELETE FROM game_guild_configs WHERE guild_id = ${guildId}
+      `;
+    }
+  } catch {
+    // Graceful fallback
+  }
+}
+
+export async function getGameTestChannel(guildId: string): Promise<string | null> {
+  if (testChannelCache.has(guildId)) {
+    return testChannelCache.get(guildId) ?? null;
+  }
+
+  try {
+    const db = getDb();
+    const rows = await db`SELECT test_channel_id FROM game_guild_configs WHERE guild_id = ${guildId}`;
+    if (rows.length === 0 || !rows[0].test_channel_id) {
+      testChannelCache.set(guildId, null);
+      return null;
+    }
+    const channelId = rows[0].test_channel_id as string;
+    testChannelCache.set(guildId, channelId);
+    return channelId;
+  } catch {
+    return null;
+  }
+}

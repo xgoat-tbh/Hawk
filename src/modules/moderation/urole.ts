@@ -3,7 +3,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
-import { toggleRoleForMember } from './roleHelpers.js';
+import { toggleRoleForMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -11,9 +11,9 @@ export default defineCommand({
   name: 'urole',
   aliases: ['ur', 'removerole', 'unrole', 'takerole'],
   module: 'moderation',
-  description: 'Toggle ONE role across MULTIPLE users.',
-  usage: 'urole <role> <users...>',
-  examples: ['urole @Role @User1 @User2 @User3'],
+  description: 'Toggle ONE role across MULTIPLE users, with optional force-move to a voice channel.',
+  usage: 'urole <role> <users...> [fmv <#vc>]',
+  examples: ['urole @Role @User1 @User2 @User3', 'urole @Role @User1 @User2 fmv #General'],
   permissions: [PermissionsBitField.Flags.ManageRoles],
   botPermissions: [PermissionsBitField.Flags.ManageRoles],
   cooldown: 3,
@@ -21,23 +21,31 @@ export default defineCommand({
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, respond, member } = ctx;
 
-    if (parsed.args.length < 2) {
-      await respond.error('Usage: `?urole <role> <users...>`');
+    const fmvResult = extractForceMoveOption(parsed.args, guild, member);
+    if (fmvResult.error) {
+      await respond.error(fmvResult.error);
       return;
     }
 
-    const roleRes = resolveRole(parsed.args[0], guild);
+    const cleanArgs = fmvResult.cleanArgs;
+    if (cleanArgs.length < 2) {
+      await respond.error('Usage: `?urole <role> <users...> [fmv <#vc>]`');
+      return;
+    }
+
+    const roleRes = resolveRole(cleanArgs[0], guild);
     if (!roleRes.success) {
       await respond.error(`Role: ${roleRes.error}`);
       return;
     }
 
     const targetRole = roleRes.value.role;
-    const userArgs = parsed.args.slice(1);
+    const userArgs = cleanArgs.slice(1);
 
     let addedCount = 0;
     let removedCount = 0;
     let skippedCount = 0;
+    const affectedMembersList: import('discord.js').GuildMember[] = [];
 
     for (const userArg of userArgs) {
       const userRes = await resolveUser(userArg, guild);
@@ -47,13 +55,25 @@ export default defineCommand({
       }
 
       const res = await toggleRoleForMember(guild, userRes.value.member, targetRole, member);
-      if (res === 'added') addedCount++;
-      else if (res === 'removed') removedCount++;
-      else skippedCount++;
+      if (res === 'added') {
+        addedCount++;
+        affectedMembersList.push(userRes.value.member);
+      } else if (res === 'removed') {
+        removedCount++;
+        affectedMembersList.push(userRes.value.member);
+      } else {
+        skippedCount++;
+      }
+    }
+
+    let moveInfo = '';
+    if (fmvResult.hasFmv && fmvResult.destVc) {
+      const moveRes = await executeForceMove(affectedMembersList, fmvResult.destVc);
+      moveInfo = `\n\n🔊 Moved **${moveRes.movedCount}** member(s) to **${fmvResult.destVc.name}**.`;
     }
 
     await respond.success(
-      `Role update for ${mentionRole(targetRole.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`,
+      `Role update for ${mentionRole(targetRole.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
     );
 
     logEvent('info', 'command_execution', `URole toggle by ${member.user.tag}`, {
@@ -65,6 +85,7 @@ export default defineCommand({
       addedCount,
       removedCount,
       skippedCount,
+      hasFmv: fmvResult.hasFmv,
     });
   },
 });

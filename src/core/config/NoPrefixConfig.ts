@@ -10,6 +10,17 @@ export function isNoPrefixEnabled(guildId: string, userId: string): boolean {
   return noPrefixUsers.get(makeKey(guildId, userId)) === true;
 }
 
+export function getNoPrefixUsersForGuild(guildId: string): string[] {
+  const prefix = `${guildId}:`;
+  const result: string[] = [];
+  for (const [key, enabled] of noPrefixUsers.entries()) {
+    if (enabled && key.startsWith(prefix)) {
+      result.push(key.slice(prefix.length));
+    }
+  }
+  return result;
+}
+
 export async function setNoPrefix(guildId: string, userId: string, enabled: boolean): Promise<void> {
   const key = makeKey(guildId, userId);
   if (enabled) {

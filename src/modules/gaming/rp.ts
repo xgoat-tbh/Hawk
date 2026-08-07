@@ -1,7 +1,7 @@
 import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
-import { getGamePing } from '../../core/database/repositories/gameRepo.js';
+import { getGamePing, getGameTestChannel } from '../../core/database/repositories/gameRepo.js';
 import { checkVcCooldown, setVcCooldown } from './GameVcCooldownManager.js';
 import { mentionRole, mentionChannel } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
@@ -44,13 +44,19 @@ export default defineCommand({
       return;
     }
 
-    // Check independent per-identifier cooldown
-    const remainingCooldown = checkVcCooldown(guild.id, pingConfig.identifier);
-    if (remainingCooldown > 0) {
-      await respond.warning(
-        `The ping destination \`${pingConfig.identifier}\` (${pingConfig.gameName}) is on cooldown for **${remainingCooldown}s**.`,
-      );
-      return;
+    // Check if current channel is designated game test channel (bypasses cooldowns)
+    const testChannelId = await getGameTestChannel(guild.id);
+    const isTestChannel = testChannelId && channel.id === testChannelId;
+
+    if (!isTestChannel) {
+      // Check independent per-identifier cooldown
+      const remainingCooldown = checkVcCooldown(guild.id, pingConfig.identifier);
+      if (remainingCooldown > 0) {
+        await respond.warning(
+          `The ping destination \`${pingConfig.identifier}\` (${pingConfig.gameName}) is on cooldown for **${remainingCooldown}s**.`,
+        );
+        return;
+      }
     }
 
     // Auto-delete original command message

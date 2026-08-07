@@ -3,18 +3,29 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
-import { createGamePing, updateGamePing, deleteGamePing, getGamePing, listGamePings } from '../../core/database/repositories/gameRepo.js';
+import { resolveChannel } from '../../core/resolver/ChannelResolver.js';
+import {
+  createGamePing,
+  updateGamePing,
+  deleteGamePing,
+  getGamePing,
+  listGamePings,
+  setGameTestChannel,
+  getGameTestChannel,
+} from '../../core/database/repositories/gameRepo.js';
 import { mentionRole, mentionChannel, bold, inlineCode } from '../../core/utils/formatters.js';
 
 export default defineCommand({
   name: 'game',
   module: 'gaming',
-  description: 'Manage single-destination game ping configurations.',
-  usage: 'game <create|edit|delete|list> [args...]',
+  description: 'Manage single-destination game ping configurations and test channel.',
+  usage: 'game <create|edit|delete|list|testchannel> [args...]',
   examples: [
     'game create au1 "Among Us" @AmongUs #au-vc1 300',
     'game list',
     'game delete au1',
+    'game testchannel #test-pings',
+    'game testchannel none',
   ],
   permissions: [PermissionsBitField.Flags.ManageGuild],
   botPermissions: [],
@@ -50,8 +61,17 @@ export default defineCommand({
         await handleList(ctx);
         break;
 
+      case 'testchannel':
+      case 'test_channel':
+      case 'tc':
+      case 'test':
+        await handleTestChannel(ctx, subArgs);
+        break;
+
       default:
-        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`create\`, \`edit\`, \`delete\`, \`list\`.`);
+        await respond.error(
+          `Unknown subcommand \`${subcommand}\`. Valid options: \`create\`, \`edit\`, \`delete\`, \`list\`, \`testchannel\`.`
+        );
         break;
     }
   },
@@ -205,4 +225,37 @@ async function handleList(ctx: CommandContext): Promise<void> {
   );
 
   await respond.send(`**Gaming Ping Configurations (${pings.length})**\n\n${lines.join('\n')}`);
+}
+
+async function handleTestChannel(ctx: CommandContext, args: string[]): Promise<void> {
+  const { guild, respond } = ctx;
+
+  if (args.length === 0) {
+    const currentTcId = await getGameTestChannel(guild.id);
+    if (currentTcId) {
+      await respond.info(`The current game test channel is set to ${mentionChannel(currentTcId)}.`);
+    } else {
+      await respond.info('No game test channel is currently set for this server.');
+    }
+    return;
+  }
+
+  const input = args[0].toLowerCase();
+  if (['none', 'off', 'disable', 'delete', 'remove', 'clear'].includes(input)) {
+    await setGameTestChannel(guild.id, null);
+    await respond.success('Game test channel configuration removed. Cooldowns will apply in all channels.');
+    return;
+  }
+
+  const channelRes = resolveChannel(args[0], guild);
+  if (!channelRes.success) {
+    await respond.error(`Channel: ${channelRes.error}`);
+    return;
+  }
+
+  const targetChannelId = channelRes.value.id;
+  await setGameTestChannel(guild.id, targetChannelId);
+  await respond.success(
+    `Game test channel set to ${mentionChannel(targetChannelId)}. Commands run in this channel will have **no cooldown**.`,
+  );
 }

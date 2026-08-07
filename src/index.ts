@@ -32,6 +32,7 @@ import { handleHelpSelect } from './modules/general/_helpHandler.js';
 import { handlePingRefresh } from './modules/general/pingUI.js';
 import { handleInfoInteraction } from './modules/general/infoUI.js';
 import { handleDragmeInteraction } from './modules/voice/_dragmeHandler.js';
+import { handleVConfigFallback } from './modules/voice/vconfig.js';
 import { handleFmvVoiceStateUpdate } from './modules/voice/FmvManager.js';
 import { recordDeletedMessage } from './modules/moderation/SnipeManager.js';
 import {
@@ -84,37 +85,37 @@ async function bootstrap() {
   });
 
   client.on('messageCreate', async (message) => {
-    if (!message.guild) return;
+    if (!message.guild || message.author.bot) return;
     try {
-      if (!message.author.bot) {
-        const prefix = await getPrefix(message.guild.id);
-        const type = classifyMessage(message, prefix);
-        switch (type) {
-          case MessageType.PrefixCommand:
-            await handleMessage(message);
-            break;
-          case MessageType.BotMention:
-            await handleBotMention(message, prefix);
-            break;
-          case MessageType.Normal:
-            if (isNoPrefixEnabled(message.guild.id, message.author.id)) {
-              await handleMessage(message);
-            }
-            break;
-        }
-      }
+      const prefix = await getPrefix(message.guild.id);
+      const type = classifyMessage(message, prefix);
 
-      await handleAfkMessage(message);
       await handleStickyResurface(message);
       await handleSuggestionPanelResurface(message);
       await handleConfessionPanelResurface(message);
+
+      switch (type) {
+        case MessageType.PrefixCommand:
+          await handleMessage(message);
+          break;
+        case MessageType.BotMention:
+          await handleBotMention(message, prefix);
+          break;
+        case MessageType.Normal:
+          if (isNoPrefixEnabled(message.guild.id, message.author.id)) {
+            await handleMessage(message);
+          }
+          break;
+      }
+
+      await handleAfkMessage(message);
       await handleMediaFilter(message);
     } catch (error) {
       consoleLog('error', 'unhandled_exception', `Unhandled error in messageCreate: ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
-  client.on('messageDelete', async (message) => {
+  client.on('messageDelete', (message) => {
     try {
       recordDeletedMessage(message as any);
     } catch (error) {
@@ -164,13 +165,18 @@ async function bootstrap() {
 
   client.on('interactionCreate', async (interaction) => {
     try {
-      if (interaction.isStringSelectMenu()) {
+      if (interaction.isChannelSelectMenu()) {
+        const id = interaction.customId;
+        if (id.startsWith('vconfig_')) {
+          await handleVConfigFallback(interaction);
+        }
+      } else if (interaction.isStringSelectMenu()) {
         await handleHelpSelect(interaction);
       } else if (interaction.isButton()) {
         const id = interaction.customId;
-        if (id.startsWith('sug_')) {
+        if (id.startsWith('sug_') || id.startsWith('suggest_')) {
           await handleSuggestionButton(interaction);
-        } else if (id.startsWith('conf_')) {
+        } else if (id.startsWith('conf_') || id.startsWith('confess_')) {
           await handleConfessionButton(interaction);
         } else if (id.startsWith('dragme_')) {
           await handleDragmeInteraction(interaction);
@@ -182,12 +188,14 @@ async function bootstrap() {
           await handleWelcomeButton(interaction);
         } else if (id.startsWith('nuke_')) {
           await handleNukeInteraction(interaction);
+        } else if (id.startsWith('vconfig_')) {
+          await handleVConfigFallback(interaction);
         }
       } else if (interaction.isModalSubmit()) {
         const id = interaction.customId;
-        if (id.startsWith('sug_')) {
+        if (id.startsWith('sug_') || id.startsWith('suggest_')) {
           await handleSuggestionModal(interaction);
-        } else if (id.startsWith('conf_')) {
+        } else if (id.startsWith('conf_') || id.startsWith('confess_')) {
           await handleConfessionModal(interaction);
         } else if (id.startsWith('welcome_modal_')) {
           await handleWelcomeModal(interaction);

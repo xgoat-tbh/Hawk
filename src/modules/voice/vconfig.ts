@@ -196,11 +196,18 @@ export default defineCommand({
     let selectedChannelIds: string[] = [];
 
     const collector = sentMsg.createMessageComponentCollector({
-      filter: (i) => i.user.id === member.id,
       time: 60_000,
     });
 
     collector.on('collect', async (i) => {
+      if (i.user.id !== member.id) {
+        await i.reply({
+          content: 'Only the administrator who ran vconfig can use these controls.',
+          flags: MessageFlags.Ephemeral,
+        }).catch(() => {});
+        return;
+      }
+
       if (i.isChannelSelectMenu()) {
         selectedChannelIds = i.values;
         await i.reply({
@@ -253,3 +260,13 @@ export default defineCommand({
     });
   },
 });
+
+export async function handleVConfigFallback(
+  interaction: import('discord.js').ButtonInteraction | import('discord.js').ChannelSelectMenuInteraction,
+): Promise<void> {
+  if (interaction.replied || interaction.deferred) return;
+  await interaction.reply({
+    content: 'This voice configuration menu has expired or is no longer active. Please run `?vconfig` again.',
+    flags: MessageFlags.Ephemeral,
+  }).catch(() => {});
+}

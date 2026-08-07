@@ -1,27 +1,45 @@
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
-import { toggleNoPrefix, setNoPrefix } from '../../core/config/NoPrefixConfig.js';
+import { toggleNoPrefix, setNoPrefix, getNoPrefixUsersForGuild } from '../../core/config/NoPrefixConfig.js';
 import { mentionUser } from '../../core/utils/formatters.js';
 
 export default defineCommand({
   name: 'noprefix',
+  aliases: ['np'],
   module: 'owner',
-  description: 'Toggle or set no-prefix command execution mode for a user in this server.',
-  usage: 'noprefix <user> [on|off]',
-  examples: ['noprefix @User', 'noprefix @User on', 'noprefix @User off'],
+  description: 'Toggle or set no-prefix command execution mode for a user, or list users with no-prefix mode enabled.',
+  usage: 'noprefix <user> [on|off] | noprefix list',
+  examples: ['noprefix @User', 'noprefix @User on', 'noprefix @User off', 'noprefix list'],
   ownerOnly: true,
+  permissions: [],
+  botPermissions: [],
+  cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?noprefix <user> [on|off]`');
+      await respond.error('Usage: `?noprefix <user> [on|off]` or `?noprefix list`');
       return;
     }
 
-    const targetArg = parsed.args[0];
-    const userResult = await resolveUser(targetArg, guild);
+    const sub = parsed.args[0].toLowerCase();
+
+    // ── Subcommand: list ──
+    if (sub === 'list' || sub === 'show') {
+      const userIds = getNoPrefixUsersForGuild(guild.id);
+      if (userIds.length === 0) {
+        await respond.info('No users currently have no-prefix mode enabled in this server.');
+        return;
+      }
+
+      const userList = userIds.map((id, index) => `${index + 1}. ${mentionUser(id)} (\`${id}\`)`).join('\n');
+      await respond.send(`**⚡ No-Prefix Mode Users (${userIds.length})**\n\n${userList}`);
+      return;
+    }
+
+    const userResult = await resolveUser(parsed.args[0], guild);
     if (!userResult.success) {
       await respond.error(`User: ${userResult.error}`);
       return;
