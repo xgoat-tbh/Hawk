@@ -11,6 +11,8 @@ import { logEvent } from './core/logging/WebhookLogger.js';
 import { consoleLog } from './core/logging/ConsoleLogger.js';
 import { isNoPrefixEnabled, loadNoPrefixCache } from './core/config/NoPrefixConfig.js';
 import { loadAfkCache } from './core/database/repositories/afkRepo.js';
+import { startInteractionCleanup } from './core/interactions/InteractionState.js';
+import { startCooldownCleanup } from './core/cooldowns/CooldownManager.js';
 import { handleAfkMessage } from './modules/general/_afkHandler.js';
 import { handleStickyResurface } from './modules/sticky/_stickyHandler.js';
 import {
@@ -77,6 +79,8 @@ async function bootstrap() {
     const elapsed = Date.now() - startTime;
     (globalThis as any).hawkClient = client;
     updateBotActivity(client);
+    startInteractionCleanup();
+    startCooldownCleanup();
     await loadNoPrefixCache();
     await loadAfkCache();
     await initializeSuggestionPanels(client);
