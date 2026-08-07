@@ -2,7 +2,7 @@ import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getGamePing, getGameTestChannel } from '../../core/database/repositories/gameRepo.js';
-import { checkVcCooldown, setVcCooldown } from './GameVcCooldownManager.js';
+import { checkVcCooldown, setVcCooldown, removeVcCooldown } from './GameVcCooldownManager.js';
 import { mentionRole, mentionChannel } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
@@ -44,11 +44,16 @@ export default defineCommand({
       return;
     }
 
-    // Check if current channel is designated game test channel (bypasses cooldowns)
+    // Check if current channel is designated game test channel or name contains 'test'
     const testChannelId = await getGameTestChannel(guild.id);
-    const isTestChannel = testChannelId && channel.id === testChannelId;
+    const isTestChannel = Boolean(
+      (testChannelId && channel.id === testChannelId) ||
+      ('name' in channel && channel.name && channel.name.toLowerCase().includes('test'))
+    );
 
-    if (!isTestChannel) {
+    if (isTestChannel) {
+      removeVcCooldown(guild.id, pingConfig.identifier);
+    } else {
       // Check independent per-identifier cooldown
       const remainingCooldown = checkVcCooldown(guild.id, pingConfig.identifier);
       if (remainingCooldown > 0) {

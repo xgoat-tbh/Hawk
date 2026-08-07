@@ -48,6 +48,20 @@ export function setVcCooldown(guildId: string, identifier: string, vcIdOrSeconds
   pingCooldowns.set(key, Date.now() + seconds * 1000);
 }
 
+export function removeVcCooldown(guildId: string, identifier?: string): void {
+  if (identifier) {
+    const key = makeKey(guildId, identifier);
+    pingCooldowns.delete(key);
+  } else {
+    const prefix = `${guildId}:`;
+    for (const key of pingCooldowns.keys()) {
+      if (key.startsWith(prefix)) {
+        pingCooldowns.delete(key);
+      }
+    }
+  }
+}
+
 export function clearVcCooldowns(): void {
   pingCooldowns.clear();
 }

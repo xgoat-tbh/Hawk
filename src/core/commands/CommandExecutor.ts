@@ -106,7 +106,10 @@ export async function handleMessage(message: Message): Promise<void> {
   let isGameTestChannel = false;
   if (command.module === 'gaming' || command.name === 'rp') {
     const testChannelId = await getGameTestChannel(message.guild.id);
-    if (testChannelId && guildChannel.id === testChannelId) {
+    if (
+      (testChannelId && guildChannel.id === testChannelId) ||
+      ('name' in guildChannel && guildChannel.name && guildChannel.name.toLowerCase().includes('test'))
+    ) {
       isGameTestChannel = true;
     }
   }
