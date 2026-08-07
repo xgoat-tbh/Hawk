@@ -28,7 +28,7 @@ export default defineCommand({
 
     const cleanArgs = fmvResult.cleanArgs;
     if (cleanArgs.length < 2) {
-      await respond.error('Usage: `?rolein <target_population_role> <role_to_toggle> [fmv <#vc>]`');
+      await respond.error(`Usage: \`${parsed.prefix}rolein <target_population_role> <role_to_toggle> [fmv <#vc>]\``);
       return;
     }
 

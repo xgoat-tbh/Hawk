@@ -29,7 +29,7 @@ export default defineCommand({
 
     const cleanArgs = fmvResult.cleanArgs;
     if (cleanArgs.length < 2) {
-      await respond.error('Usage: `?role <user> <roles...> [fmv <#vc>]`');
+      await respond.error(`Usage: \`${parsed.prefix}role <user> <roles...> [fmv <#vc>]\``);
       return;
     }
 

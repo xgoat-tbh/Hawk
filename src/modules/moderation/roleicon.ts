@@ -27,7 +27,7 @@ export default defineCommand({
     const { parsed, guild, member, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?roleicon <role> [emoji|url|masked_link|none]`');
+      await respond.error(`Usage: \`${parsed.prefix}roleicon <role> [emoji|url|masked_link|none]\``);
       return;
     }
 

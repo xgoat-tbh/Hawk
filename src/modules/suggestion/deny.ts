@@ -19,9 +19,10 @@ export default defineCommand({
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, member, respond } = ctx;
+    const prefix = parsed.prefix;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?deny <number|messageId|url> [reason...]`');
+      await respond.error(`Usage: \`${prefix}deny <number|messageId|url> [reason...]\``);
       return;
     }
 

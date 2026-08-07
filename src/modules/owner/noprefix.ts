@@ -20,7 +20,7 @@ export default defineCommand({
     const { parsed, guild, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?noprefix <user> [on|off]` or `?noprefix list`');
+      await respond.error(`Usage: \`${parsed.prefix}noprefix <user> [on|off]\` or \`${parsed.prefix}noprefix list\``);
       return;
     }
 
