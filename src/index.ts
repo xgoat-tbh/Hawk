@@ -29,6 +29,7 @@ import {
 } from './modules/confession/_confessionHandler.js';
 import { handleMediaFilter } from './modules/media/_mediaHandler.js';
 import { handleHelpSelect } from './modules/general/_helpHandler.js';
+import { handleStealButton, handleStealModal } from './modules/general/_stealHandler.js';
 import { handlePingRefresh } from './modules/general/pingUI.js';
 import { handleInfoInteraction } from './modules/general/infoUI.js';
 import { handleDragmeInteraction } from './modules/voice/_dragmeHandler.js';
@@ -190,6 +191,8 @@ async function bootstrap() {
           await handleNukeInteraction(interaction);
         } else if (id.startsWith('vconfig_')) {
           await handleVConfigFallback(interaction);
+        } else if (id.startsWith('steal_btn_')) {
+          await handleStealButton(interaction);
         }
       } else if (interaction.isModalSubmit()) {
         const id = interaction.customId;
@@ -199,6 +202,8 @@ async function bootstrap() {
           await handleConfessionModal(interaction);
         } else if (id.startsWith('welcome_modal_')) {
           await handleWelcomeModal(interaction);
+        } else if (id.startsWith('steal_modal_')) {
+          await handleStealModal(interaction);
         }
       }
     } catch (error) {
