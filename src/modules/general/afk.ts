@@ -17,24 +17,22 @@ export default defineCommand({
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { guild, member, channel, parsed } = ctx;
+    const { guild, member, channel, parsed, message } = ctx;
 
     const rawReason = parsed.rawArgs.trim();
     const reason = rawReason || 'AFK';
 
     await setAfk(guild.id, member.id, reason);
 
+    // 1. Delete the user's command message (!afk ...)
+    message.delete().catch(() => {});
+
+    // 2. Send AFK confirmation message (keep in channel)
     const payload = buildAfkSetPayload(member.id, rawReason);
-    const setMsg = await (channel as GuildTextBasedChannel).send({
+    await (channel as GuildTextBasedChannel).send({
       ...payload,
       allowedMentions: AFK_ALLOWED_MENTIONS,
     }).catch(() => null);
-
-    if (setMsg) {
-      setTimeout(() => {
-        setMsg.delete().catch(() => {});
-      }, 6000);
-    }
 
     logEvent('info', 'command_execution', `AFK status set by ${member.user.tag}`, {
       user: member.user.tag,
