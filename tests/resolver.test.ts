@@ -199,6 +199,14 @@ test('addRoleToMember and removeRoleFromMember respect existing member roles', a
   assert.equal(removed, true);
 });
 
+test('move command supports multiple users and has updated usage metadata', async () => {
+  const moveCmd = (await import('../src/modules/voice/move.ts')).default;
+  assert.equal(moveCmd.name, 'move');
+  assert.ok(moveCmd.usage.includes('<users...>'));
+  assert.ok(moveCmd.description.includes('user or multiple users'));
+});
+
+
 
 
 
