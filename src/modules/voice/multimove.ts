@@ -60,38 +60,40 @@ export default defineCommand({
     const successes: string[] = [];
     const failures: string[] = [];
 
-    for (const arg of targetInputs) {
-      const result = await resolveUser(arg, guild);
-      if (!result.success) {
-        failures.push(`\`${arg}\`: ${result.error}`);
-        continue;
-      }
-
-      const target = result.value;
-      const targetMember = target.member;
-      if (!targetMember) {
-        failures.push(`${mentionUser(target.id)}: not in this server`);
-        continue;
-      }
-
-      if (!targetMember.voice.channel) {
-        failures.push(`${mentionUser(target.id)}: not in a voice channel`);
-        continue;
-      }
-
-      if (targetMember.voice.channelId === destVc.id) {
-        failures.push(`${mentionUser(target.id)}: already in destination`);
-        continue;
-      }
-
-      try {
-        await targetMember.voice.setChannel(destVc);
-        successes.push(mentionUser(target.id));
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        consoleLog('error', 'command_failure', `multimove: failed to move ${target.id}`, { error: msg });
-        failures.push(`${mentionUser(target.id)}: could not move`);
-      }
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < targetInputs.length; i += CHUNK_SIZE) {
+      const chunk = targetInputs.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(async (arg) => {
+          const result = await resolveUser(arg, guild);
+          if (!result.success) {
+            failures.push(`\`${arg}\`: ${result.error}`);
+            return;
+          }
+          const target = result.value;
+          const targetMember = target.member;
+          if (!targetMember) {
+            failures.push(`${mentionUser(target.id)}: not in this server`);
+            return;
+          }
+          if (!targetMember.voice.channel) {
+            failures.push(`${mentionUser(target.id)}: not in a voice channel`);
+            return;
+          }
+          if (targetMember.voice.channelId === destVc.id) {
+            failures.push(`${mentionUser(target.id)}: already in destination`);
+            return;
+          }
+          try {
+            await targetMember.voice.setChannel(destVc);
+            successes.push(mentionUser(target.id));
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            consoleLog('error', 'command_failure', `multimove: failed to move ${target.id}`, { error: msg });
+            failures.push(`${mentionUser(target.id)}: could not move`);
+          }
+        })
+      );
     }
 
     const parts: string[] = [];

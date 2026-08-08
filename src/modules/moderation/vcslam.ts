@@ -63,14 +63,21 @@ export default defineCommand({
     const shouldMute = mutedCount < targets.length;
 
     let affectedCount = 0;
-    for (const target of targets) {
-      try {
-        await target.voice.setMute(shouldMute, `VC Slam by ${member.user.tag}`);
-        await target.voice.setDeaf(shouldMute, `VC Slam by ${member.user.tag}`);
-        affectedCount++;
-      } catch {
-        // Skip individual failures
-      }
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < targets.length; i += CHUNK_SIZE) {
+      const chunk = targets.slice(i, i + CHUNK_SIZE);
+      const results = await Promise.all(
+        chunk.map(async (target) => {
+          try {
+            await target.voice.setMute(shouldMute, `VC Slam by ${member.user.tag}`);
+            await target.voice.setDeaf(shouldMute, `VC Slam by ${member.user.tag}`);
+            return true;
+          } catch {
+            return false;
+          }
+        })
+      );
+      affectedCount += results.filter(Boolean).length;
     }
 
     const actionText = shouldMute ? 'Muted & Deafened' : 'Unmuted & Undeafened';

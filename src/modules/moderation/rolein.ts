@@ -74,26 +74,36 @@ export default defineCommand({
     let addedCount = 0;
     let removedCount = 0;
     let skippedCount = 0;
-    const affectedMembersList: import('discord.js').GuildMember[] = [];
-
     let processed = 0;
-    for (const targetMember of membersWithPopRole) {
-      const res = isRemoveMode
-        ? await removeRoleFromMember(guild, targetMember, toggleRole, member)
-        : await addRoleToMember(guild, targetMember, toggleRole, member);
+    const affectedMembersList: import('discord.js').GuildMember[] = [];
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < membersWithPopRole.length; i += CHUNK_SIZE) {
+      const chunk = membersWithPopRole.slice(i, i + CHUNK_SIZE);
+      const results = await Promise.all(
+        chunk.map(targetMember =>
+          isRemoveMode
+            ? removeRoleFromMember(guild, targetMember, toggleRole, member).then(res => ({ targetMember, res }))
+            : addRoleToMember(guild, targetMember, toggleRole, member).then(res => ({ targetMember, res }))
+        )
+      );
 
-      if (res === 'added') {
-        addedCount++;
-        affectedMembersList.push(targetMember);
-      } else if (res === 'removed') {
-        removedCount++;
-        affectedMembersList.push(targetMember);
-      } else {
-        skippedCount++;
+      for (const { targetMember, res } of results) {
+        if (res === 'added') {
+          addedCount++;
+          affectedMembersList.push(targetMember);
+        } else if (res === 'removed') {
+          removedCount++;
+          affectedMembersList.push(targetMember);
+        } else {
+          skippedCount++;
+        }
       }
-      processed++;
+      processed += chunk.length;
       if (tracker) {
         await tracker.update(processed, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`);
+      }
+      if (i + CHUNK_SIZE < membersWithPopRole.length) {
+        await new Promise(r => setTimeout(r, 200));
       }
     }
 

@@ -6,7 +6,7 @@ import { getPrefix } from './core/database/repositories/guildConfigRepo.js';
 import { classifyMessage, handleBotMention, MessageType } from './services/MentionHandler.js';
 import { handleMessage } from './core/commands/CommandExecutor.js';
 import { runMigrations } from './core/database/migrations/runner.js';
-import { validateConnection } from './core/database/pool.js';
+import { validateConnection, closeDb } from './core/database/pool.js';
 import { logEvent } from './core/logging/WebhookLogger.js';
 import { consoleLog } from './core/logging/ConsoleLogger.js';
 import { isNoPrefixEnabled, loadNoPrefixCache } from './core/config/NoPrefixConfig.js';
@@ -95,9 +95,14 @@ async function bootstrap() {
       const prefix = await getPrefix(message.guild.id);
       const type = classifyMessage(message, prefix);
 
-      await handleStickyResurface(message);
-      await handleSuggestionPanelResurface(message);
-      await handleConfessionPanelResurface(message);
+      // Run background non-command tasks concurrently without blocking command processing
+      Promise.allSettled([
+        handleStickyResurface(message),
+        handleSuggestionPanelResurface(message),
+        handleConfessionPanelResurface(message),
+        handleAfkMessage(message),
+        handleMediaFilter(message),
+      ]).catch(() => {});
 
       switch (type) {
         case MessageType.PrefixCommand:
@@ -112,9 +117,6 @@ async function bootstrap() {
           }
           break;
       }
-
-      await handleAfkMessage(message);
-      await handleMediaFilter(message);
     } catch (error) {
       consoleLog('error', 'unhandled_exception', `Unhandled error in messageCreate: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -222,6 +224,22 @@ async function bootstrap() {
   process.on('uncaughtException', (error) => {
     consoleLog('critical', 'uncaught_exception', `Uncaught Exception: ${error.stack ?? error.message}`);
   });
+
+  const handleGracefulShutdown = async (signal: string) => {
+    consoleLog('info', 'shutdown', `Received ${signal}, initiating graceful shutdown...`);
+    try {
+      client.destroy();
+      await closeDb();
+      consoleLog('info', 'shutdown', 'Graceful shutdown completed.');
+      process.exit(0);
+    } catch (err) {
+      consoleLog('error', 'shutdown', `Error during graceful shutdown: ${err}`);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => handleGracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleGracefulShutdown('SIGINT'));
 
   // Start HTTP health-check server for Render free tier web service hosting
   const http = await import('node:http');

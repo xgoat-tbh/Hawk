@@ -65,25 +65,38 @@ export default defineCommand({
     const affectedMembersList: import('discord.js').GuildMember[] = [];
 
     let processed = 0;
-    for (const userArg of userArgs) {
-      const userRes = await resolveUser(userArg, guild);
-      if (!userRes.success || !userRes.value.member) {
-        skippedCount++;
-      } else {
-        const res = await toggleRoleForMember(guild, userRes.value.member, targetRole, member);
-        if (res === 'added') {
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < userArgs.length; i += CHUNK_SIZE) {
+      const chunk = userArgs.slice(i, i + CHUNK_SIZE);
+      const results = await Promise.all(
+        chunk.map(async (userArg) => {
+          const userRes = await resolveUser(userArg, guild);
+          if (!userRes.success || !userRes.value.member) {
+            return { member: null, res: 'skipped' as const };
+          }
+          const targetMem = userRes.value.member;
+          const res = await toggleRoleForMember(guild, targetMem, targetRole, member);
+          return { member: targetMem, res };
+        })
+      );
+
+      for (const { member: targetMem, res } of results) {
+        if (res === 'added' && targetMem) {
           addedCount++;
-          affectedMembersList.push(userRes.value.member);
-        } else if (res === 'removed') {
+          affectedMembersList.push(targetMem);
+        } else if (res === 'removed' && targetMem) {
           removedCount++;
-          affectedMembersList.push(userRes.value.member);
+          affectedMembersList.push(targetMem);
         } else {
           skippedCount++;
         }
       }
-      processed++;
+      processed += chunk.length;
       if (tracker) {
         await tracker.update(processed, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`);
+      }
+      if (i + CHUNK_SIZE < userArgs.length) {
+        await new Promise(r => setTimeout(r, 200));
       }
     }
 
@@ -103,7 +116,7 @@ export default defineCommand({
     });
 
     if (statusMsg) {
-      await statusMsg.edit({ content: undefined, components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+      await statusMsg.edit({ content: undefined, components: finalPayload.components }).catch(() => {});
     } else {
       await respond.success(
         `Role update for ${mentionRole(targetRole.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,

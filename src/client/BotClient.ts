@@ -9,11 +9,22 @@ export function createClient(): Client {
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
       MessageManager: 200,
-      GuildMemberManager: { maxSize: 10000 },
-      ReactionManager: 100,
-      ReactionUserManager: 100,
+      GuildMemberManager: { maxSize: 5000 },
+      ReactionManager: 50,
+      ReactionUserManager: 50,
     }),
-    sweepers: { ...Options.DefaultSweeperSettings, messages: { interval: 300, lifetime: 60 } },
+    sweepers: {
+      ...Options.DefaultSweeperSettings,
+      messages: { interval: 300, lifetime: 60 },
+      guildMembers: {
+        interval: 600,
+        filter: () => (member) => !member.user.bot && member.id !== member.guild.ownerId,
+      },
+      users: {
+        interval: 600,
+        filter: () => (user) => !user.bot,
+      },
+    },
   });
 }
 

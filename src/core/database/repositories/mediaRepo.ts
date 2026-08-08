@@ -1,6 +1,8 @@
 import { getDb } from '../pool.js';
 import type { MediaChannelRecord } from '../../../types/media.js';
 
+const mediaChannelsCache = new Map<string, Set<string>>(); // guildId -> Set<channelId>
+
 export async function addMediaChannel(guildId: string, channelId: string): Promise<boolean> {
   const db = getDb();
   const result = await db`
@@ -9,7 +11,12 @@ export async function addMediaChannel(guildId: string, channelId: string): Promi
     ON CONFLICT (guild_id, channel_id) DO NOTHING
     RETURNING id
   `;
-  return result.length > 0;
+  if (result.length > 0) {
+    const cached = mediaChannelsCache.get(guildId);
+    if (cached) cached.add(channelId);
+    return true;
+  }
+  return false;
 }
 
 export async function removeMediaChannel(guildId: string, channelId: string): Promise<boolean> {
@@ -18,7 +25,12 @@ export async function removeMediaChannel(guildId: string, channelId: string): Pr
     DELETE FROM media_channels
     WHERE guild_id = ${guildId} AND channel_id = ${channelId}
   `;
-  return result.count > 0;
+  if (result.count > 0) {
+    const cached = mediaChannelsCache.get(guildId);
+    if (cached) cached.delete(channelId);
+    return true;
+  }
+  return false;
 }
 
 export async function getMediaChannels(guildId: string): Promise<MediaChannelRecord[]> {
@@ -28,22 +40,24 @@ export async function getMediaChannels(guildId: string): Promise<MediaChannelRec
     WHERE guild_id = ${guildId}
     ORDER BY created_at
   `;
-  return rows.map(r => ({
+  const records = rows.map(r => ({
     id: r.id as number,
     guildId: r.guild_id as string,
     channelId: r.channel_id as string,
     createdAt: r.created_at as Date,
   }));
+
+  mediaChannelsCache.set(guildId, new Set(records.map(r => r.channelId)));
+  return records;
 }
 
 export async function isMediaChannel(guildId: string, channelId: string): Promise<boolean> {
-  const db = getDb();
-  const rows = await db`
-    SELECT 1 FROM media_channels
-    WHERE guild_id = ${guildId} AND channel_id = ${channelId}
-    LIMIT 1
-  `;
-  return rows.length > 0;
+  let cached = mediaChannelsCache.get(guildId);
+  if (!cached) {
+    await getMediaChannels(guildId);
+    cached = mediaChannelsCache.get(guildId);
+  }
+  return cached ? cached.has(channelId) : false;
 }
 
 export async function setMediaAutoThread(guildId: string, enabled: boolean): Promise<void> {

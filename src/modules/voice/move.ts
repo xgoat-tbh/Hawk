@@ -100,25 +100,29 @@ export default defineCommand({
     const successes: string[] = [];
     const failures: string[] = [];
 
-    for (const targetMember of targetMembers) {
-      if (!targetMember.voice.channel) {
-        failures.push(`${mentionUser(targetMember.id)}: not in a voice channel`);
-        continue;
-      }
-
-      if (targetMember.voice.channelId === destVc.id) {
-        failures.push(`${mentionUser(targetMember.id)}: already in **${destVc.name}**`);
-        continue;
-      }
-
-      try {
-        await targetMember.voice.setChannel(destVc);
-        successes.push(mentionUser(targetMember.id));
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        consoleLog('error', 'command_failure', `move: failed to move ${targetMember.id}`, { error: msg });
-        failures.push(`${mentionUser(targetMember.id)}: could not move`);
-      }
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < targetMembers.length; i += CHUNK_SIZE) {
+      const chunk = targetMembers.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(async (targetMember) => {
+          if (!targetMember.voice.channel) {
+            failures.push(`${mentionUser(targetMember.id)}: not in a voice channel`);
+            return;
+          }
+          if (targetMember.voice.channelId === destVc.id) {
+            failures.push(`${mentionUser(targetMember.id)}: already in **${destVc.name}**`);
+            return;
+          }
+          try {
+            await targetMember.voice.setChannel(destVc);
+            successes.push(mentionUser(targetMember.id));
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            consoleLog('error', 'command_failure', `move: failed to move ${targetMember.id}`, { error: msg });
+            failures.push(`${mentionUser(targetMember.id)}: could not move`);
+          }
+        })
+      );
     }
 
     const parts: string[] = [];
