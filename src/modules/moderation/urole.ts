@@ -4,7 +4,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
-import { toggleRoleForMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
+import { toggleRoleForMember } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
@@ -14,9 +14,9 @@ export default defineCommand({
   name: 'urole',
   aliases: ['ur', 'removerole', 'unrole', 'takerole'],
   module: 'moderation',
-  description: 'Toggle ONE role across MULTIPLE users, with optional force-move to a voice channel.',
-  usage: 'urole <role> <users...> [fmv <#vc>]',
-  examples: ['urole @Role @User1 @User2 @User3', 'urole @Role @User1 @User2 fmv #General'],
+  description: 'Toggle ONE role across MULTIPLE users.',
+  usage: 'urole <role> <users...>',
+  examples: ['urole @Role @User1 @User2 @User3'],
   permissions: [PermissionsBitField.Flags.ManageRoles],
   botPermissions: [PermissionsBitField.Flags.ManageRoles],
   cooldown: 3,
@@ -24,26 +24,19 @@ export default defineCommand({
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, respond, member } = ctx;
 
-    const fmvResult = extractForceMoveOption(parsed.args, guild, member);
-    if (fmvResult.error) {
-      await respond.error(fmvResult.error);
+    if (parsed.args.length < 2) {
+      await respond.error(`Usage: \`${parsed.prefix}urole <role> <users...>\``);
       return;
     }
 
-    const cleanArgs = fmvResult.cleanArgs;
-    if (cleanArgs.length < 2) {
-      await respond.error(`Usage: \`${parsed.prefix}urole <role> <users...> [fmv <#vc>]\``);
-      return;
-    }
-
-    const roleRes = resolveRole(cleanArgs[0], guild);
+    const roleRes = resolveRole(parsed.args[0], guild);
     if (!roleRes.success) {
       await respond.error(`Role: ${roleRes.error}`);
       return;
     }
 
     const targetRole = roleRes.value.role;
-    const userArgs = cleanArgs.slice(1);
+    const userArgs = parsed.args.slice(1);
     const totalUsers = userArgs.length;
 
     let statusMsg = null;
@@ -104,22 +97,16 @@ export default defineCommand({
       await tracker.update(totalUsers, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
     }
 
-    let moveInfo = '';
-    if (fmvResult.hasFmv && fmvResult.destVc) {
-      const moveRes = await executeForceMove(affectedMembersList, fmvResult.destVc);
-      moveInfo = `\n\n🔊 Moved **${moveRes.movedCount}** member(s) to **${fmvResult.destVc.name}**.`;
-    }
-
     const finalPayload = buildV2Container({
       text: `✅ **URole Completed** (${mentionRole(targetRole.id)})`,
-      sections: [`Added: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`],
+      sections: [`Added: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`],
     });
 
     if (statusMsg) {
       await statusMsg.edit({ content: undefined, components: finalPayload.components }).catch(() => {});
     } else {
       await respond.success(
-        `Role update for ${mentionRole(targetRole.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
+        `Role update for ${mentionRole(targetRole.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`,
       );
     }
 
@@ -132,7 +119,6 @@ export default defineCommand({
       addedCount,
       removedCount,
       skippedCount,
-      hasFmv: fmvResult.hasFmv,
     });
   },
 });

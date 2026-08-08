@@ -206,8 +206,12 @@ test('move command supports multiple users and has updated usage metadata', asyn
   assert.ok(moveCmd.description.includes('user or multiple users'));
 });
 
-
-
-
-
-
+test('list command exists with proper metadata and aliases', async () => {
+  const listCmd = (await import('../src/modules/moderation/list.js')).default;
+  assert.equal(listCmd.name, 'list');
+  assert.ok(listCmd.aliases.includes('inrole'));
+  assert.ok(listCmd.aliases.includes('admin'));
+  assert.ok(listCmd.aliases.includes('admins'));
+  assert.ok(listCmd.aliases.includes('bot'));
+  assert.ok(listCmd.aliases.includes('bots'));
+});

@@ -1,7 +1,6 @@
-import { PermissionsBitField, type Guild, type GuildMember, type Role, type VoiceBasedChannel } from 'discord.js';
+import type { Guild, GuildMember, Role } from 'discord.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
-import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
 
 export function canExecutorManage(
   guild: Guild,
@@ -128,92 +127,4 @@ export async function removeRoleFromMember(
   } catch {
     return 'skipped';
   }
-}
-
-export interface ForceMoveParseResult {
-  hasFmv: boolean;
-  cleanArgs: string[];
-  destVc: VoiceBasedChannel | null;
-  error?: string;
-}
-
-export function extractForceMoveOption(
-  args: string[],
-  guild: Guild,
-  executor: GuildMember,
-): ForceMoveParseResult {
-  const fmvIndex = args.findIndex(a => {
-    const l = a.toLowerCase();
-    return l === 'fmv' || l === 'forcemove' || l === 'fm' || l === '--fmv' || l === '--forcemove';
-  });
-
-  if (fmvIndex === -1) {
-    return { hasFmv: false, cleanArgs: args, destVc: null };
-  }
-
-  const nextArg = args[fmvIndex + 1];
-  let destVc: VoiceBasedChannel | null = null;
-  let cleanArgs: string[];
-
-  if (nextArg && !nextArg.startsWith('-')) {
-    const vcResult = resolveVoiceChannel(nextArg, guild);
-    if (vcResult.success) {
-      destVc = vcResult.value.channel;
-      cleanArgs = args.filter((_, i) => i !== fmvIndex && i !== fmvIndex + 1);
-    } else {
-      cleanArgs = args.filter((_, i) => i !== fmvIndex);
-      if (executor.voice.channel) {
-        destVc = executor.voice.channel;
-      } else {
-        return { hasFmv: true, cleanArgs, destVc: null, error: `Voice Channel: ${vcResult.error}` };
-      }
-    }
-  } else {
-    cleanArgs = args.filter((_, i) => i !== fmvIndex);
-    if (executor.voice.channel) {
-      destVc = executor.voice.channel;
-    } else {
-      return { hasFmv: true, cleanArgs, destVc: null, error: 'You must be in a voice channel or specify a destination VC for forcemove.' };
-    }
-  }
-
-  return { hasFmv: true, cleanArgs, destVc };
-}
-
-export async function executeForceMove(
-  members: GuildMember[],
-  destVc: VoiceBasedChannel,
-  executor?: GuildMember,
-): Promise<{ movedCount: number; failedCount: number }> {
-  let movedCount = 0;
-  let failedCount = 0;
-
-  const manageableMembers = members.filter(member => {
-    if (!executor) return true;
-    const authority = getAuthorityLevel(executor.id, member.guild.ownerId);
-    if (authority >= AuthorityLevel.ServerAdmin) return true;
-    if (!executor.permissions.has(PermissionsBitField.Flags.MoveMembers)) return false;
-    return canExecutorManage(member.guild, executor, undefined, member);
-  });
-
-  failedCount += (members.length - manageableMembers.length);
-
-  const chunkSize = 5;
-  for (let i = 0; i < manageableMembers.length; i += chunkSize) {
-    const chunk = manageableMembers.slice(i, i + chunkSize);
-    await Promise.all(
-      chunk.map(async (member) => {
-        if (member.voice.channel && member.voice.channelId !== destVc.id) {
-          try {
-            await member.voice.setChannel(destVc);
-            movedCount++;
-          } catch {
-            failedCount++;
-          }
-        }
-      })
-    );
-  }
-
-  return { movedCount, failedCount };
 }
