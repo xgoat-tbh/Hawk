@@ -26,8 +26,8 @@ export function buildSuggestionPayload(
     `Suggested by ${authorDisplay}`,
   ];
 
-  if (suggestion.status !== 'pending' && suggestion.staffId) {
-    let statusNote = `**Status:** ${suggestion.status.toUpperCase()} (by <@${suggestion.staffId}>)`;
+  if (suggestion.status !== 'pending') {
+    let statusNote = `**Status:** ${suggestion.status.toUpperCase()}`;
     if (reason) {
       statusNote += `\n**Reason:** ${reason}`;
     }
