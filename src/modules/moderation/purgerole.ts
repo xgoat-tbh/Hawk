@@ -11,11 +11,11 @@ import { LiveProgressTracker, renderProgressBar } from '../../core/utils/Progres
 
 export default defineCommand({
   name: 'purgerole',
-  aliases: ['rpurge', 'rolepurge', 'clearrole', 'roleclear', 'unroleall', 'purge-role'],
+  aliases: ['rr'],
   module: 'moderation',
   description: 'Purge (remove) a target role from all members who currently possess it in the server.',
   usage: 'purgerole <@role>',
-  examples: ['purgerole @Muted', 'rpurge @level5', 'clearrole @test'],
+  examples: ['purgerole @Muted', 'rr @level5'],
   permissions: [PermissionsBitField.Flags.ManageRoles],
   botPermissions: [PermissionsBitField.Flags.ManageRoles],
   cooldown: 10,

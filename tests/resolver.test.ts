@@ -134,8 +134,7 @@ test('purgerole command exists with proper metadata and aliases', async () => {
   const purgeroleCmd = (await import('../src/modules/moderation/purgerole.js')).default;
 
   assert.equal(purgeroleCmd.name, 'purgerole');
-  assert.ok(purgeroleCmd.aliases.includes('rpurge'));
-  assert.ok(purgeroleCmd.aliases.includes('clearrole'));
+  assert.ok(purgeroleCmd.aliases.includes('rr'));
   assert.ok(purgeroleCmd.usage.includes('<@role>'));
 });
 
