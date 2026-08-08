@@ -3,7 +3,7 @@ import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
-import { toggleRoleForMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
+import { addRoleToMember, removeRoleFromMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
@@ -13,9 +13,9 @@ export default defineCommand({
   name: 'rolein',
   aliases: ['rin', 'rolemembers'],
   module: 'moderation',
-  description: 'Toggle a role for all members who currently possess a target role, with optional force-move to a voice channel.',
-  usage: 'rolein <target_population_role> <role_to_toggle> [fmv <#vc>]',
-  examples: ['rolein @Members @VIP', 'rolein @Members @VIP fmv #General'],
+  description: 'Add or remove (with ?rm) a role for all members who currently possess a target role, with optional force-move to a voice channel.',
+  usage: 'rolein <target_population_role> <role_to_assign> [?rm] [fmv <#vc>]',
+  examples: ['rolein @Members @VIP', 'rolein @monopoly @amongus ?rm', 'rolein @Members @VIP fmv #General'],
   permissions: [PermissionsBitField.Flags.ManageRoles],
   botPermissions: [PermissionsBitField.Flags.ManageRoles],
   cooldown: 5,
@@ -30,20 +30,23 @@ export default defineCommand({
     }
 
     const cleanArgs = fmvResult.cleanArgs;
-    if (cleanArgs.length < 2) {
-      await respond.error(`Usage: \`${parsed.prefix}rolein <target_population_role> <role_to_toggle> [fmv <#vc>]\``);
+    const isRemoveMode = cleanArgs.includes('?rm');
+    const roleArgs = cleanArgs.filter(a => a !== '?rm');
+
+    if (roleArgs.length < 2) {
+      await respond.error(`Usage: \`${parsed.prefix}rolein <target_population_role> <role_to_assign> [?rm] [fmv <#vc>]\``);
       return;
     }
 
-    const popRoleRes = resolveRole(cleanArgs[0], guild);
+    const popRoleRes = resolveRole(roleArgs[0], guild);
     if (!popRoleRes.success) {
       await respond.error(`Population Role: ${popRoleRes.error}`);
       return;
     }
 
-    const toggleRoleRes = resolveRole(cleanArgs[1], guild);
+    const toggleRoleRes = resolveRole(roleArgs[1], guild);
     if (!toggleRoleRes.success) {
-      await respond.error(`Role to Toggle: ${toggleRoleRes.error}`);
+      await respond.error(`Role: ${toggleRoleRes.error}`);
       return;
     }
 
@@ -62,7 +65,7 @@ export default defineCommand({
 
     // Send initial live progress message
     const initialPayload = buildV2Container({
-      text: `⏳ **Processing RoleIn** (${mentionRole(toggleRole.id)} for ${mentionRole(popRole.id)})`,
+      text: `⏳ **Processing RoleIn** (${mentionRole(toggleRole.id)} for ${mentionRole(popRole.id)}) [Mode: ${isRemoveMode ? 'REMOVE' : 'ADD'}]`,
       sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nAdded: **0** | Removed: **0** | Skipped: **0**`],
     });
     const statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
@@ -75,7 +78,10 @@ export default defineCommand({
 
     let processed = 0;
     for (const targetMember of membersWithPopRole) {
-      const res = await toggleRoleForMember(guild, targetMember, toggleRole, member);
+      const res = isRemoveMode
+        ? await removeRoleFromMember(guild, targetMember, toggleRole, member)
+        : await addRoleToMember(guild, targetMember, toggleRole, member);
+
       if (res === 'added') {
         addedCount++;
         affectedMembersList.push(targetMember);
@@ -107,20 +113,21 @@ export default defineCommand({
     });
 
     if (statusMsg) {
-      await statusMsg.edit({ content: undefined, components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+      await statusMsg.edit({ content: undefined, components: finalPayload.components }).catch(() => {});
     } else {
       await respond.success(
         `RoleIn update (${mentionRole(toggleRole.id)} for members in ${mentionRole(popRole.id)}):\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
       );
     }
 
-    logEvent('info', 'command_execution', `RoleIn toggle by ${member.user.tag}`, {
+    logEvent('info', 'command_execution', `RoleIn (${isRemoveMode ? 'remove' : 'add'}) by ${member.user.tag}`, {
       executor: member.user.tag,
       executorId: member.id,
       guild: guild.name,
       guildId: guild.id,
       popRole: popRole.name,
       toggleRole: toggleRole.name,
+      mode: isRemoveMode ? 'remove' : 'add',
       addedCount,
       removedCount,
       skippedCount,

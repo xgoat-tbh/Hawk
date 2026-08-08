@@ -46,7 +46,6 @@ export class LiveProgressTracker {
     await this.progressMsg.edit({
       content: undefined,
       components: payload.components,
-      flags: payload.flags,
     }).catch(() => {});
   }
 }

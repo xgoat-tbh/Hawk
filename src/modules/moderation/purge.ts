@@ -65,8 +65,11 @@ export default defineCommand({
     let lastId: string | undefined = undefined;
 
     while (deletedCount < amount) {
-      const limit = Math.min(100, (amount - deletedCount) * 2);
-      const fetched: Collection<string, Message> = await textChannel.messages.fetch({ limit, before: lastId }).catch(() => new Map() as any);
+      const limit = Math.min(100, Math.max(20, (amount - deletedCount) * 2));
+      const fetchOptions: import('discord.js').FetchMessagesOptions = { limit };
+      if (lastId) fetchOptions.before = lastId;
+
+      const fetched: Collection<string, Message> = await textChannel.messages.fetch(fetchOptions).catch(() => new Map() as any);
       if (fetched.size === 0) break;
 
       const messages = Array.from(fetched.values());
@@ -114,7 +117,7 @@ export default defineCommand({
         text: `✅ **Purge Completed**`,
         sections: [`Purged **${deletedCount}** message(s).`],
       });
-      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+      await statusMsg.edit({ components: finalPayload.components }).catch(() => {});
       setTimeout(() => {
         statusMsg?.delete().catch(() => {});
       }, 5000);

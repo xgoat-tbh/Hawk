@@ -3,7 +3,7 @@ import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
-import { toggleRoleForMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
+import { addRoleToMember, removeRoleFromMember, extractForceMoveOption, executeForceMove } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
@@ -13,9 +13,9 @@ export default defineCommand({
   name: 'roleall',
   aliases: ['rall', 'massrole'],
   module: 'moderation',
-  description: 'Toggle a role across all human or all bot accounts in the server, with optional force-move to a voice channel.',
-  usage: 'roleall <human|bot> <role> [fmv <#vc>]',
-  examples: ['roleall human @Members', 'roleall bot @BotRole', 'roleall human @Members fmv #Stage'],
+  description: 'Add or remove (with ?rm) a role across all human or all bot accounts in the server, with optional force-move to a voice channel.',
+  usage: 'roleall <human|bot> <role_to_assign> [?rm] [fmv <#vc>]',
+  examples: ['roleall human @Members', 'roleall humans @level5 ?rm', 'roleall bot @BotRole', 'roleall human @Members fmv #Stage'],
   permissions: [PermissionsBitField.Flags.ManageRoles],
   botPermissions: [PermissionsBitField.Flags.ManageRoles],
   cooldown: 10,
@@ -30,19 +30,22 @@ export default defineCommand({
     }
 
     const cleanArgs = fmvResult.cleanArgs;
-    if (cleanArgs.length < 2) {
-      await respond.error(`Usage: \`${parsed.prefix}roleall <human|bot> <role> [fmv <#vc>]\``);
+    const isRemoveMode = cleanArgs.includes('?rm');
+    const roleArgs = cleanArgs.filter(a => a !== '?rm');
+
+    if (roleArgs.length < 2) {
+      await respond.error(`Usage: \`${parsed.prefix}roleall <human|bot> <role_to_assign> [?rm] [fmv <#vc>]\``);
       return;
     }
 
-    const targetType = cleanArgs[0].toLowerCase();
+    const targetType = roleArgs[0].toLowerCase();
     if (targetType !== 'human' && targetType !== 'bot' && targetType !== 'bots' && targetType !== 'humans') {
       await respond.error('Target population must be `human` or `bot`.');
       return;
     }
 
     const isBotTarget = targetType === 'bot' || targetType === 'bots';
-    const roleRes = resolveRole(cleanArgs[1], guild);
+    const roleRes = resolveRole(roleArgs[1], guild);
     if (!roleRes.success) {
       await respond.error(`Role: ${roleRes.error}`);
       return;
@@ -62,7 +65,7 @@ export default defineCommand({
 
     // Send initial live progress message
     const initialPayload = buildV2Container({
-      text: `⏳ **Processing RoleAll** (${mentionRole(toggleRole.id)} for ${isBotTarget ? 'bots' : 'humans'})`,
+      text: `⏳ **Processing RoleAll** (${mentionRole(toggleRole.id)} for ${isBotTarget ? 'bots' : 'humans'}) [Mode: ${isRemoveMode ? 'REMOVE' : 'ADD'}]`,
       sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nAdded: **0** | Removed: **0** | Skipped: **0**`],
     });
     const statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
@@ -75,7 +78,10 @@ export default defineCommand({
 
     let processed = 0;
     for (const targetMember of targetMembers) {
-      const res = await toggleRoleForMember(guild, targetMember, toggleRole, member);
+      const res = isRemoveMode
+        ? await removeRoleFromMember(guild, targetMember, toggleRole, member)
+        : await addRoleToMember(guild, targetMember, toggleRole, member);
+
       if (res === 'added') {
         addedCount++;
         affectedMembersList.push(targetMember);
@@ -107,20 +113,21 @@ export default defineCommand({
     });
 
     if (statusMsg) {
-      await statusMsg.edit({ content: undefined, components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+      await statusMsg.edit({ content: undefined, components: finalPayload.components }).catch(() => {});
     } else {
       await respond.success(
         `RoleAll update (${mentionRole(toggleRole.id)} for ${isBotTarget ? 'bots' : 'humans'}):\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}${moveInfo}`,
       );
     }
 
-    logEvent('info', 'command_execution', `RoleAll toggle by ${member.user.tag}`, {
+    logEvent('info', 'command_execution', `RoleAll (${isRemoveMode ? 'remove' : 'add'}) by ${member.user.tag}`, {
       executor: member.user.tag,
       executorId: member.id,
       guild: guild.name,
       guildId: guild.id,
       targetPopulation: isBotTarget ? 'bot' : 'human',
       toggleRole: toggleRole.name,
+      mode: isRemoveMode ? 'remove' : 'add',
       addedCount,
       removedCount,
       skippedCount,

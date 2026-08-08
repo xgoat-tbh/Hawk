@@ -86,6 +86,50 @@ export async function toggleRoleForMember(
   }
 }
 
+export async function addRoleToMember(
+  guild: Guild,
+  member: GuildMember,
+  role: Role,
+  executor?: GuildMember,
+): Promise<'added' | 'skipped'> {
+  if (!isRoleManageable(guild, role, executor)) {
+    return 'skipped';
+  }
+
+  if (member.roles.cache.has(role.id)) {
+    return 'skipped';
+  }
+
+  try {
+    await member.roles.add(role);
+    return 'added';
+  } catch {
+    return 'skipped';
+  }
+}
+
+export async function removeRoleFromMember(
+  guild: Guild,
+  member: GuildMember,
+  role: Role,
+  executor?: GuildMember,
+): Promise<'removed' | 'skipped'> {
+  if (!isRoleManageable(guild, role, executor)) {
+    return 'skipped';
+  }
+
+  if (!member.roles.cache.has(role.id)) {
+    return 'skipped';
+  }
+
+  try {
+    await member.roles.remove(role);
+    return 'removed';
+  } catch {
+    return 'skipped';
+  }
+}
+
 export interface ForceMoveParseResult {
   hasFmv: boolean;
   cleanArgs: string[];

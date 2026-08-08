@@ -130,6 +130,76 @@ test('Nuke command exists with proper metadata and aliases', async () => {
   assert.ok(nukeCmd.aliases.includes('recreatechannel'));
 });
 
+test('rolein and roleall commands exist with proper metadata and usage', async () => {
+  const roleinCmd = (await import('../src/modules/moderation/rolein.ts')).default;
+  const roleallCmd = (await import('../src/modules/moderation/roleall.ts')).default;
+
+  assert.equal(roleinCmd.name, 'rolein');
+  assert.ok(roleinCmd.aliases.includes('rin'));
+  assert.ok(roleinCmd.usage.includes('?rm'));
+
+  assert.equal(roleallCmd.name, 'roleall');
+  assert.ok(roleallCmd.aliases.includes('rall'));
+  assert.ok(roleallCmd.usage.includes('?rm'));
+});
+
+test('addRoleToMember and removeRoleFromMember respect existing member roles', async () => {
+  const { addRoleToMember, removeRoleFromMember } = await import('../src/modules/moderation/roleHelpers.ts');
+
+  const mockRole = { id: 'role1', position: 10, managed: false } as any;
+  const mockBot = { roles: { highest: { position: 100 } } } as any;
+
+  let added = false;
+  let removed = false;
+
+  const mockMemberWithRole = {
+    id: 'user1',
+    roles: {
+      cache: new Map([['role1', mockRole]]),
+      highest: { position: 5 },
+      add: async () => { added = true; },
+      remove: async () => { removed = true; },
+    },
+  } as any;
+
+  const mockMemberWithoutRole = {
+    id: 'user2',
+    roles: {
+      cache: new Map(),
+      highest: { position: 5 },
+      add: async () => { added = true; },
+      remove: async () => { removed = true; },
+    },
+  } as any;
+
+  const mockGuild = {
+    id: 'guild1',
+    ownerId: 'owner1',
+    members: { me: mockBot },
+  } as any;
+
+  // Adding role to member who already has it -> skipped
+  const res1 = await addRoleToMember(mockGuild, mockMemberWithRole, mockRole);
+  assert.equal(res1, 'skipped');
+
+  // Adding role to member who does not have it -> added
+  added = false;
+  const res2 = await addRoleToMember(mockGuild, mockMemberWithoutRole, mockRole);
+  assert.equal(res2, 'added');
+  assert.equal(added, true);
+
+  // Removing role from member who does not have it -> skipped
+  const res3 = await removeRoleFromMember(mockGuild, mockMemberWithoutRole, mockRole);
+  assert.equal(res3, 'skipped');
+
+  // Removing role from member who has it -> removed
+  removed = false;
+  const res4 = await removeRoleFromMember(mockGuild, mockMemberWithRole, mockRole);
+  assert.equal(res4, 'removed');
+  assert.equal(removed, true);
+});
+
+
 
 
 

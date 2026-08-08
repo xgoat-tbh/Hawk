@@ -68,7 +68,7 @@ export default defineCommand({
       }
 
       if (msg) {
-        await msg.edit(v2Payload).catch(() => {});
+        await msg.edit({ components: v2Payload.components }).catch(() => {});
       }
     }
 
