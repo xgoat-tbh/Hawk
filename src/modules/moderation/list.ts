@@ -46,6 +46,9 @@ export default defineCommand({
       }
     }
 
+    // Fetch all guild members to ensure uncached members are loaded
+    const allMembers = await guild.members.fetch().catch(() => guild.members.cache);
+
     if (mode === 'inrole') {
       if (!targetRoleArg) {
         await respond.error(`Usage: \`${parsed.prefix}inrole <@role>\` or \`${parsed.prefix}list inrole <@role>\`.`);
@@ -59,7 +62,7 @@ export default defineCommand({
       }
 
       const targetRole = roleRes.value.role;
-      const roleMembers = Array.from(targetRole.members.values());
+      const roleMembers = Array.from(allMembers.filter(m => m.roles.cache.has(targetRole.id)).values());
       const totalCount = roleMembers.length;
 
       if (totalCount === 0) {
@@ -82,11 +85,6 @@ export default defineCommand({
 
       await respond.raw({ components: payload.components });
     } else if (mode === 'admin') {
-      let allMembers = guild.members.cache;
-      if (allMembers.size === 0) {
-        allMembers = await guild.members.fetch().catch(() => guild.members.cache);
-      }
-
       const adminMembers = Array.from(
         allMembers.filter(m => {
           if (m.user.bot) return false;
@@ -115,11 +113,6 @@ export default defineCommand({
 
       await respond.raw({ components: payload.components });
     } else if (mode === 'bots') {
-      let allMembers = guild.members.cache;
-      if (allMembers.size === 0) {
-        allMembers = await guild.members.fetch().catch(() => guild.members.cache);
-      }
-
       const botMembers = Array.from(allMembers.filter(m => m.user.bot).values());
       const totalCount = botMembers.length;
 

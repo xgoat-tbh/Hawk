@@ -46,8 +46,9 @@ export default defineCommand({
     const popRole = popRoleRes.value.role;
     const toggleRole = toggleRoleRes.value.role;
 
-    // Directly target members possessing popRole without a full guild member fetch
-    const membersWithPopRole = Array.from(popRole.members.values());
+    // Fetch all guild members to ensure uncached members possessing popRole are loaded
+    const allMembers = await guild.members.fetch().catch(() => guild.members.cache);
+    const membersWithPopRole = Array.from(allMembers.filter(m => m.roles.cache.has(popRole.id)).values());
     const totalMembers = membersWithPopRole.length;
 
     if (totalMembers === 0) {

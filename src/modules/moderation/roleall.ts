@@ -46,11 +46,8 @@ export default defineCommand({
 
     const toggleRole = roleRes.value.role;
 
-    // Filter directly from cached members or fetch if cache is empty
-    let allMembers = guild.members.cache;
-    if (allMembers.size === 0) {
-      allMembers = await guild.members.fetch().catch(() => guild.members.cache);
-    }
+    // Fetch all guild members to ensure uncached members are loaded
+    const allMembers = await guild.members.fetch().catch(() => guild.members.cache);
     const targetMembers = Array.from(allMembers.filter(m => isBotTarget ? m.user.bot : !m.user.bot).values());
     const totalMembers = targetMembers.length;
 
