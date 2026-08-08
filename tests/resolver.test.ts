@@ -130,17 +130,13 @@ test('Nuke command exists with proper metadata and aliases', async () => {
   assert.ok(nukeCmd.aliases.includes('recreatechannel'));
 });
 
-test('rolein and roleall commands exist with proper metadata and usage', async () => {
-  const roleinCmd = (await import('../src/modules/moderation/rolein.ts')).default;
-  const roleallCmd = (await import('../src/modules/moderation/roleall.ts')).default;
+test('purgerole command exists with proper metadata and aliases', async () => {
+  const purgeroleCmd = (await import('../src/modules/moderation/purgerole.js')).default;
 
-  assert.equal(roleinCmd.name, 'rolein');
-  assert.ok(roleinCmd.aliases.includes('rin'));
-  assert.ok(roleinCmd.usage.includes('?rm'));
-
-  assert.equal(roleallCmd.name, 'roleall');
-  assert.ok(roleallCmd.aliases.includes('rall'));
-  assert.ok(roleallCmd.usage.includes('?rm'));
+  assert.equal(purgeroleCmd.name, 'purgerole');
+  assert.ok(purgeroleCmd.aliases.includes('rpurge'));
+  assert.ok(purgeroleCmd.aliases.includes('clearrole'));
+  assert.ok(purgeroleCmd.usage.includes('<@role>'));
 });
 
 test('addRoleToMember and removeRoleFromMember respect existing member roles', async () => {
