@@ -14,6 +14,9 @@ import {
 import { buildV2Container } from '../../core/utils/componentsV2.js';
 import { mentionUser } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
+import { AuthorityLevel } from '../../types/permission.js';
+import * as permissionRepo from '../../core/database/repositories/permissionRepo.js';
 
 export function buildNukeConfirmationPayload(channelId: string, authorId: string) {
   const confirmBtn = new ButtonBuilder()
@@ -53,14 +56,26 @@ export async function handleNukeInteraction(interaction: ButtonInteraction): Pro
   }
 
   const member = interaction.member;
+  const authority = getAuthorityLevel(user.id, guild.ownerId);
   const isAdministrator =
     member &&
     'permissions' in member &&
     (member.permissions as Readonly<PermissionsBitField>).has(PermissionsBitField.Flags.Administrator);
 
-  if (!isAdministrator && user.id !== guild.ownerId) {
+  let memberRoleIds: string[] = [];
+  if (member && 'roles' in member) {
+    if ('cache' in member.roles) {
+      memberRoleIds = Array.from((member.roles as any).cache.keys());
+    } else if (Array.isArray(member.roles)) {
+      memberRoleIds = member.roles as string[];
+    }
+  }
+
+  const hasPermit = await permissionRepo.hasPermit(guild.id, user.id, memberRoleIds, 'nuke', 'moderation');
+
+  if (authority < AuthorityLevel.ServerAdmin && !isAdministrator && !hasPermit) {
     await interaction.reply({
-      content: 'You must have Administrator permission to execute a channel nuke.',
+      content: 'You must have Administrator permission or a valid permit to execute a channel nuke.',
       flags: MessageFlags.Ephemeral,
     });
     return;

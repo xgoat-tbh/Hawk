@@ -37,6 +37,7 @@ export async function handleDragmeInteraction(interaction: ButtonInteraction): P
 
   if (action === 'deny') {
     deleteState(stateKey);
+    if (request.timeoutId) clearTimeout(request.timeoutId);
 
     // Disable buttons
     const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -66,6 +67,7 @@ export async function handleDragmeInteraction(interaction: ButtonInteraction): P
 
   if (action === 'approve') {
     deleteState(stateKey);
+    if (request.timeoutId) clearTimeout(request.timeoutId);
 
     // Re-validate all conditions
     const guild = interaction.guild;

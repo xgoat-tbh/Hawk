@@ -36,19 +36,20 @@ export default defineCommand({
     // Mode 1: No argument -> @everyone: DENY
     if (parsed.args.length === 0) {
       const everyoneRole = guild.roles.everyone;
-      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permToEdit);
+      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permToEdit).catch(() => {});
       await respond.success(`Locked ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole.id)}.`);
     }
     // Mode 3: "all" argument -> @everyone: DENY + every existing role override: DENY
     else if (parsed.args[0].toLowerCase() === 'all') {
       const everyoneRole = guild.roles.everyone;
-      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permToEdit);
+      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permToEdit).catch(() => {});
 
       let count = 1;
       for (const [, overwrite] of (targetChannel as any).permissionOverwrites.cache) {
         if (overwrite.type === OverwriteType.Role && overwrite.id !== everyoneRole.id) {
           await (targetChannel as any).permissionOverwrites.edit(overwrite.id, permToEdit).catch(() => {});
           count++;
+          await new Promise(r => setTimeout(r, 50));
         }
       }
       await respond.success(`Locked ${mentionChannel(targetChannel.id)} for all **${count}** role overrides.`);

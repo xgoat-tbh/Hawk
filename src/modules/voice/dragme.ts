@@ -12,6 +12,7 @@ export interface DragmeRequest {
   targetId: string;
   guildId: string;
   messageId: string;
+  timeoutId?: NodeJS.Timeout | number;
 }
 
 const DRAGME_TTL = 60_000; // 1 minute
@@ -22,7 +23,7 @@ export default defineCommand({
   description: 'Request a user to drag you into their voice channel.',
   usage: 'dragme <user>',
   examples: ['dragme @User'],
-  permissions: [PermissionsBitField.Flags.MoveMembers],
+  permissions: [],
   botPermissions: [PermissionsBitField.Flags.MoveMembers],
   cooldown: 10,
 
@@ -103,10 +104,7 @@ export default defineCommand({
       messageId: sentMessage.id,
     };
 
-    setState(stateKey, member.id, request, DRAGME_TTL);
-
-    // Disable buttons & schedule deletion after request timeout
-    setTimeout(async () => {
+    const timeoutId = setTimeout(async () => {
       try {
         const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
@@ -132,5 +130,8 @@ export default defineCommand({
         // Message may have been deleted
       }
     }, DRAGME_TTL);
+
+    request.timeoutId = timeoutId;
+    setState(stateKey, member.id, request, DRAGME_TTL);
   },
 });

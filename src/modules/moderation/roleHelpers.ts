@@ -1,4 +1,4 @@
-import type { Guild, GuildMember, Role, VoiceBasedChannel } from 'discord.js';
+import { PermissionsBitField, type Guild, type GuildMember, type Role, type VoiceBasedChannel } from 'discord.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
@@ -69,7 +69,7 @@ export async function toggleRoleForMember(
   role: Role,
   executor?: GuildMember,
 ): Promise<'added' | 'removed' | 'skipped'> {
-  if (!isRoleManageable(guild, role, executor)) {
+  if (!isRoleManageable(guild, role, executor) || !isMemberManageable(guild, member, executor)) {
     return 'skipped';
   }
 
@@ -92,7 +92,7 @@ export async function addRoleToMember(
   role: Role,
   executor?: GuildMember,
 ): Promise<'added' | 'skipped'> {
-  if (!isRoleManageable(guild, role, executor)) {
+  if (!isRoleManageable(guild, role, executor) || !isMemberManageable(guild, member, executor)) {
     return 'skipped';
   }
 
@@ -114,7 +114,7 @@ export async function removeRoleFromMember(
   role: Role,
   executor?: GuildMember,
 ): Promise<'removed' | 'skipped'> {
-  if (!isRoleManageable(guild, role, executor)) {
+  if (!isRoleManageable(guild, role, executor) || !isMemberManageable(guild, member, executor)) {
     return 'skipped';
   }
 
@@ -183,19 +183,36 @@ export function extractForceMoveOption(
 export async function executeForceMove(
   members: GuildMember[],
   destVc: VoiceBasedChannel,
+  executor?: GuildMember,
 ): Promise<{ movedCount: number; failedCount: number }> {
   let movedCount = 0;
   let failedCount = 0;
 
-  for (const member of members) {
-    if (member.voice.channel && member.voice.channelId !== destVc.id) {
-      try {
-        await member.voice.setChannel(destVc);
-        movedCount++;
-      } catch {
-        failedCount++;
-      }
-    }
+  const manageableMembers = members.filter(member => {
+    if (!executor) return true;
+    const authority = getAuthorityLevel(executor.id, member.guild.ownerId);
+    if (authority >= AuthorityLevel.ServerAdmin) return true;
+    if (!executor.permissions.has(PermissionsBitField.Flags.MoveMembers)) return false;
+    return canExecutorManage(member.guild, executor, undefined, member);
+  });
+
+  failedCount += (members.length - manageableMembers.length);
+
+  const chunkSize = 5;
+  for (let i = 0; i < manageableMembers.length; i += chunkSize) {
+    const chunk = manageableMembers.slice(i, i + chunkSize);
+    await Promise.all(
+      chunk.map(async (member) => {
+        if (member.voice.channel && member.voice.channelId !== destVc.id) {
+          try {
+            await member.voice.setChannel(destVc);
+            movedCount++;
+          } catch {
+            failedCount++;
+          }
+        }
+      })
+    );
   }
 
   return { movedCount, failedCount };

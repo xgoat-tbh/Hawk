@@ -37,19 +37,20 @@ export default defineCommand({
     // Mode 1: No argument -> @everyone: INHERIT (null)
     if (parsed.args.length === 0) {
       const everyoneRole = guild.roles.everyone;
-      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permInherit);
+      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permInherit).catch(() => {});
       await respond.success(`Unlocked ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole.id)} (inherited).`);
     }
     // Mode 3: "all" argument -> @everyone: INHERIT (null) + every existing role override: INHERIT (null)
     else if (parsed.args[0].toLowerCase() === 'all') {
       const everyoneRole = guild.roles.everyone;
-      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permInherit);
+      await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permInherit).catch(() => {});
 
       let count = 1;
       for (const [, overwrite] of (targetChannel as any).permissionOverwrites.cache) {
         if (overwrite.type === OverwriteType.Role && overwrite.id !== everyoneRole.id) {
           await (targetChannel as any).permissionOverwrites.edit(overwrite.id, permInherit).catch(() => {});
           count++;
+          await new Promise(r => setTimeout(r, 50));
         }
       }
       await respond.success(`Unlocked ${mentionChannel(targetChannel.id)} for all **${count}** role overrides (inherited).`);

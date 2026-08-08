@@ -4,8 +4,8 @@ import { guilds } from '../core/config/guilds.js';
 
 export function createClient(): Client {
   return new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates],
-    partials: [Partials.Message, Partials.Channel],
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessageReactions],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
       MessageManager: 200,
@@ -18,7 +18,7 @@ export function createClient(): Client {
       messages: { interval: 300, lifetime: 60 },
       guildMembers: {
         interval: 600,
-        filter: () => (member) => !member.user.bot && member.id !== member.guild.ownerId,
+        filter: () => (member) => !member.user.bot && member.id !== member.guild.ownerId && !member.voice.channelId,
       },
       users: {
         interval: 600,

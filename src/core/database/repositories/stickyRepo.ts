@@ -10,11 +10,23 @@ export async function setSticky(input: SetStickyInput): Promise<StickyRecord> {
     DO UPDATE SET message_id = ${input.messageId}, content = ${input.content}, updated_at = NOW()
     RETURNING *
   `;
+  activeStickyChannels.add(`${input.guildId}:${input.channelId}`);
   return mapStickyRow(rows[0]);
 }
 
+const activeStickyChannels = new Set<string>();
+let isStickyCacheLoaded = false;
+
 export async function getSticky(guildId: string, channelId: string): Promise<StickyRecord | null> {
   const db = getDb();
+  if (!isStickyCacheLoaded) {
+    const rows = await db`SELECT guild_id, channel_id FROM sticky_messages`;
+    for (const row of rows) activeStickyChannels.add(`${row.guild_id}:${row.channel_id}`);
+    isStickyCacheLoaded = true;
+  }
+  
+  if (!activeStickyChannels.has(`${guildId}:${channelId}`)) return null;
+
   const rows = await db`
     SELECT * FROM sticky_messages
     WHERE guild_id = ${guildId} AND channel_id = ${channelId}
@@ -38,6 +50,9 @@ export async function deleteSticky(guildId: string, channelId: string): Promise<
     DELETE FROM sticky_messages
     WHERE guild_id = ${guildId} AND channel_id = ${channelId}
   `;
+  if (result.count > 0) {
+    activeStickyChannels.delete(`${guildId}:${channelId}`);
+  }
   return result.count > 0;
 }
 

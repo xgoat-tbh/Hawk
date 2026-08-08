@@ -27,17 +27,14 @@ export function buildVariableContext(guild: Guild, userOrMember: User | GuildMem
   };
 }
 
+const VAR_REGEX = /\{(username|usermention|usertag|useravatar|servername|servermember|serveravatar|randomuser)\}/gi;
+
 export function substituteVariables(text: string, ctx: VariableContext): string {
   if (!text) return text;
-  return text
-    .replace(/\{username\}/gi, ctx.username)
-    .replace(/\{usermention\}/gi, ctx.usermention)
-    .replace(/\{usertag\}/gi, ctx.usertag)
-    .replace(/\{useravatar\}/gi, ctx.useravatar)
-    .replace(/\{servername\}/gi, ctx.servername)
-    .replace(/\{servermember\}/gi, String(ctx.servermember))
-    .replace(/\{serveravatar\}/gi, ctx.serveravatar)
-    .replace(/\{randomuser\}/gi, ctx.randomuser);
+  return text.replace(VAR_REGEX, (match, p1) => {
+    const key = p1.toLowerCase() as keyof VariableContext;
+    return String(ctx[key] ?? match);
+  });
 }
 
 const MAX_JSON_PAYLOAD_LENGTH = 20_000;

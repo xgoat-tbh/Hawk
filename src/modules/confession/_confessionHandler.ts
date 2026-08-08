@@ -25,6 +25,7 @@ import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
 const activeConfessionPanels = new Map<string, string>(); // guildId -> messageId
 const confessionPanelChannels = new Set<string>(); // channelId
+const confessionPanelLocks = new Set<string>(); // channelId
 
 export function registerConfessionPanelChannel(channelId: string): void {
   confessionPanelChannels.add(channelId);
@@ -98,6 +99,11 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+  while (confessionPanelLocks.has(channelId)) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+  confessionPanelLocks.add(channelId);
+
   try {
     // 1. Delete previous confession panel message FIRST
     const config = await getConfessionConfig(guild.id);
@@ -147,6 +153,8 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
     const msg = error instanceof Error ? error.message : String(error);
     consoleLog('error', 'command_failure', `Failed to process confession for ${user.id}`, { error: msg });
     await interaction.editReply({ content: 'Could not post confession. Please try again later.' });
+  } finally {
+    confessionPanelLocks.delete(channelId);
   }
 }
 

@@ -35,6 +35,7 @@ import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
 const activePanelMessages = new Map<string, string>(); // guildId -> messageId
 const suggestionPanelChannels = new Set<string>(); // channelId
+const suggestionPanelLocks = new Set<string>(); // channelId
 
 export function registerSuggestionPanelChannel(channelId: string): void {
   suggestionPanelChannels.add(channelId);
@@ -118,6 +119,11 @@ export async function handleSuggestionModal(interaction: ModalSubmitInteraction)
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+  while (suggestionPanelLocks.has(channelId)) {
+    await new Promise(r => setTimeout(r, 100));
+  }
+  suggestionPanelLocks.add(channelId);
+
   try {
     // 1. Delete previous panel message
     const config = await getSuggestionConfig(guild.id);
@@ -175,6 +181,8 @@ export async function handleSuggestionModal(interaction: ModalSubmitInteraction)
     const msg = error instanceof Error ? error.message : String(error);
     consoleLog('error', 'command_failure', `Failed to process suggestion modal for ${user.id}`, { error: msg });
     await interaction.editReply({ content: 'Failed to submit suggestion. Please try again later.' });
+  } finally {
+    suggestionPanelLocks.delete(channelId);
   }
 }
 

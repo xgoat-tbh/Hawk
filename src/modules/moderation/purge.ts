@@ -63,8 +63,12 @@ export default defineCommand({
     // Fetch recent message history in batches
     let deletedCount = 0;
     let lastId: string | undefined = undefined;
+    let iterations = 0;
+    const MAX_ITERATIONS = 25;
 
     while (deletedCount < amount) {
+      if (++iterations > MAX_ITERATIONS) break;
+
       const limit = Math.min(100, Math.max(20, (amount - deletedCount) * 2));
       const fetchOptions: import('discord.js').FetchMessagesOptions = { limit };
       if (lastId) fetchOptions.before = lastId;
@@ -77,6 +81,10 @@ export default defineCommand({
 
       // Filter messages (exclude progress status message if sent)
       const FourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+      
+      const allOlder = messages.every(m => m.createdTimestamp < FourteenDaysAgo);
+      if (allOlder) break;
+
       const eligible = messages.filter(m => {
         if (statusMsg && m.id === statusMsg.id) return false;
         if (m.createdTimestamp < FourteenDaysAgo) return false;

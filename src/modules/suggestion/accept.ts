@@ -30,8 +30,8 @@ export default defineCommand({
     let reason = '';
     const firstArg = parsed.args[0];
     const isFirstArgTarget = firstArg && (
+      (!message.reference && /^\d+$/.test(firstArg)) ||
       firstArg.startsWith('#') ||
-      /^\d+$/.test(firstArg) ||
       firstArg.includes('discord.com/channels')
     );
 

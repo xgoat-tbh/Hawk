@@ -54,7 +54,10 @@ function enqueue(content: string): void {
 
 async function flushQueue(): Promise<void> {
   if (queue.length === 0) return;
-  if (!env.devWebhookUrl) return;
+  if (!env.devWebhookUrl) {
+    queue.length = 0;
+    return;
+  }
   const now = Date.now();
   if (now - lastSend < constants.webhookMinInterval) return;
 

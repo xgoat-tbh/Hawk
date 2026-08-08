@@ -3,6 +3,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { isMemberManageable } from './roleHelpers.js';
 
 export default defineCommand({
   name: 'vcundeafen',
@@ -30,6 +31,10 @@ export default defineCommand({
       const res = await resolveUser(arg, guild);
       if (res.success && res.value.member) {
         const targetMember = res.value.member;
+        if (!isMemberManageable(guild, targetMember, member)) {
+          failCount++;
+          continue;
+        }
         if (targetMember.voice.channel) {
           try {
             await targetMember.voice.setDeaf(false);

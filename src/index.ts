@@ -7,12 +7,12 @@ import { classifyMessage, handleBotMention, MessageType } from './services/Menti
 import { handleMessage } from './core/commands/CommandExecutor.js';
 import { runMigrations } from './core/database/migrations/runner.js';
 import { validateConnection, closeDb } from './core/database/pool.js';
-import { logEvent } from './core/logging/WebhookLogger.js';
+import { logEvent, stopWebhookLogger } from './core/logging/WebhookLogger.js';
 import { consoleLog } from './core/logging/ConsoleLogger.js';
 import { isNoPrefixEnabled, loadNoPrefixCache } from './core/config/NoPrefixConfig.js';
 import { loadAfkCache } from './core/database/repositories/afkRepo.js';
-import { startInteractionCleanup } from './core/interactions/InteractionState.js';
-import { startCooldownCleanup } from './core/cooldowns/CooldownManager.js';
+import { startInteractionCleanup, stopInteractionCleanup } from './core/interactions/InteractionState.js';
+import { startCooldownCleanup, stopCooldownCleanup } from './core/cooldowns/CooldownManager.js';
 import { handleAfkMessage } from './modules/general/_afkHandler.js';
 import { handleStickyResurface } from './modules/sticky/_stickyHandler.js';
 import {
@@ -223,13 +223,22 @@ async function bootstrap() {
 
   process.on('uncaughtException', (error) => {
     consoleLog('critical', 'uncaught_exception', `Uncaught Exception: ${error.stack ?? error.message}`);
+    process.exit(1);
   });
+
+  let healthServer: any;
 
   const handleGracefulShutdown = async (signal: string) => {
     consoleLog('info', 'shutdown', `Received ${signal}, initiating graceful shutdown...`);
     try {
       client.destroy();
       await closeDb();
+      stopWebhookLogger();
+      stopInteractionCleanup();
+      stopCooldownCleanup();
+      if (healthServer) {
+        healthServer.close();
+      }
       consoleLog('info', 'shutdown', 'Graceful shutdown completed.');
       process.exit(0);
     } catch (err) {
@@ -244,7 +253,7 @@ async function bootstrap() {
   // Start HTTP health-check server for Render free tier web service hosting
   const http = await import('node:http');
   const port = process.env.PORT || 3000;
-  http.createServer((_req, res) => {
+  healthServer = http.createServer((_req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', bot: client.user?.tag || 'starting', uptime: Math.floor(process.uptime()) }));
   }).listen(port, () => {

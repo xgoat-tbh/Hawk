@@ -35,7 +35,7 @@ export default defineCommand({
       const everyoneRole = guild.roles.everyone;
       await targetChannel.permissionOverwrites.edit(everyoneRole.id, {
         ViewChannel: null,
-      });
+      }).catch(() => {});
       await respond.success(`Unhidden ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole.id)} (inherited).`);
     }
     // Mode 3: "all" argument -> @everyone: INHERIT (null) + every existing role override: INHERIT (null)
@@ -43,7 +43,7 @@ export default defineCommand({
       const everyoneRole = guild.roles.everyone;
       await targetChannel.permissionOverwrites.edit(everyoneRole.id, {
         ViewChannel: null,
-      });
+      }).catch(() => {});
 
       let count = 1;
       for (const [, overwrite] of targetChannel.permissionOverwrites.cache) {
@@ -52,6 +52,7 @@ export default defineCommand({
             ViewChannel: null,
           }).catch(() => {});
           count++;
+          await new Promise(r => setTimeout(r, 50));
         }
       }
       await respond.success(`Unhidden ${mentionChannel(targetChannel.id)} for all **${count}** role overrides (inherited).`);
