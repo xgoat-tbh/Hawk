@@ -17,6 +17,26 @@ export async function getConfessionChannel(guildId: string): Promise<string | nu
   return rows[0]?.channel_id ?? null;
 }
 
+export async function setConfessionLogChannel(guildId: string, logChannelId: string | null): Promise<void> {
+  const db = getDb();
+  await db`
+    INSERT INTO confession_configs (guild_id, channel_id, log_channel_id)
+    VALUES (${guildId}, '', ${logChannelId})
+    ON CONFLICT (guild_id)
+    DO UPDATE SET log_channel_id = ${logChannelId}, updated_at = NOW()
+  `;
+}
+
+export async function getConfessionLogChannel(guildId: string): Promise<string | null> {
+  try {
+    const db = getDb();
+    const rows = await db`SELECT log_channel_id FROM confession_configs WHERE guild_id = ${guildId}`;
+    return (rows[0]?.log_channel_id as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function setConfessionPanelMessageId(guildId: string, messageId: string | null): Promise<void> {
   const db = getDb();
   await db`
@@ -26,28 +46,30 @@ export async function setConfessionPanelMessageId(guildId: string, messageId: st
   `;
 }
 
-export async function getConfessionConfig(guildId: string): Promise<{ channelId: string; panelMessageId: string | null } | null> {
+export async function getConfessionConfig(guildId: string): Promise<{ channelId: string; panelMessageId: string | null; logChannelId: string | null } | null> {
   try {
     const db = getDb();
-    const rows = await db`SELECT channel_id, panel_message_id FROM confession_configs WHERE guild_id = ${guildId}`;
+    const rows = await db`SELECT channel_id, panel_message_id, log_channel_id FROM confession_configs WHERE guild_id = ${guildId}`;
     if (rows.length === 0) return null;
     return {
       channelId: rows[0].channel_id as string,
       panelMessageId: (rows[0].panel_message_id as string) ?? null,
+      logChannelId: (rows[0].log_channel_id as string) ?? null,
     };
   } catch {
     return null;
   }
 }
 
-export async function getAllConfessionConfigs(): Promise<{ guildId: string; channelId: string; panelMessageId: string | null }[]> {
+export async function getAllConfessionConfigs(): Promise<{ guildId: string; channelId: string; panelMessageId: string | null; logChannelId: string | null }[]> {
   try {
     const db = getDb();
-    const rows = await db`SELECT guild_id, channel_id, panel_message_id FROM confession_configs`;
+    const rows = await db`SELECT guild_id, channel_id, panel_message_id, log_channel_id FROM confession_configs`;
     return rows.map(r => ({
       guildId: r.guild_id as string,
       channelId: r.channel_id as string,
       panelMessageId: (r.panel_message_id as string) ?? null,
+      logChannelId: (r.log_channel_id as string) ?? null,
     }));
   } catch {
     return [];

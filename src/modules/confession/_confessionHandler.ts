@@ -20,6 +20,7 @@ import {
   createConfessionRecord,
 } from '../../core/database/repositories/confessionRepo.js';
 import { buildAnonymousConfessionEmbed, buildConfessionPanel } from './confessionUI.js';
+import { buildV2Container } from '../../core/utils/componentsV2.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
@@ -105,8 +106,9 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
   confessionPanelLocks.add(channelId);
 
   try {
-    // 1. Delete previous confession panel message FIRST
     const config = await getConfessionConfig(guild.id);
+
+    // 1. Delete previous confession panel message FIRST
     if (config && config.panelMessageId) {
       const prevMsg = await targetChannel.messages.fetch(config.panelMessageId).catch(() => null);
       if (prevMsg) {
@@ -135,6 +137,22 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
     // 5. Track new panel message ID in DB and memory
     activeConfessionPanels.set(guild.id, newPanelMsg.id);
     await setConfessionPanelMessageId(guild.id, newPanelMsg.id);
+
+    // 6. Send mod log entry to configured confession log channel if present
+    if (config && config.logChannelId) {
+      const logChannel = (await guild.channels.fetch(config.logChannelId).catch(() => null)) as GuildTextBasedChannel | null;
+      if (logChannel) {
+        const logPayload = buildV2Container({
+          text: `🕵️ **Confession Log #${record.id}**`,
+          sections: [
+            `**Author:** <@${user.id}> (\`${user.tag}\`) [ID: \`${user.id}\`]`,
+            `**Content:**\n${content}`,
+            `**Message Link:** ${postedMsg.url}`,
+          ],
+        });
+        await logChannel.send(logPayload).catch(() => {});
+      }
+    }
 
     // Private developer logging
     logEvent('info', 'command_execution', `Anonymous confession #${record.id} submitted by ${user.tag}`, {

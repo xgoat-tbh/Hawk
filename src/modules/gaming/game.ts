@@ -14,15 +14,18 @@ import {
   getGameTestChannel,
 } from '../../core/database/repositories/gameRepo.js';
 import { mentionRole, mentionChannel, bold, inlineCode } from '../../core/utils/formatters.js';
+import { buildV2Container } from '../../core/utils/componentsV2.js';
 
 export default defineCommand({
   name: 'game',
+  aliases: ['gamelist', 'games', 'gameconfig', 'listgames'],
   module: 'gaming',
   description: 'Manage single-destination game ping configurations and test channel.',
   usage: 'game <create|edit|delete|list|testchannel> [args...]',
   examples: [
     'game create au1 "Among Us" @AmongUs #au-vc1 300',
     'game list',
+    'gamelist',
     'game delete au1',
     'game testchannel #test-pings',
     'game testchannel none',
@@ -33,6 +36,12 @@ export default defineCommand({
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, respond } = ctx;
+
+    const alias = parsed.aliasUsed.toLowerCase();
+    if (alias === 'gamelist' || alias === 'games' || alias === 'gameconfig' || alias === 'listgames') {
+      await handleList(ctx);
+      return;
+    }
 
     if (parsed.args.length === 0) {
       await respond.error('Specify a subcommand: `create`, `edit`, `delete`, or `list`.');
@@ -220,11 +229,34 @@ async function handleList(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  const lines = pings.map(
-    p => `${inlineCode(p.identifier)}  •  ${bold(p.gameName)}  •  ${mentionRole(p.roleId)}  •  ${mentionChannel(p.vcId)} (${p.cooldownSeconds}s)`,
+  const pingLines = pings.map(
+    p => `• ${inlineCode(p.identifier)} — ${bold(p.gameName)} — ${mentionRole(p.roleId)} — ${mentionChannel(p.vcId)} (\`${p.cooldownSeconds}s\` cooldown)`,
   );
 
-  await respond.send(`**Gaming Ping Configurations (${pings.length})**\n\n${lines.join('\n')}`);
+  const result: string[] = [];
+  let currentLength = 0;
+  let truncatedCount = 0;
+  for (let i = 0; i < pingLines.length; i++) {
+    const line = pingLines[i];
+    if (currentLength + line.length + 1 > 1800) {
+      truncatedCount = pingLines.length - i;
+      break;
+    }
+    result.push(line);
+    currentLength += line.length + 1;
+  }
+
+  const sections = [
+    `**Total Game Configurations:** ${pings.length}`,
+    result.join('\n') + (truncatedCount > 0 ? `\n\n*...and ${truncatedCount} more configuration(s)*` : ''),
+  ];
+
+  const payload = buildV2Container({
+    text: '🎮 **Gaming Ping Configurations**',
+    sections,
+  });
+
+  await respond.raw({ components: payload.components });
 }
 
 async function handleTestChannel(ctx: CommandContext, args: string[]): Promise<void> {

@@ -6,6 +6,8 @@ import { resolveChannel } from '../../core/resolver/ChannelResolver.js';
 import {
   setConfessionChannel,
   getConfessionChannel,
+  setConfessionLogChannel,
+  getConfessionLogChannel,
   setConfessionPanelMessageId,
   resetConfessionDataForGuild,
 } from '../../core/database/repositories/confessionRepo.js';
@@ -17,10 +19,12 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 export default defineCommand({
   name: 'confession',
   module: 'confession',
-  description: 'Manage Confession module channel, submission panel, or perform a reset.',
-  usage: 'confession <channel|panel|reset> [args...]',
+  description: 'Manage Confession module channel, log channel, submission panel, or perform a reset.',
+  usage: 'confession <channel|log|panel|reset> [args...]',
   examples: [
     'confession channel #confessions',
+    'confession log #mod-logs',
+    'confession log none',
     'confession panel',
     'confession reset confirm',
   ],
@@ -32,7 +36,7 @@ export default defineCommand({
     const { parsed, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Specify a subcommand: `channel`, `panel`, or `reset`.');
+      await respond.error('Specify a subcommand: `channel`, `log`, `panel`, or `reset`.');
       return;
     }
 
@@ -42,6 +46,13 @@ export default defineCommand({
     switch (subcommand) {
       case 'channel':
         await handleChannelConfig(ctx, subArgs);
+        break;
+
+      case 'log':
+      case 'logchannel':
+      case 'logs':
+      case 'modlog':
+        await handleLogConfig(ctx, subArgs);
         break;
 
       case 'panel':
@@ -55,7 +66,7 @@ export default defineCommand({
         break;
 
       default:
-        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`panel\`, \`reset\`.`);
+        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`log\`, \`panel\`, \`reset\`.`);
         break;
     }
   },
@@ -99,6 +110,50 @@ async function handleChannelConfig(ctx: CommandContext, args: string[]): Promise
     guildId: guild.id,
     previousChannel: prevChannel ?? 'none',
     newChannel: channel.id,
+  });
+}
+
+async function handleLogConfig(ctx: CommandContext, args: string[]): Promise<void> {
+  const { guild, respond, member } = ctx;
+
+  if (args.length === 0) {
+    const current = await getConfessionLogChannel(guild.id);
+    if (current) {
+      await respond.info(`The current confession log channel is ${mentionChannel(current)}.`);
+    } else {
+      await respond.info('No confession log channel is currently configured. Use `?confession log <#channel>`.');
+    }
+    return;
+  }
+
+  const input = args[0].toLowerCase();
+  if (['none', 'off', 'disable', 'delete', 'remove', 'clear'].includes(input)) {
+    await setConfessionLogChannel(guild.id, null);
+    await respond.success('Confession log channel configuration removed.');
+    return;
+  }
+
+  const channelResult = resolveChannel(args[0], guild);
+  if (!channelResult.success) {
+    await respond.error(`Channel: ${channelResult.error}`);
+    return;
+  }
+
+  const channel = channelResult.value.channel;
+  if (!channel.isTextBased()) {
+    await respond.error('The confession log channel must be a text-based channel.');
+    return;
+  }
+
+  await setConfessionLogChannel(guild.id, channel.id);
+  await respond.success(`Confession log channel configured to ${mentionChannel(channel.id)}.`);
+
+  logEvent('info', 'command_execution', `Confession log channel configured by ${member.user.tag}`, {
+    administrator: member.user.tag,
+    adminId: member.id,
+    guild: guild.name,
+    guildId: guild.id,
+    logChannel: channel.id,
   });
 }
 
