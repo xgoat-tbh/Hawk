@@ -76,11 +76,27 @@ export async function deleteGamePing(guildId: string, identifier: string): Promi
 export async function listGamePings(guildId: string): Promise<GamePingConfig[]> {
   const db = getDb();
 
-  const rows = await db`
+  let rows = await db`
     SELECT * FROM game_pings
     WHERE guild_id = ${guildId}
     ORDER BY identifier ASC
   `;
+
+  if (rows.length === 0) {
+    try {
+      const oldRows = await db`
+        SELECT g.id, g.guild_id, g.identifier, g.name as game_name, g.role_id, COALESCE(v.vc_id, '') as vc_id, COALESCE(v.cooldown_seconds, 300) as cooldown_seconds, g.created_at, g.updated_at
+        FROM games g
+        LEFT JOIN game_vcs v ON v.game_id = g.id
+        WHERE g.guild_id = ${guildId}
+      `;
+      if (oldRows.length > 0) {
+        rows = oldRows;
+      }
+    } catch {
+      // Old legacy table does not exist
+    }
+  }
 
   return rows.map(mapPingRow);
 }
