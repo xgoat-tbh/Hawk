@@ -229,9 +229,11 @@ async function handleList(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  const pingLines = pings.map(
-    p => `• ${inlineCode(p.identifier)} — ${bold(p.gameName)} — ${mentionRole(p.roleId)}${p.vcId ? ` — ${mentionChannel(p.vcId)}` : ''} (\`${p.cooldownSeconds}s\` cooldown)`,
-  );
+  const pingLines = pings.map((p) => {
+    const role = guild.roles.cache.get(p.roleId);
+    const roleStr = role ? bold(role.name) : mentionRole(p.roleId);
+    return `• ${inlineCode(p.identifier)} — ${bold(p.gameName)} — ${roleStr}${p.vcId ? ` — ${mentionChannel(p.vcId)}` : ''} (\`${p.cooldownSeconds}s\` cooldown)`;
+  });
 
   await sendPaginatedV2Container(ctx, {
     title: '🎮 **Gaming Ping Configurations**',

@@ -10,6 +10,7 @@ import {
 } from 'discord.js';
 import type { Message, GuildTextBasedChannel } from 'discord.js';
 import type { CommandContext } from '../../types/command.js';
+import { sanitize } from './validators.js';
 
 export interface ComponentV2Options {
   accentColor?: number;
@@ -70,23 +71,27 @@ export async function sendPaginatedV2Container(
   ctx: CommandContext,
   options: PaginatedV2Options,
 ): Promise<Message> {
-  const { channel, member } = ctx;
+  const { channel, member, guild } = ctx;
   const pageSize = options.pageSize && options.pageSize > 0 ? options.pageSize : 10;
   const timeoutMs = options.timeoutMs ?? 120_000;
-  const totalPages = Math.max(1, Math.ceil(options.items.length / pageSize));
+
+  const title = sanitize(options.title, guild);
+  const emptyText = sanitize(options.emptyText ?? 'No items found.', guild);
+  const items = options.items.map((it) => sanitize(it, guild));
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
 
   function buildPagePayload(page: number, disabled = false): ComponentV2Payload {
-    if (options.items.length === 0) {
+    if (items.length === 0) {
       return buildV2Container({
-        text: options.title,
-        sections: [options.emptyText ?? 'No items found.'],
+        text: title,
+        sections: [emptyText],
         accentColor: options.accentColor,
       });
     }
 
     const start = (page - 1) * pageSize;
-    const pageItems = options.items.slice(start, start + pageSize);
-    const content = `${pageItems.join('\n')}\n\n*Page ${page}/${totalPages} (Total: ${options.items.length})*`;
+    const pageItems = items.slice(start, start + pageSize);
+    const content = `${pageItems.join('\n')}\n\n*Page ${page}/${totalPages} (Total: ${items.length})*`;
 
     let buttonRow: ActionRowBuilder<ButtonBuilder> | undefined;
     if (totalPages > 1) {
@@ -110,7 +115,7 @@ export async function sendPaginatedV2Container(
     }
 
     return buildV2Container({
-      text: options.title,
+      text: title,
       sections: [content],
       components: buttonRow ? [buttonRow] : undefined,
       accentColor: options.accentColor,
