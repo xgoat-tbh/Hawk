@@ -39,7 +39,7 @@ export default defineCommand({
     const { parsed, respond } = ctx;
 
     if (parsed.args.length < 2) {
-      await respond.error('Usage: `?welcome <greet|leave> <channel|message|remove|showvars|test> [args...]`');
+      await respond.error(`Usage: \`${parsed.prefix}welcome <greet|leave> <channel|message|remove|showvars|test> [args...]\``);
       return;
     }
 
@@ -161,12 +161,12 @@ async function handleTest(ctx: CommandContext, isGreet: boolean): Promise<void> 
   const rawPayload = isGreet ? config?.greetPayload : config?.leavePayload;
 
   if (!channelId) {
-    await respond.error(`No ${isGreet ? 'welcome' : 'leave'} destination channel has been configured. Use \`?welcome ${isGreet ? 'greet' : 'leave'} channel <#channel>\`.`);
+    await respond.error(`No ${isGreet ? 'welcome' : 'leave'} destination channel has been configured. Use \`${ctx.parsed.prefix}welcome ${isGreet ? 'greet' : 'leave'} channel <#channel>\`.`);
     return;
   }
 
   if (!rawPayload) {
-    await respond.error(`No ${isGreet ? 'welcome' : 'leave'} message payload has been configured. Use \`?welcome ${isGreet ? 'greet' : 'leave'} message\`.`);
+    await respond.error(`No ${isGreet ? 'welcome' : 'leave'} message payload has been configured. Use \`${ctx.parsed.prefix}welcome ${isGreet ? 'greet' : 'leave'} message\`.`);
     return;
   }
 

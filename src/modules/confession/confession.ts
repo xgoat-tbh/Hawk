@@ -77,10 +77,11 @@ async function handleChannelConfig(ctx: CommandContext, args: string[]): Promise
 
   if (args.length === 0) {
     const current = await getConfessionChannel(guild.id);
+    const prefix = ctx.parsed.prefix;
     if (current) {
       await respond.info(`The current confession channel is ${mentionChannel(current)}.`);
     } else {
-      await respond.info('No confession channel has been configured yet. Use `?confession channel <#channel>`.');
+      await respond.info(`No confession channel has been configured yet. Use \`${prefix}confession channel <#channel>\`.`);
     }
     return;
   }
@@ -118,10 +119,11 @@ async function handleLogConfig(ctx: CommandContext, args: string[]): Promise<voi
 
   if (args.length === 0) {
     const current = await getConfessionLogChannel(guild.id);
+    const prefix = ctx.parsed.prefix;
     if (current) {
       await respond.info(`The current confession log channel is ${mentionChannel(current)}.`);
     } else {
-      await respond.info('No confession log channel is currently configured. Use `?confession log <#channel>`.');
+      await respond.info(`No confession log channel is currently configured. Use \`${prefix}confession log <#channel>\`.`);
     }
     return;
   }
@@ -181,8 +183,9 @@ async function handleReset(ctx: CommandContext, args: string[]): Promise<void> {
   const { guild, respond, member } = ctx;
 
   if (args.length === 0 || args[0].toLowerCase() !== 'confirm') {
+    const prefix = ctx.parsed.prefix;
     await respond.warning(
-      `⚠️ ${bold('DESTRUCTIVE OPERATION')}: Resetting confessions will delete all confession records and channel configuration for this server.\n\nTo confirm, run: \`?confession reset confirm\``,
+      `⚠️ ${bold('DESTRUCTIVE OPERATION')}: Resetting confessions will delete all confession records and channel configuration for this server.\n\nTo confirm, run: \`${prefix}confession reset confirm\``,
     );
     return;
   }

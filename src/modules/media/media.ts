@@ -32,7 +32,7 @@ export default defineCommand({
     const { parsed, respond } = ctx;
 
     if (parsed.args.length < 2) {
-      await respond.error('Usage: `?media <channel|thread> <add|remove|list|on|off> [target]`');
+      await respond.error(`Usage: \`${parsed.prefix}media <channel|thread> <add|remove|list|on|off> [target]\``);
       return;
     }
 
@@ -67,7 +67,7 @@ export default defineCommand({
         await respond.error(`Unknown thread option \`${action}\`. Valid options: \`on\`, \`off\`.`);
       }
     } else {
-      await respond.error('Specify `channel` or `thread`. Example: `?media channel add #media` or `?media thread on`.');
+      await respond.error(`Specify \`channel\` or \`thread\`. Example: \`${parsed.prefix}media channel add #media\` or \`${parsed.prefix}media thread on\`.`);
     }
   },
 });
@@ -76,7 +76,7 @@ async function handleChannelAdd(ctx: CommandContext, args: string[]): Promise<vo
   const { guild, respond, member } = ctx;
 
   if (args.length === 0) {
-    await respond.error('Usage: `?media channel add <#channel>`');
+    await respond.error(`Usage: \`${ctx.parsed.prefix}media channel add <#channel>\``);
     return;
   }
 
@@ -113,7 +113,7 @@ async function handleChannelRemove(ctx: CommandContext, args: string[]): Promise
   const { guild, respond, member } = ctx;
 
   if (args.length === 0) {
-    await respond.error('Usage: `?media channel remove <#channel>`');
+    await respond.error(`Usage: \`${ctx.parsed.prefix}media channel remove <#channel>\``);
     return;
   }
 

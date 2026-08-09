@@ -21,7 +21,7 @@ export default defineCommand({
 
     const stickyContent = parsed.rawArgs.trim();
     if (!stickyContent) {
-      await respond.error('Usage: `?stick <message...>`');
+      await respond.error(`Usage: \`${parsed.prefix}stick <message...>\``);
       return;
     }
 

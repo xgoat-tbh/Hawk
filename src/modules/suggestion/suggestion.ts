@@ -106,7 +106,7 @@ async function handleChannelConfig(ctx: CommandContext, args: string[]): Promise
     if (current) {
       await respond.info(`The current suggestion channel is ${mentionChannel(current)}.`);
     } else {
-      await respond.info('No suggestion channel has been configured yet. Use `?suggestion channel <#channel>`.');
+      await respond.info(`No suggestion channel has been configured yet. Use \`${ctx.parsed.prefix}suggestion channel <#channel>\`.`);
     }
     return;
   }
@@ -144,7 +144,7 @@ async function handlePanelConfig(ctx: CommandContext): Promise<void> {
 
   const channelId = await getSuggestionChannel(guild.id);
   if (!channelId) {
-    await respond.error('Please configure a suggestion channel first using `?suggestion channel <#channel>`.');
+    await respond.error(`Please configure a suggestion channel first using \`${ctx.parsed.prefix}suggestion channel <#channel>\`.`);
     return;
   }
 
@@ -174,7 +174,7 @@ async function handleBlacklist(ctx: CommandContext, args: string[]): Promise<voi
   const { guild, respond, member } = ctx;
 
   if (args.length === 0) {
-    await respond.error('Usage: `?suggestion blacklist <add|remove|list> [user]`');
+    await respond.error(`Usage: \`${ctx.parsed.prefix}suggestion blacklist <add|remove|list> [user]\``);
     return;
   }
 
@@ -192,7 +192,7 @@ async function handleBlacklist(ctx: CommandContext, args: string[]): Promise<voi
   }
 
   if (args.length < 2) {
-    await respond.error(`Usage: \`?suggestion blacklist ${action} <user>\``);
+    await respond.error(`Usage: \`${ctx.parsed.prefix}suggestion blacklist ${action} <user>\``);
     return;
   }
 
@@ -252,7 +252,7 @@ async function handleReset(ctx: CommandContext, args: string[]): Promise<void> {
 
   if (args.length === 0 || args[0].toLowerCase() !== 'confirm') {
     await respond.warning(
-      `⚠️ ${bold('DESTRUCTIVE OPERATION')}: Resetting suggestions will delete all suggestion history, vote records, suggestion counters, and blacklist data for this server.\n\nTo confirm, run: \`?suggestion reset confirm\``,
+      `⚠️ ${bold('DESTRUCTIVE OPERATION')}: Resetting suggestions will delete all suggestion history, vote records, suggestion counters, and blacklist data for this server.\n\nTo confirm, run: \`${ctx.parsed.prefix}suggestion reset confirm\``,
     );
     return;
   }

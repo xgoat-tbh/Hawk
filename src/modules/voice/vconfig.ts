@@ -41,7 +41,7 @@ export default defineCommand({
     const { guild, member, channel, parsed, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?vconfig <voice-command|all> <wl|bl> <@role|?all>` or `?vconfig list`');
+      await respond.error(`Usage: \`${parsed.prefix}vconfig <voice-command|all> <wl|bl> <@role|?all>\` or \`${parsed.prefix}vconfig list\``);
       return;
     }
 
@@ -75,7 +75,7 @@ export default defineCommand({
     // ── Subcommand: remove ────────────────────────────────────
     if (sub === 'remove' || sub === 'delete') {
       if (parsed.args.length < 4) {
-        await respond.error('Usage: `?vconfig remove <voice-command|all> <wl|bl> <@role|?all>`');
+        await respond.error(`Usage: \`${parsed.prefix}vconfig remove <voice-command|all> <wl|bl> <@role|?all>\``);
         return;
       }
 
@@ -112,9 +112,8 @@ export default defineCommand({
       return;
     }
 
-    // ── Main Configuration Flow: ?vconfig <cmd|all> <wl|bl> <role> ──
     if (parsed.args.length < 3) {
-      await respond.error('Usage: `?vconfig <voice-command|all> <wl|bl> <@role|?all>`');
+      await respond.error(`Usage: \`${parsed.prefix}vconfig <voice-command|all> <wl|bl> <@role|?all>\``);
       return;
     }
 
@@ -266,7 +265,7 @@ export async function handleVConfigFallback(
 ): Promise<void> {
   if (interaction.replied || interaction.deferred) return;
   await interaction.reply({
-    content: 'This voice configuration menu has expired or is no longer active. Please run `?vconfig` again.',
+    content: 'This voice configuration menu has expired or is no longer active. Please run `vconfig` again.',
     flags: MessageFlags.Ephemeral,
   }).catch(() => {});
 }

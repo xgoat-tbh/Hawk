@@ -39,7 +39,7 @@ export default defineCommand({
     const { parsed, guild, channel, respond, member } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?slowmode <duration|off>` (e.g. `10s`, `5m`, `off`)');
+      await respond.error(`Usage: \`${parsed.prefix}slowmode <duration|off>\` (e.g. \`10s\`, \`5m\`, \`off\`)`);
       return;
     }
 

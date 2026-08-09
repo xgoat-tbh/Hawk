@@ -47,7 +47,7 @@ export default defineCommand({
     const { guild, member, channel, parsed, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?ignore <command|module|all> <wl|bl> <@role|#channel|@user|all>` or `?ignore list`');
+      await respond.error(`Usage: \`${parsed.prefix}ignore <command|module|all> <wl|bl> <@role|#channel|@user|all>\` or \`${parsed.prefix}ignore list\``);
       return;
     }
 
@@ -87,7 +87,7 @@ export default defineCommand({
     // ── Subcommand: remove ────────────────────────────────────
     if (sub === 'remove' || sub === 'delete') {
       if (parsed.args.length < 4) {
-        await respond.error('Usage: `?ignore remove <command|module|all> <wl|bl> <@role|#channel|@user|all>`');
+        await respond.error(`Usage: \`${parsed.prefix}ignore remove <command|module|all> <wl|bl> <@role|#channel|@user|all>\``);
         return;
       }
 
@@ -124,9 +124,8 @@ export default defineCommand({
       return;
     }
 
-    // ── Main Command Flow: ?ignore <scope> <wl|bl> <target> ───
     if (parsed.args.length < 3) {
-      await respond.error('Usage: `?ignore <command|module|all> <wl|bl> <@role|#channel|@user|all>`');
+      await respond.error(`Usage: \`${parsed.prefix}ignore <command|module|all> <wl|bl> <@role|#channel|@user|all>\``);
       return;
     }
 

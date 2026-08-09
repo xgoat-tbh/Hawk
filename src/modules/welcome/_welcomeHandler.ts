@@ -99,7 +99,7 @@ export async function handleWelcomeModal(interaction: ModalSubmitInteraction): P
   }
 
   await interaction.reply({
-    content: `✅ ${isGreet ? 'Welcome' : 'Leave'} ${isJson ? 'JSON payload' : 'simple message'} configured successfully. Use \`?welcome ${type} test\` to send a preview.`,
+    content: `✅ ${isGreet ? 'Welcome' : 'Leave'} ${isJson ? 'JSON payload' : 'simple message'} configured successfully. Use \`!welcome ${type} test\` to send a preview.`,
     flags: MessageFlags.Ephemeral,
   });
 

@@ -27,7 +27,7 @@ export default defineCommand({
     }
 
     if (parsed.args.length > 1) {
-      await respond.error('Usage: `?unlock [@Role|all]` (accepts at most one target argument).');
+      await respond.error(`Usage: \`${parsed.prefix}unlock [@Role|all]\` (accepts at most one target argument).`);
       return;
     }
 

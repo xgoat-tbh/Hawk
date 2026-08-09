@@ -26,7 +26,7 @@ export default defineCommand({
     const { parsed, guild, respond, message, channel } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?rp <identifier> <message...>`');
+      await respond.error(`Usage: \`${parsed.prefix}rp <identifier> <message...>\``);
       return;
     }
 

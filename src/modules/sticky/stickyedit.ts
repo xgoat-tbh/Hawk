@@ -21,13 +21,13 @@ export default defineCommand({
 
     const existingSticky = await getSticky(guild.id, channel.id);
     if (!existingSticky) {
-      await respond.error('No active sticky configuration found for this channel. Use `?stick <message...>` first.');
+      await respond.error(`No active sticky configuration found for this channel. Use \`${parsed.prefix}stick <message...>\` first.`);
       return;
     }
 
     const newContent = parsed.rawArgs.trim();
     if (!newContent) {
-      await respond.error('Usage: `?stickyedit <new_message...>`');
+      await respond.error(`Usage: \`${parsed.prefix}stickyedit <new_message...>\``);
       return;
     }
 

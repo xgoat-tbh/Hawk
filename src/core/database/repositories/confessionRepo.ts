@@ -19,12 +19,22 @@ export async function getConfessionChannel(guildId: string): Promise<string | nu
 
 export async function setConfessionLogChannel(guildId: string, logChannelId: string | null): Promise<void> {
   const db = getDb();
-  await db`
-    INSERT INTO confession_configs (guild_id, channel_id, log_channel_id)
-    VALUES (${guildId}, '', ${logChannelId})
-    ON CONFLICT (guild_id)
-    DO UPDATE SET log_channel_id = ${logChannelId}, updated_at = NOW()
-  `;
+  try {
+    await db`
+      INSERT INTO confession_configs (guild_id, channel_id, log_channel_id)
+      VALUES (${guildId}, '', ${logChannelId})
+      ON CONFLICT (guild_id)
+      DO UPDATE SET log_channel_id = ${logChannelId}, updated_at = NOW()
+    `;
+  } catch {
+    await db.unsafe('ALTER TABLE confession_configs ADD COLUMN IF NOT EXISTS log_channel_id TEXT;');
+    await db`
+      INSERT INTO confession_configs (guild_id, channel_id, log_channel_id)
+      VALUES (${guildId}, '', ${logChannelId})
+      ON CONFLICT (guild_id)
+      DO UPDATE SET log_channel_id = ${logChannelId}, updated_at = NOW()
+    `;
+  }
 }
 
 export async function getConfessionLogChannel(guildId: string): Promise<string | null> {

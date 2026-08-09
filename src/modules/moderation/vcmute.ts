@@ -20,7 +20,7 @@ export default defineCommand({
     const { parsed, guild, respond, member } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?vcmute <targets...>`');
+      await respond.error(`Usage: \`${parsed.prefix}vcmute <targets...>\``);
       return;
     }
 

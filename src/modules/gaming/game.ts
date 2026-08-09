@@ -90,7 +90,7 @@ async function handleCreate(ctx: CommandContext, args: string[]): Promise<void> 
   const { guild, respond } = ctx;
 
   if (args.length < 4) {
-    await respond.error('Usage: `?game create <identifier> "<game_name>" <@role> <#vc> [cooldown_seconds]`');
+    await respond.error(`Usage: \`${ctx.parsed.prefix}game create <identifier> "<game_name>" <@role> <#vc> [cooldown_seconds]\``);
     return;
   }
 
@@ -148,7 +148,7 @@ async function handleEdit(ctx: CommandContext, args: string[]): Promise<void> {
   const { guild, respond } = ctx;
 
   if (args.length < 4) {
-    await respond.error('Usage: `?game edit <identifier> "<game_name>" <@role> <#vc> [cooldown_seconds]`');
+    await respond.error(`Usage: \`${ctx.parsed.prefix}game edit <identifier> "<game_name>" <@role> <#vc> [cooldown_seconds]\``);
     return;
   }
 
@@ -201,7 +201,7 @@ async function handleDelete(ctx: CommandContext, args: string[]): Promise<void> 
   const { guild, respond } = ctx;
 
   if (args.length === 0) {
-    await respond.error('Usage: `?game delete <identifier>`');
+    await respond.error(`Usage: \`${ctx.parsed.prefix}game delete <identifier>\``);
     return;
   }
 

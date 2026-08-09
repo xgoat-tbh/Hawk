@@ -22,7 +22,7 @@ export default defineCommand({
     const { parsed, guild, channel, message, respond, member } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `?purge <amount> [bot|human|@user|embeds|links|images]`');
+      await respond.error(`Usage: \`${parsed.prefix}purge <amount> [bot|human|@user|embeds|links|images]\``);
       return;
     }
 
