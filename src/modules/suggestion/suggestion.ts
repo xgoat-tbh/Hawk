@@ -15,7 +15,8 @@ import {
 } from '../../core/database/repositories/suggestionRepo.js';
 import { buildSuggestionPanelPayload } from './suggestionUI.js';
 import { registerSuggestionPanelChannel } from './_suggestionHandler.js';
-import { mentionChannel, mentionUser, bold, inlineCode } from '../../core/utils/formatters.js';
+import { mentionChannel, mentionUser, bold } from '../../core/utils/formatters.js';
+import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 import acceptCmd from './accept.js';
@@ -186,8 +187,13 @@ async function handleBlacklist(ctx: CommandContext, args: string[]): Promise<voi
       await respond.info('No users are currently blacklisted from suggestions.');
       return;
     }
-    const lines = records.map(r => `• ${mentionUser(r.userId)} (${inlineCode(r.userId)})`);
-    await respond.send(`**Blacklisted Suggestion Users (${records.length})**\n\n${lines.join('\n')}`);
+    const lines = records.map(r => `• ${mentionUser(r.userId)} (\`${r.userId}\`)`);
+    await sendPaginatedV2Container(ctx, {
+      title: '🚫 **Blacklisted Suggestion Users**',
+      items: lines,
+      pageSize: 10,
+      emptyText: 'No users are currently blacklisted from suggestions.',
+    });
     return;
   }
 

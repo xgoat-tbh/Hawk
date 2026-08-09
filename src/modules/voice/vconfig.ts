@@ -17,7 +17,7 @@ import {
   removeVConfigRule,
   getVConfigRulesForGuild,
 } from '../../core/database/repositories/vconfigRepo.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { buildV2Container, sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -62,13 +62,15 @@ export default defineCommand({
             : r.channelIds.length > 0
             ? r.channelIds.map((id) => `<#${id}>`).join(', ')
             : 'None';
-        return `• **\`${r.commandName}\`** | Mode: **${r.mode.toUpperCase()}** | Role: ${mentionRole(r.roleId)}\n  Channels: ${chans}`;
+        return `• **\`${r.commandName}\`** | Mode: **${r.mode.toUpperCase()}** | Role: ${mentionRole(r.roleId)} | Channels: ${chans}`;
       });
 
-      const payload = buildV2Container({
-        text: '**🔊 Voice Command Access Configurations**\n\n' + lines.join('\n\n'),
+      await sendPaginatedV2Container(ctx, {
+        title: '🔊 **Voice Command Access Configurations**',
+        items: lines,
+        pageSize: 10,
+        emptyText: 'No voice command access configurations exist for this server.',
       });
-      await (channel as GuildTextBasedChannel).send(payload);
       return;
     }
 

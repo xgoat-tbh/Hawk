@@ -2,6 +2,8 @@ import { EmbedBuilder } from 'discord.js';
 import type { Message, MessageCreateOptions, GuildTextBasedChannel } from 'discord.js';
 import { branding, getEmoji, toReactableEmoji } from '../config/branding.js';
 import { sanitize, truncate } from '../utils/validators.js';
+import { buildV2Container } from '../utils/componentsV2.js';
+import type { ComponentV2Options } from '../utils/componentsV2.js';
 
 const SAFE_ALLOWED_MENTIONS = {
   parse: [] as [],
@@ -33,9 +35,13 @@ export class ResponseBuilder {
     }
   }
 
+  private cleanSanitize(text: string): string {
+    return sanitize(text, this.message.guild);
+  }
+
   async success(text: string): Promise<Message> {
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('success')} ${sanitize(text)}`,
+      content: `${getEmoji('success')} ${this.cleanSanitize(text)}`,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent);
@@ -44,7 +50,7 @@ export class ResponseBuilder {
 
   async error(text: string): Promise<Message> {
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('error')} ${sanitize(text)}`,
+      content: `${getEmoji('error')} ${this.cleanSanitize(text)}`,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent, true);
@@ -53,7 +59,7 @@ export class ResponseBuilder {
 
   async warning(text: string): Promise<Message> {
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('warning')} ${sanitize(text)}`,
+      content: `${getEmoji('warning')} ${this.cleanSanitize(text)}`,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent, true);
@@ -62,7 +68,7 @@ export class ResponseBuilder {
 
   async info(text: string): Promise<Message> {
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('info')} ${sanitize(text)}`,
+      content: `${getEmoji('info')} ${this.cleanSanitize(text)}`,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent);
@@ -80,7 +86,7 @@ export class ResponseBuilder {
 
     if (text) {
       const sent = await this.sendableChannel.send({
-        content: `${rawEmoji} ${sanitize(text)}`,
+        content: `${rawEmoji} ${this.cleanSanitize(text)}`,
         allowedMentions: SAFE_ALLOWED_MENTIONS,
       });
       this.scheduleClean(sent);
@@ -92,7 +98,7 @@ export class ResponseBuilder {
 
   async send(text: string): Promise<Message> {
     const sent = await this.sendableChannel.send({
-      content: sanitize(text),
+      content: this.cleanSanitize(text),
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent);
@@ -111,20 +117,31 @@ export class ResponseBuilder {
     if (options.color !== undefined) {
       embed.setColor(options.color);
     }
-    if (options.title) embed.setTitle(sanitize(options.title));
-    if (options.description) embed.setDescription(truncate(sanitize(options.description), 4000));
-    if (options.footer || branding.footerText) embed.setFooter({ text: sanitize(options.footer ?? branding.footerText) });
+    if (options.title) embed.setTitle(this.cleanSanitize(options.title));
+    if (options.description) embed.setDescription(truncate(this.cleanSanitize(options.description), 4000));
+    if (options.footer || branding.footerText) embed.setFooter({ text: this.cleanSanitize(options.footer ?? branding.footerText) });
     if (options.thumbnail) embed.setThumbnail(options.thumbnail);
     if (options.fields) {
       for (const field of options.fields) {
         embed.addFields({
-          name: truncate(sanitize(field.name), 256),
-          value: truncate(sanitize(field.value), 1024),
+          name: truncate(this.cleanSanitize(field.name), 256),
+          value: truncate(this.cleanSanitize(field.value), 1024),
           inline: field.inline,
         });
       }
     }
     const sent = await this.sendableChannel.send({ embeds: [embed], allowedMentions: SAFE_ALLOWED_MENTIONS });
+    this.scheduleClean(sent);
+    return sent;
+  }
+
+  async v2Container(options: ComponentV2Options): Promise<Message> {
+    const payload = buildV2Container(options);
+    const sent = await this.sendableChannel.send({
+      components: payload.components,
+      flags: payload.flags,
+      allowedMentions: SAFE_ALLOWED_MENTIONS,
+    });
     this.scheduleClean(sent);
     return sent;
   }
@@ -140,7 +157,7 @@ export class ResponseBuilder {
 
   async reply(text: string): Promise<Message> {
     const sent = await this.message.reply({
-      content: sanitize(text),
+      content: this.cleanSanitize(text),
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent);

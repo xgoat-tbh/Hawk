@@ -14,6 +14,7 @@ import {
   getGameTestChannel,
 } from '../../core/database/repositories/gameRepo.js';
 import { mentionRole, mentionChannel, bold, inlineCode } from '../../core/utils/formatters.js';
+import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 
 export default defineCommand({
   name: 'game',
@@ -232,25 +233,12 @@ async function handleList(ctx: CommandContext): Promise<void> {
     p => `• ${inlineCode(p.identifier)} — ${bold(p.gameName)} — ${mentionRole(p.roleId)}${p.vcId ? ` — ${mentionChannel(p.vcId)}` : ''} (\`${p.cooldownSeconds}s\` cooldown)`,
   );
 
-  const chunks: string[] = [];
-  let currentChunk = '';
-  for (const line of pingLines) {
-    if ((currentChunk + '\n' + line).length > 3800) {
-      chunks.push(currentChunk);
-      currentChunk = line;
-    } else {
-      currentChunk = currentChunk ? `${currentChunk}\n${line}` : line;
-    }
-  }
-  if (currentChunk) chunks.push(currentChunk);
-
-  for (let i = 0; i < chunks.length; i++) {
-    await respond.embed({
-      title: `🎮 Gaming Ping Configurations (${pings.length})${chunks.length > 1 ? ` — Page ${i + 1}/${chunks.length}` : ''}`,
-      description: chunks[i],
-      color: 0x5865f2,
-    });
-  }
+  await sendPaginatedV2Container(ctx, {
+    title: '🎮 **Gaming Ping Configurations**',
+    items: pingLines,
+    pageSize: 10,
+    emptyText: 'No game ping configurations found for this server.',
+  });
 }
 
 async function handleTestChannel(ctx: CommandContext, args: string[]): Promise<void> {

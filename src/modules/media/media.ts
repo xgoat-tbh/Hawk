@@ -10,6 +10,7 @@ import {
   getMediaAutoThread,
 } from '../../core/database/repositories/mediaRepo.js';
 import { mentionChannel, bold } from '../../core/utils/formatters.js';
+import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
@@ -153,10 +154,15 @@ async function handleChannelList(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  const channelListStr = channels.map(c => mentionChannel(c.channelId)).join('\n');
-  await respond.info(
-    `${bold('MEDIA CHANNELS')}\n\n${channelListStr}\n\nAuto Threads: ${bold(autoThread ? 'ON' : 'OFF')}`,
-  );
+  const items = channels.map(c => `• ${mentionChannel(c.channelId)}`);
+  items.push(`\n**Auto Threads:** ${bold(autoThread ? 'ON' : 'OFF')}`);
+
+  await sendPaginatedV2Container(ctx, {
+    title: '🖼️ **Media Filter Channels**',
+    items,
+    pageSize: 10,
+    emptyText: 'No media channels are currently configured.',
+  });
 }
 
 async function handleThreadToggle(ctx: CommandContext, enabled: boolean): Promise<void> {

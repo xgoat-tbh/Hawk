@@ -1,5 +1,4 @@
 import { PermissionsBitField } from 'discord.js';
-import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveCommand } from '../../core/commands/CommandRegistry.js';
@@ -11,7 +10,7 @@ import {
   removeIgnore,
   getIgnoreEntries,
 } from '../../core/database/repositories/ignoreRepo.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 import { mentionRole, mentionChannel, mentionUser } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -44,7 +43,7 @@ export default defineCommand({
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { guild, member, channel, parsed, respond } = ctx;
+    const { guild, member, parsed, respond } = ctx;
 
     if (parsed.args.length === 0) {
       await respond.error(`Usage: \`${parsed.prefix}ignore <command|module|all> <wl|bl> <@role|#channel|@user|all>\` or \`${parsed.prefix}ignore list\``);
@@ -77,10 +76,12 @@ export default defineCommand({
         return `• **${modeStr}** | ${scopeStr} | Target: ${targetStr} (${e.entityType})`;
       });
 
-      const payload = buildV2Container({
-        text: '**🛡️ Command & Module Access Rules**\n\n' + lines.join('\n'),
+      await sendPaginatedV2Container(ctx, {
+        title: '🛡️ **Command & Module Access Rules**',
+        items: lines,
+        pageSize: 10,
+        emptyText: 'No command or module ignore/whitelist rules exist for this server.',
       });
-      await (channel as GuildTextBasedChannel).send(payload);
       return;
     }
 

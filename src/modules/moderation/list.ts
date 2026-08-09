@@ -3,7 +3,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { mentionRole, mentionUser } from '../../core/utils/formatters.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
@@ -71,19 +71,13 @@ export default defineCommand({
       }
 
       const memberLines = roleMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
-      const { textLines, truncatedCount } = formatListLines(memberLines, 1800);
 
-      const sections = [
-        `**Total Members:** ${totalCount}`,
-        textLines.join('\n') + (truncatedCount > 0 ? `\n\n*...and ${truncatedCount} more member(s)*` : ''),
-      ];
-
-      const payload = buildV2Container({
-        text: `📜 **Members in ${targetRole.name}** (${mentionRole(targetRole.id)})`,
-        sections,
+      await sendPaginatedV2Container(ctx, {
+        title: `📜 **Members in ${targetRole.name}** (${mentionRole(targetRole.id)})`,
+        items: memberLines,
+        pageSize: 10,
+        emptyText: `No members currently possess the role ${mentionRole(targetRole.id)}.`,
       });
-
-      await respond.raw({ components: payload.components });
     } else if (mode === 'admin') {
       const adminMembers = Array.from(
         allMembers.filter(m => {
@@ -99,19 +93,13 @@ export default defineCommand({
       }
 
       const adminLines = adminMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)${m.id === guild.ownerId ? ' 👑 *(Owner)*' : ''}`);
-      const { textLines, truncatedCount } = formatListLines(adminLines, 1800);
 
-      const sections = [
-        `**Total User Admins:** ${totalCount}`,
-        textLines.join('\n') + (truncatedCount > 0 ? `\n\n*...and ${truncatedCount} more admin(s)*` : ''),
-      ];
-
-      const payload = buildV2Container({
-        text: `🛡️ **Server Administrators (Human Users)**`,
-        sections,
+      await sendPaginatedV2Container(ctx, {
+        title: `🛡️ **Server Administrators (Human Users)**`,
+        items: adminLines,
+        pageSize: 10,
+        emptyText: 'No human administrator accounts found in this server.',
       });
-
-      await respond.raw({ components: payload.components });
     } else if (mode === 'bots') {
       const botMembers = Array.from(allMembers.filter(m => m.user.bot).values());
       const totalCount = botMembers.length;
@@ -122,19 +110,13 @@ export default defineCommand({
       }
 
       const botLines = botMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
-      const { textLines, truncatedCount } = formatListLines(botLines, 1800);
 
-      const sections = [
-        `**Total Bot Accounts:** ${totalCount}`,
-        textLines.join('\n') + (truncatedCount > 0 ? `\n\n*...and ${truncatedCount} more bot(s)*` : ''),
-      ];
-
-      const payload = buildV2Container({
-        text: `🤖 **Server Bot Accounts**`,
-        sections,
+      await sendPaginatedV2Container(ctx, {
+        title: `🤖 **Server Bot Accounts**`,
+        items: botLines,
+        pageSize: 10,
+        emptyText: 'No bot accounts found in this server.',
       });
-
-      await respond.raw({ components: payload.components });
     }
 
     logEvent('info', 'command_execution', `List (${mode}) by ${member.user.tag}`, {
@@ -146,21 +128,3 @@ export default defineCommand({
     });
   },
 });
-
-function formatListLines(lines: string[], maxLength: number): { textLines: string[]; truncatedCount: number } {
-  const result: string[] = [];
-  let currentLength = 0;
-  let truncatedCount = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (currentLength + line.length + 1 > maxLength) {
-      truncatedCount = lines.length - i;
-      break;
-    }
-    result.push(line);
-    currentLength += line.length + 1;
-  }
-
-  return { textLines: result, truncatedCount };
-}

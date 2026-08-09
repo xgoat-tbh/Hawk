@@ -4,8 +4,12 @@ import {
   SeparatorBuilder,
   SeparatorSpacingSize,
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   MessageFlags,
 } from 'discord.js';
+import type { Message, GuildTextBasedChannel } from 'discord.js';
+import type { CommandContext } from '../../types/command.js';
 
 export interface ComponentV2Options {
   accentColor?: number;
@@ -18,6 +22,15 @@ export interface ComponentV2Options {
 export interface ComponentV2Payload {
   components: ContainerBuilder[];
   flags: number;
+}
+
+export interface PaginatedV2Options {
+  title: string;
+  items: string[];
+  pageSize?: number;
+  accentColor?: number;
+  emptyText?: string;
+  timeoutMs?: number;
 }
 
 export function buildV2Container(options: ComponentV2Options): ComponentV2Payload {
@@ -51,4 +64,108 @@ export function buildV2Container(options: ComponentV2Options): ComponentV2Payloa
   }
 
   return { components: [container], flags: MessageFlags.IsComponentsV2 };
+}
+
+export async function sendPaginatedV2Container(
+  ctx: CommandContext,
+  options: PaginatedV2Options,
+): Promise<Message> {
+  const { channel, member } = ctx;
+  const pageSize = options.pageSize && options.pageSize > 0 ? options.pageSize : 10;
+  const timeoutMs = options.timeoutMs ?? 120_000;
+  const totalPages = Math.max(1, Math.ceil(options.items.length / pageSize));
+
+  function buildPagePayload(page: number, disabled = false): ComponentV2Payload {
+    if (options.items.length === 0) {
+      return buildV2Container({
+        text: options.title,
+        sections: [options.emptyText ?? 'No items found.'],
+        accentColor: options.accentColor,
+      });
+    }
+
+    const start = (page - 1) * pageSize;
+    const pageItems = options.items.slice(start, start + pageSize);
+    const content = `${pageItems.join('\n')}\n\n*Page ${page}/${totalPages} (Total: ${options.items.length})*`;
+
+    let buttonRow: ActionRowBuilder<ButtonBuilder> | undefined;
+    if (totalPages > 1) {
+      buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`v2_prev_${page}`)
+          .setLabel('◀ Prev')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(disabled || page <= 1),
+        new ButtonBuilder()
+          .setCustomId(`v2_page_indicator`)
+          .setLabel(`${page} / ${totalPages}`)
+          .setStyle(ButtonStyle.Primary)
+          .setDisabled(true),
+        new ButtonBuilder()
+          .setCustomId(`v2_next_${page}`)
+          .setLabel('Next ▶')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(disabled || page >= totalPages),
+      );
+    }
+
+    return buildV2Container({
+      text: options.title,
+      sections: [content],
+      components: buttonRow ? [buttonRow] : undefined,
+      accentColor: options.accentColor,
+    });
+  }
+
+  const textChannel = channel as GuildTextBasedChannel;
+  let currentPage = 1;
+  const initialPayload = buildPagePayload(currentPage);
+
+  const sentMsg = await textChannel.send({
+    components: initialPayload.components,
+    flags: initialPayload.flags,
+    allowedMentions: { parse: [], roles: [], users: [], repliedUser: false },
+  });
+
+  if (totalPages <= 1) {
+    return sentMsg;
+  }
+
+  const collector = sentMsg.createMessageComponentCollector({
+    time: timeoutMs,
+  });
+
+  collector.on('collect', async (i) => {
+    if (i.user.id !== member.id) {
+      await i.reply({
+        content: 'Only the command executor can switch pages.',
+        flags: MessageFlags.Ephemeral,
+      }).catch(() => {});
+      return;
+    }
+
+    if (i.customId.startsWith('v2_prev_')) {
+      currentPage = Math.max(1, currentPage - 1);
+    } else if (i.customId.startsWith('v2_next_')) {
+      currentPage = Math.min(totalPages, currentPage + 1);
+    } else {
+      return;
+    }
+
+    const nextPayload = buildPagePayload(currentPage);
+    await i.update({
+      components: nextPayload.components,
+      flags: nextPayload.flags,
+    }).catch(() => {});
+  });
+
+  collector.on('end', async () => {
+    const finalPayload = buildPagePayload(currentPage, true);
+    await sentMsg.edit({
+      components: finalPayload.components,
+      flags: finalPayload.flags,
+    }).catch(() => {});
+  });
+
+  return sentMsg;
 }

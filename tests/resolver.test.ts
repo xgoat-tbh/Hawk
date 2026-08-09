@@ -210,3 +210,26 @@ test('list command exists with proper metadata and aliases', async () => {
   assert.ok(listCmd.aliases.includes('bot'));
   assert.ok(listCmd.aliases.includes('bots'));
 });
+
+test('sanitize strips @ and masks mentions in bold without @ prefix', async () => {
+  const { sanitize } = await import('../src/core/utils/validators.js');
+
+  const mockGuild = {
+    roles: {
+      cache: new Map([
+        ['111111111111111111', { id: '111111111111111111', name: 'Moderator' }],
+      ]),
+    },
+    members: {
+      cache: new Map([
+        ['222222222222222222', { id: '222222222222222222', displayName: 'Yoshi', user: { username: 'yoshi' } }],
+      ]),
+    },
+  } as any;
+
+  assert.equal(sanitize('@everyone', mockGuild), '**everyone**');
+  assert.equal(sanitize('@here', mockGuild), '**here**');
+  assert.equal(sanitize('<@&111111111111111111>', mockGuild), '**Moderator**');
+  assert.equal(sanitize('<@222222222222222222>', mockGuild), '**Yoshi**');
+  assert.equal(sanitize('<@!222222222222222222>', mockGuild), '**Yoshi**');
+});
