@@ -21,7 +21,7 @@ export function canExecutorManage(
     return false;
   }
 
-  if (targetMember && executorHighest.position <= targetMember.roles.highest.position) {
+  if (targetMember && executor.id !== targetMember.id && executorHighest.position <= targetMember.roles.highest.position) {
     return false;
   }
 
@@ -46,14 +46,19 @@ export function isRoleManageable(guild: Guild, role: Role, executor?: GuildMembe
 }
 
 export function isMemberManageable(guild: Guild, member: GuildMember, executor?: GuildMember): boolean {
-  if (member.id === guild.ownerId) return false;
+  // Non-owners cannot manage Server Owner, but Server Owner can manage themselves
+  if (member.id === guild.ownerId && executor?.id !== guild.ownerId) return false;
 
   const botMember = guild.members.me;
   if (!botMember) return false;
 
   const botHighest = botMember.roles.highest;
   const targetHighest = member.roles.highest;
-  if (botHighest.position <= targetHighest.position) return false;
+
+  // Bot role hierarchy check
+  if (botHighest.position <= targetHighest.position && member.id !== botMember.id && executor?.id !== guild.ownerId) {
+    return false;
+  }
 
   if (executor && !canExecutorManage(guild, executor, undefined, member)) {
     return false;

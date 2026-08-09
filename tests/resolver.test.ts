@@ -233,3 +233,40 @@ test('sanitize strips @ and masks mentions in bold without @ prefix', async () =
   assert.equal(sanitize('<@222222222222222222>', mockGuild), '**Yoshi**');
   assert.equal(sanitize('<@!222222222222222222>', mockGuild), '**Yoshi**');
 });
+
+test('toggleRoleForMember allows self-targeting and performs hybrid role toggling', async () => {
+  const { toggleRoleForMember } = await import('../src/modules/moderation/roleHelpers.ts');
+
+  const mockRole1 = { id: 'role1', position: 10, managed: false } as any;
+  const mockRole2 = { id: 'role2', position: 10, managed: false } as any;
+  const mockBot = { roles: { highest: { position: 100 } } } as any;
+
+  let addedRole = '';
+  let removedRole = '';
+
+  const mockMember = {
+    id: 'user1',
+    roles: {
+      cache: new Map([['role1', mockRole1]]),
+      highest: { position: 50 },
+      add: async (r: any) => { addedRole = r.id; },
+      remove: async (r: any) => { removedRole = r.id; },
+    },
+  } as any;
+
+  const mockGuild = {
+    id: 'guild1',
+    ownerId: 'owner1',
+    members: { me: mockBot },
+  } as any;
+
+  // Toggling role user already has -> removes it
+  const res1 = await toggleRoleForMember(mockGuild, mockMember, mockRole1, mockMember);
+  assert.equal(res1, 'removed');
+  assert.equal(removedRole, 'role1');
+
+  // Toggling role user does not have -> adds it
+  const res2 = await toggleRoleForMember(mockGuild, mockMember, mockRole2, mockMember);
+  assert.equal(res2, 'added');
+  assert.equal(addedRole, 'role2');
+});
