@@ -1,5 +1,4 @@
 import { PermissionsBitField } from 'discord.js';
-import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
@@ -10,7 +9,7 @@ import {
   removePermit,
   getPermitsForGuild,
 } from '../../core/database/repositories/permissionRepo.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -33,7 +32,7 @@ export default defineCommand({
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { parsed, guild, member, channel, respond } = ctx;
+    const { parsed, guild, member, respond } = ctx;
 
     if (parsed.args.length === 0) {
       await respond.error('Usage: `access list` | `access add <@user|@role|?all> <scope>` | `access remove <@user|@role|?all> <scope>`');
@@ -60,10 +59,12 @@ export default defineCommand({
         return `• ${targetStr} (${p.targetType}) ➜ ${scopeStr}`;
       });
 
-      const payload = buildV2Container({
-        text: `**🔐 Active Custom Permits (${permits.length})**\n\n` + lines.join('\n'),
+      await sendPaginatedV2Container(ctx, {
+        title: '🔐 **Active Custom Permits**',
+        items: lines,
+        pageSize: 10,
+        emptyText: 'No custom permits have been granted in this server.',
       });
-      await (channel as GuildTextBasedChannel).send(payload);
       return;
     }
 
