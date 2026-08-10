@@ -25,10 +25,12 @@ export function resolveCommand(nameOrAlias: string): CommandDefinition | null {
   return null;
 }
 
-export function getModuleCommands(moduleName: string): CommandDefinition[] {
+export function getModuleCommands(moduleName: string, includeHidden = false): CommandDefinition[] {
   const names = modules.get(moduleName);
   if (!names) return [];
-  return Array.from(names).map(n => commands.get(n)).filter((c): c is CommandDefinition => c !== undefined);
+  return Array.from(names)
+    .map(n => commands.get(n))
+    .filter((c): c is CommandDefinition => c !== undefined && (includeHidden || !c.hidden));
 }
 
 export function getModules(): string[] { return Array.from(modules.keys()); }
