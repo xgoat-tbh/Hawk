@@ -8,84 +8,78 @@ import {
 import type { ButtonInteraction, GuildMember } from 'discord.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
-// Pre-curated fallback anime GIF URLs for each action
+// Direct working fallback anime GIF URLs (using i.giphy.com to avoid Discord embed blocking)
 const FALLBACK_GIFS: Record<string, string[]> = {
   hug: [
-    'https://media.giphy.com/media/lrr91983vOTW8/giphy.gif',
-    'https://media.giphy.com/media/u9BxkmXgOwMMo/giphy.gif',
-    'https://media.giphy.com/media/od5H3PmEG5EVq/giphy.gif',
-    'https://media.giphy.com/media/PHZ7v9tfQu0o0/giphy.gif',
+    'https://i.giphy.com/media/lrr91983vOTW8/giphy.gif',
+    'https://i.giphy.com/media/u9BxkmXgOwMMo/giphy.gif',
+    'https://i.giphy.com/media/od5H3PmEG5EVq/giphy.gif',
+    'https://i.giphy.com/media/PHZ7v9tfQu0o0/giphy.gif',
   ],
   kiss: [
-    'https://media.giphy.com/media/FqVM4892kmLR6/giphy.gif',
-    'https://media.giphy.com/media/G3va31oEEnIkM/giphy.gif',
-    'https://media.giphy.com/media/QGc80ZaFZCHhS/giphy.gif',
-    'https://media.giphy.com/media/Wm8fW4z0Fh0b1u655S/giphy.gif',
+    'https://i.giphy.com/media/FqVM4892kmLR6/giphy.gif',
+    'https://i.giphy.com/media/G3va31oEEnIkM/giphy.gif',
+    'https://i.giphy.com/media/QGc80ZaFZCHhS/giphy.gif',
   ],
   cuddle: [
-    'https://media.giphy.com/media/143v0Z4767T15e/giphy.gif',
-    'https://media.giphy.com/media/VG30a3XlPStsA/giphy.gif',
-    'https://media.giphy.com/media/S6ZlyZ0a6y0F2/giphy.gif',
+    'https://i.giphy.com/media/143v0Z4767T15e/giphy.gif',
+    'https://i.giphy.com/media/VG30a3XlPStsA/giphy.gif',
   ],
   pat: [
-    'https://media.giphy.com/media/5tmRHwD75vw82uZ4zQ/giphy.gif',
-    'https://media.giphy.com/media/ARSp9T7wwxNcs/giphy.gif',
-    'https://media.giphy.com/media/L2z7ILmjTOZZS/giphy.gif',
+    'https://i.giphy.com/media/5tmRHwD75vw82uZ4zQ/giphy.gif',
+    'https://i.giphy.com/media/ARSp9T7wwxNcs/giphy.gif',
   ],
   slap: [
-    'https://media.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif',
-    'https://media.giphy.com/media/Zau0yRL15t84w/giphy.gif',
-    'https://media.giphy.com/media/j3iGKfXRKlLqw/giphy.gif',
+    'https://i.giphy.com/media/Gf3AUz3eBNbTW/giphy.gif',
+    'https://i.giphy.com/media/Zau0yRL15t84w/giphy.gif',
   ],
   bite: [
-    'https://media.giphy.com/media/13Z0Z4W9d854eA/giphy.gif',
-    'https://media.giphy.com/media/OqJ92TjI8f8270x0u9/giphy.gif',
-    'https://media.giphy.com/media/oX2E0U36o3rP3q6t24/giphy.gif',
+    'https://i.giphy.com/media/13Z0Z4W9d854eA/giphy.gif',
+    'https://i.giphy.com/media/OqJ92TjI8f8270x0u9/giphy.gif',
   ],
   holdhands: [
-    'https://media.giphy.com/media/EPQfELrpbh56W5xWj4/giphy.gif',
-    'https://media.giphy.com/media/mp1JYId8n0t3y/giphy.gif',
-    'https://media.giphy.com/media/k5IqP83B4e3E4/giphy.gif',
+    'https://i.giphy.com/media/EPQfELrpbh56W5xWj4/giphy.gif',
+    'https://i.giphy.com/media/mp1JYId8n0t3y/giphy.gif',
   ],
   handhold: [
-    'https://media.giphy.com/media/EPQfELrpbh56W5xWj4/giphy.gif',
-    'https://media.giphy.com/media/mp1JYId8n0t3y/giphy.gif',
+    'https://i.giphy.com/media/EPQfELrpbh56W5xWj4/giphy.gif',
+    'https://i.giphy.com/media/mp1JYId8n0t3y/giphy.gif',
   ],
   lick: [
-    'https://media.giphy.com/media/8HqJ0aK0m15F540nZ5/giphy.gif',
-    'https://media.giphy.com/media/13BwKHda33nihW/giphy.gif',
+    'https://i.giphy.com/media/8HqJ0aK0m15F540nZ5/giphy.gif',
+    'https://i.giphy.com/media/13BwKHda33nihW/giphy.gif',
   ],
   poke: [
-    'https://media.giphy.com/media/31X0APFZAKKte/giphy.gif',
-    'https://media.giphy.com/media/vU14Y2a441Dq0/giphy.gif',
+    'https://i.giphy.com/media/31X0APFZAKKte/giphy.gif',
+    'https://i.giphy.com/media/vU14Y2a441Dq0/giphy.gif',
   ],
   highfive: [
-    'https://media.giphy.com/media/10Uheed412yPPM/giphy.gif',
-    'https://media.giphy.com/media/3oEjHV0z85GPvfxk2Q/giphy.gif',
+    'https://i.giphy.com/media/10Uheed412yPPM/giphy.gif',
+    'https://i.giphy.com/media/3oEjHV0z85GPvfxk2Q/giphy.gif',
   ],
   lappillow: [
-    'https://media.giphy.com/media/L0C0f91lC9tW8/giphy.gif',
-    'https://media.giphy.com/media/12A32xJgQu571K/giphy.gif',
+    'https://i.giphy.com/media/L0C0f91lC9tW8/giphy.gif',
+    'https://i.giphy.com/media/12A32xJgQu571K/giphy.gif',
   ],
   tickle: [
-    'https://media.giphy.com/media/10g14pY7S0N1Gk/giphy.gif',
-    'https://media.giphy.com/media/xT1R3x7Lg4Jj1Zz1i8/giphy.gif',
+    'https://i.giphy.com/media/10g14pY7S0N1Gk/giphy.gif',
+    'https://i.giphy.com/media/xT1R3x7Lg4Jj1Zz1i8/giphy.gif',
   ],
   blush: [
-    'https://media.giphy.com/media/tFjN51Wj2LwV02z5Xf/giphy.gif',
-    'https://media.giphy.com/media/26hpKMTa535v7z28M/giphy.gif',
+    'https://i.giphy.com/media/tFjN51Wj2LwV02z5Xf/giphy.gif',
+    'https://i.giphy.com/media/26hpKMTa535v7z28M/giphy.gif',
   ],
   wink: [
-    'https://media.giphy.com/media/13vPE0A3mgWqC4/giphy.gif',
-    'https://media.giphy.com/media/148x4ezZXvpIeA/giphy.gif',
+    'https://i.giphy.com/media/13vPE0A3mgWqC4/giphy.gif',
+    'https://i.giphy.com/media/148x4ezZXvpIeA/giphy.gif',
   ],
   smile: [
-    'https://media.giphy.com/media/10t57cXgow7504/giphy.gif',
-    'https://media.giphy.com/media/3o6UB3VhArvomJHtdK/giphy.gif',
+    'https://i.giphy.com/media/10t57cXgow7504/giphy.gif',
+    'https://i.giphy.com/media/3o6UB3VhArvomJHtdK/giphy.gif',
   ],
 };
 
-// Map internal action names to nekos.best API endpoints
+// Map actions supported natively by nekos.best v2
 const NEKOS_BEST_MAP: Record<string, string> = {
   hug: 'hug',
   kiss: 'kiss',
@@ -95,33 +89,46 @@ const NEKOS_BEST_MAP: Record<string, string> = {
   bite: 'bite',
   holdhands: 'handhold',
   handhold: 'handhold',
-  lick: 'lick',
   poke: 'poke',
   highfive: 'highfive',
-  lappillow: 'lappillow',
-  tickle: 'tickle',
   blush: 'blush',
   wink: 'wink',
   smile: 'smile',
 };
 
 export async function fetchAnimeGif(action: string): Promise<string> {
-  const apiEndpoint = NEKOS_BEST_MAP[action] || action;
-  try {
-    const res = await fetch(`https://nekos.best/api/v2/${apiEndpoint}`, {
-      headers: { 'User-Agent': 'HawkDiscordBot/1.0' },
-      signal: AbortSignal.timeout(3000),
-    });
-    if (res.ok) {
-      const data = (await res.json()) as { results?: Array<{ url?: string }> };
-      if (data.results && data.results.length > 0 && data.results[0].url) {
-        return data.results[0].url;
+  // 1. Try nekos.best if supported
+  const nekosEndpoint = NEKOS_BEST_MAP[action];
+  if (nekosEndpoint) {
+    try {
+      const res = await fetch(`https://nekos.best/api/v2/${nekosEndpoint}`, {
+        headers: { 'User-Agent': 'HawkDiscordBot/1.0' },
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { results?: Array<{ url?: string }> };
+        if (data.results && data.results.length > 0 && data.results[0].url) {
+          return data.results[0].url;
+        }
       }
-    }
-  } catch {
-    // API timeout or failure -> fallback below
+    } catch {}
   }
 
+  // 2. Try otakugifs.xyz
+  try {
+    const res = await fetch(`https://api.otakugifs.xyz/gif?reaction=${action}`, {
+      headers: { 'User-Agent': 'HawkDiscordBot/1.0' },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { url?: string };
+      if (data.url) {
+        return data.url;
+      }
+    }
+  } catch {}
+
+  // 3. Fallback to direct working i.giphy.com URLs
   const list = FALLBACK_GIFS[action] || FALLBACK_GIFS.hug;
   return list[Math.floor(Math.random() * list.length)];
 }
@@ -132,6 +139,11 @@ export interface ActionInfo {
   verb: string;
   sendbackLabel: string;
   selfOnly?: boolean;
+}
+
+function capitalize(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 export function buildActionPayload(
@@ -157,10 +169,12 @@ export function buildActionPayload(
   const components: ActionRowBuilder<ButtonBuilder>[] = [];
 
   if (!isSelf && target && !actionInfo.selfOnly) {
+    const actionLabel = capitalize(actionInfo.name);
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`act_back_${actionInfo.name}_${target.id}_${author.id}`)
-        .setLabel(actionInfo.sendbackLabel)
+        .setLabel(`${actionLabel} Back!`)
+        .setEmoji(actionInfo.emoji)
         .setStyle(ButtonStyle.Primary),
     );
     components.push(row);
@@ -202,7 +216,7 @@ export async function handleActionInteraction(interaction: ButtonInteraction): P
     name: actionName,
     emoji: getEmojiForAction(actionName),
     verb: getVerbForAction(actionName),
-    sendbackLabel: `${actionName.toUpperCase()} Back!`,
+    sendbackLabel: `${capitalize(actionName)} Back!`,
   };
 
   const titleText = `${(member as GuildMember).displayName} ${actionInfo.verb} ${originalAuthor.displayName} back! ${actionInfo.emoji}`;
@@ -218,7 +232,8 @@ export async function handleActionInteraction(interaction: ButtonInteraction): P
     const disabledRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`act_back_disabled_${Date.now()}`)
-        .setLabel('Reciprocated! 💕')
+        .setLabel('Reciprocated!')
+        .setEmoji('💕')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
     );
@@ -233,7 +248,7 @@ function getEmojiForAction(action: string): string {
     hug: '🤗',
     kiss: '💋',
     cuddle: '🫂',
-    pat: '🫳',
+    pat: '✋',
     slap: '🖐️',
     bite: '🦷',
     holdhands: '🤝',
@@ -241,7 +256,7 @@ function getEmojiForAction(action: string): string {
     lick: '👅',
     poke: '👉',
     highfive: '✋',
-    lappillow: '🦵',
+    lappillow: '🛋️',
     tickle: '🪶',
     blush: '😊',
     wink: '😉',
