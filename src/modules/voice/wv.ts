@@ -52,6 +52,11 @@ export default defineCommand({
       return;
     }
 
-    await respond.send(`**${targetMember.user.username}** is in **${mentionChannel(voiceState.channel.id)}**`);
+    const chan = voiceState.channel;
+    const count = chan.members.size;
+    const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? chan.userLimit : 'Unlimited';
+    const vcInfo = `\`[ ${count}/${limit} ]\``;
+
+    await respond.send(`**${targetMember.user.username}** is in **${mentionChannel(chan.id)}** ${vcInfo}`);
   },
 });
