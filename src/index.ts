@@ -45,7 +45,6 @@ import {
   handleWelcomeModal,
 } from './modules/welcome/_welcomeHandler.js';
 import { handleNukeInteraction } from './modules/moderation/_nukeHandler.js';
-import { handleActionInteraction } from './modules/actions/_actionHandler.js';
 
 async function bootstrap() {
   const startTime = Date.now();
@@ -200,8 +199,6 @@ async function bootstrap() {
           await handleVConfigFallback(interaction);
         } else if (id.startsWith('steal_btn_')) {
           await handleStealButton(interaction);
-        } else if (id.startsWith('act_')) {
-          await handleActionInteraction(interaction);
         }
       } else if (interaction.isModalSubmit()) {
         const id = interaction.customId;
