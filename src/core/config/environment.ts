@@ -24,6 +24,7 @@ export const env: EnvironmentConfig = {
   botOwnerIds: required('BOT_OWNER_ID').split(',').map(id => id.trim()).filter(Boolean),
   botAdminIds: optional('BOT_ADMIN_IDS', '').split(',').map(id => id.trim()).filter(Boolean),
   nodeEnv: (optional('NODE_ENV', 'development') as 'development' | 'production'),
+  enabledModules: process.env.ENABLED_MODULES ? process.env.ENABLED_MODULES.split(',').map(m => m.trim()).filter(Boolean) : undefined,
 };
 
 export function isDev(): boolean {

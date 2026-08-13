@@ -11,6 +11,7 @@ export interface EnvironmentConfig {
   botOwnerIds: string[];
   botAdminIds: string[];
   nodeEnv: 'development' | 'production';
+  enabledModules?: string[];
 }
 
 // ── Guild Configuration (persisted in DB) ───────────────────
