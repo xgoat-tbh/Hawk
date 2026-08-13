@@ -14,7 +14,6 @@ import { sanitize } from '../../core/utils/validators.js';
 export interface HelpCategory {
   id: string;
   name: string;
-  emoji: string;
   description: string;
   modules: string[];
 }
@@ -23,35 +22,30 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: 'moderation',
     name: 'Moderation',
-    emoji: '🛡️',
     description: 'Server management, bans, mutes, locks, purges, and roles',
     modules: ['moderation'],
   },
   {
     id: 'voice',
     name: 'Voice Controls',
-    emoji: '🔊',
     description: 'Voice channel movement, follow-me-vc, locks, and tracking',
     modules: ['voice'],
   },
   {
     id: 'gaming',
     name: 'Gaming',
-    emoji: '🎮',
     description: 'Game LFG ping notifications and game role settings',
     modules: ['gaming'],
   },
   {
     id: 'community',
     name: 'Community',
-    emoji: '💬',
     description: 'Suggestions, confessions, sticky messages, welcome, and media filters',
     modules: ['suggestion', 'confession', 'sticky', 'welcome', 'media'],
   },
   {
     id: 'general',
     name: 'General & Info',
-    emoji: '⚙️',
     description: 'Bot statistics, AFK status, emoji stealing, access & restrictions',
     modules: ['general', 'owner'],
   },
@@ -82,7 +76,6 @@ export function buildCategoryDropdown(userId: string, activeCategoryId?: string)
     const opt = new StringSelectMenuOptionBuilder()
       .setLabel(`${cat.name} Commands`)
       .setValue(cat.id)
-      .setEmoji(cat.emoji)
       .setDescription(cat.description);
 
     if (activeCategoryId && activeCategoryId.toLowerCase() === cat.id.toLowerCase()) {
@@ -98,7 +91,7 @@ export function buildCategoryDropdown(userId: string, activeCategoryId?: string)
 export function buildMainHelpEmbed(prefix: string, userId: string): ComponentV2Payload {
   const categoryLines = HELP_CATEGORIES.map((cat) => {
     const count = getCategoryCommands(cat.id).length;
-    return `• ${cat.emoji} **${cat.name}** — \`${count}\` command${count === 1 ? '' : 's'}`;
+    return `• **${cat.name}** — \`${count}\` command${count === 1 ? '' : 's'}`;
   });
 
   const headerContent =
@@ -129,7 +122,7 @@ export function buildCategoryHelpEmbed(
   const totalPages = Math.max(1, Math.ceil(commands.length / pageSize));
   const currentPage = Math.max(1, Math.min(page, totalPages));
 
-  let bodyContent = `# ${cat.emoji} ${cat.name} Commands\n\n`;
+  let bodyContent = `# ${cat.name} Commands\n\n`;
 
   if (commands.length === 0) {
     bodyContent += 'No commands are currently available in this category.';
@@ -178,7 +171,7 @@ export function buildCategoryHelpEmbed(
 
 export function buildCommandHelpEmbed(command: CommandDefinition, prefix: string): ComponentV2Payload {
   const cat = HELP_CATEGORIES.find(c => c.modules.includes(command.module.toLowerCase()));
-  const catLabel = cat ? `${cat.emoji} ${cat.name}` : command.module;
+  const catLabel = cat ? cat.name : command.module;
 
   const usageStr = command.usage ? `\`${prefix}${command.usage}\`` : `\`${prefix}${command.name}\``;
   const aliasStr = command.aliases.length > 0 ? command.aliases.map(a => `\`${prefix}${a}\``).join(', ') : '—';
