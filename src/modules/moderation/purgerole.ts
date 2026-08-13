@@ -48,7 +48,7 @@ export default defineCommand({
 
     // Send initial live progress message
     const initialPayload = buildV2Container({
-      text: `⏳ **Purging Role** ${mentionRole(targetRole.id)} from **${totalMembers}** member(s)...`,
+      text: `**Purging Role** \`${targetRole.name}\` (${mentionRole(targetRole.id)}) from **${totalMembers}** member(s)...`,
       sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nRemoved: **0** | Skipped: **0**`],
     });
     const statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
@@ -88,7 +88,7 @@ export default defineCommand({
     }
 
     const finalPayload = buildV2Container({
-      text: `✅ **Role Purge Completed** (${mentionRole(targetRole.id)})`,
+      text: `**Role Purge Completed** for \`${targetRole.name}\` (${mentionRole(targetRole.id)})`,
       sections: [`Removed from: **${removedCount}** member(s)${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`],
     });
 

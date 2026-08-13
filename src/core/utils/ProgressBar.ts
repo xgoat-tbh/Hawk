@@ -8,7 +8,7 @@ export function renderProgressBar(current: number, total: number, width = 10): s
   const filled = Math.round((percent / 100) * width);
   const empty = Math.max(0, width - filled);
 
-  const bar = '🟩'.repeat(filled) + '⬛'.repeat(empty);
+  const bar = '▓'.repeat(filled) + '░'.repeat(empty);
   return `${bar} \`${percent}%\``;
 }
 
@@ -39,7 +39,7 @@ export class LiveProgressTracker {
     }
 
     const payload = buildV2Container({
-      text: `⏳ **${this.title}**`,
+      text: `**${this.title}**`,
       sections,
     });
 

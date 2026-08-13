@@ -185,7 +185,7 @@ async function handleReset(ctx: CommandContext, args: string[]): Promise<void> {
   if (args.length === 0 || args[0].toLowerCase() !== 'confirm') {
     const prefix = ctx.parsed.prefix;
     await respond.warning(
-      `⚠️ ${bold('DESTRUCTIVE OPERATION')}: Resetting confessions will delete all confession records and channel configuration for this server.\n\nTo confirm, run: \`${prefix}confession reset confirm\``,
+      `${bold('DESTRUCTIVE OPERATION')}: Resetting confessions will delete all confession records and channel configuration for this server.\n\nTo confirm, run: \`${prefix}confession reset confirm\``,
     );
     return;
   }

@@ -54,10 +54,10 @@ export const status = {
 
   empty: (options: StatusOptions | string) => {
     const opt = typeof options === 'string' ? { text: options } : options;
-    return buildStatusContainer('📄', opt.text, opt.title ?? 'No Items Found', opt.components, opt.accentColor);
+    return buildStatusContainer('', opt.text, opt.title ?? 'No Items Found', opt.components, opt.accentColor);
   },
 
   loading: (text = 'Processing request...') => {
-    return buildStatusContainer('⏳', text);
+    return buildStatusContainer('', text);
   },
 };

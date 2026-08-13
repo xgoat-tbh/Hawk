@@ -66,17 +66,17 @@ export default defineCommand({
       const totalCount = roleMembers.length;
 
       if (totalCount === 0) {
-        await respond.info(`No members currently possess the role ${mentionRole(targetRole.id)}.`);
+        await respond.info(`No members currently possess the role \`${targetRole.name}\` (${mentionRole(targetRole.id)}).`);
         return;
       }
 
       const memberLines = roleMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
 
       await sendPaginatedV2Container(ctx, {
-        title: `📜 **Members in ${targetRole.name}** (${mentionRole(targetRole.id)})`,
+        title: `**Members with Role \`${targetRole.name}\`** (${mentionRole(targetRole.id)})`,
         items: memberLines,
         pageSize: 10,
-        emptyText: `No members currently possess the role ${mentionRole(targetRole.id)}.`,
+        emptyText: `No members currently possess the role \`${targetRole.name}\` (${mentionRole(targetRole.id)}).`,
       });
     } else if (mode === 'admin') {
       const adminMembers = Array.from(
@@ -92,10 +92,10 @@ export default defineCommand({
         return;
       }
 
-      const adminLines = adminMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)${m.id === guild.ownerId ? ' 👑 *(Owner)*' : ''}`);
+      const adminLines = adminMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)${m.id === guild.ownerId ? ' *(Server Owner)*' : ''}`);
 
       await sendPaginatedV2Container(ctx, {
-        title: `🛡️ **Server Administrators (Human Users)**`,
+        title: `**Server Administrators (Human Users)**`,
         items: adminLines,
         pageSize: 10,
         emptyText: 'No human administrator accounts found in this server.',
@@ -112,7 +112,7 @@ export default defineCommand({
       const botLines = botMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
 
       await sendPaginatedV2Container(ctx, {
-        title: `🤖 **Server Bot Accounts**`,
+        title: `**Server Bot Accounts**`,
         items: botLines,
         pageSize: 10,
         emptyText: 'No bot accounts found in this server.',

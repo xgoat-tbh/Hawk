@@ -39,7 +39,7 @@ export async function handleConfessionButton(interaction: ButtonInteraction): Pr
   if (customId === 'confess_info') {
     await interaction.reply({
       content:
-        'ℹ️ **Anonymous Confessions Info**\n\n' +
+        '**Anonymous Confessions Info**\n\n' +
         '• Your confession is posted **100% anonymously** to the public channel.\n' +
         '• Your username, avatar, and ID are **never** displayed or attached to the public post.\n' +
         '• Respect server rules and Discord Terms of Service.',
@@ -143,7 +143,7 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
       const logChannel = (await guild.channels.fetch(config.logChannelId).catch(() => null)) as GuildTextBasedChannel | null;
       if (logChannel) {
         const logPayload = buildV2Container({
-          text: `🕵️ **Confession Log #${record.id}**`,
+          text: `**Confession Log #${record.id}**`,
           sections: [
             `**Author:** <@${user.id}> (\`${user.tag}\`) [ID: \`${user.id}\`]`,
             `**Content:**\n${content}`,

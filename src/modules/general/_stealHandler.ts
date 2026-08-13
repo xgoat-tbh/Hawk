@@ -121,7 +121,7 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
       deleteState(fullStateKey);
 
       const successPayload = buildV2Container({
-        text: `✅ **Successfully Added Emoji!**\n\nName: \`:${createdEmoji.name}:\`\nPreview: ${createdEmoji}`,
+        text: `**Successfully Added Emoji!**\n\nName: \`:${createdEmoji.name}:\`\nPreview: ${createdEmoji}`,
         components: [],
       });
 
@@ -147,7 +147,7 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
       deleteState(fullStateKey);
 
       const successPayload = buildV2Container({
-        text: `✅ **Successfully Added Sticker!**\n\nName: **${createdSticker.name}**\nSticker: **${createdSticker.name}**`,
+        text: `**Successfully Added Sticker!**\n\nName: **${createdSticker.name}**\nSticker: **${createdSticker.name}**`,
         components: [],
       });
 
@@ -165,7 +165,7 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
     consoleLog('error', 'command_failure', `steal: failed to create ${action}`, { error: msg });
 
     const failPayload = buildV2Container({
-      text: `❌ **Failed to add ${action}:** ${msg}`,
+      text: `**Failed to add ${action}:** ${msg}`,
       components: [],
     });
 

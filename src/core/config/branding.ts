@@ -23,28 +23,28 @@ export const branding: BrandingConfig = {
     welcome: '<:icon_welcome:1533460007801323611>',
     media: '<:Media:1533460114936303827>',
     general: '<:95805bot:1533459068000407582>',
-    owner: '👑',
-    specials: '⭐',
+    owner: '',
+    specials: '',
     AFK_SUCCESS: '<:icon_tick:1533549488541663283>',
-    AFK_WELCOME_BACK: '👋',
-    AFK_NOTICE: '💤',
+    AFK_WELCOME_BACK: '',
+    AFK_NOTICE: '',
   },
 };
 
 export function getEmoji(key: string): string {
   if (key === 'AFK_SUCCESS') {
-    return branding.emojis.AFK_SUCCESS ?? branding.emojis.success ?? '✅';
+    return branding.emojis.AFK_SUCCESS ?? branding.emojis.success ?? '';
   }
   if (key === 'AFK_WELCOME_BACK') {
-    return branding.emojis.AFK_WELCOME_BACK ?? '👋';
+    return branding.emojis.AFK_WELCOME_BACK ?? '';
   }
   if (key === 'AFK_NOTICE') {
-    return branding.emojis.AFK_NOTICE ?? '💤';
+    return branding.emojis.AFK_NOTICE ?? '';
   }
-  return branding.emojis[key] ?? key;
+  return branding.emojis[key] ?? '';
 }
 
-export function toReactableEmoji(emojiStr: string, fallback = '🚫'): string {
+export function toReactableEmoji(emojiStr: string, fallback = ''): string {
   if (!emojiStr) return fallback;
   const match = /<a?:[^:]+:(\d+)>/.exec(emojiStr);
   if (match) {

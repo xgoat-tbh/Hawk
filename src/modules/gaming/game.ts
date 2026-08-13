@@ -231,12 +231,12 @@ async function handleList(ctx: CommandContext): Promise<void> {
 
   const pingLines = pings.map((p) => {
     const role = guild.roles.cache.get(p.roleId);
-    const roleStr = role ? bold(role.name) : mentionRole(p.roleId);
+    const roleStr = role ? inlineCode(role.name) : mentionRole(p.roleId);
     return `• ${inlineCode(p.identifier)} — ${bold(p.gameName)} — ${roleStr}${p.vcId ? ` — ${mentionChannel(p.vcId)}` : ''} (\`${p.cooldownSeconds}s\` cooldown)`;
   });
 
   await sendPaginatedV2Container(ctx, {
-    title: '🎮 **Gaming Ping Configurations**',
+    title: '**Gaming Ping Configurations**',
     items: pingLines,
     pageSize: 10,
     emptyText: 'No game ping configurations found for this server.',

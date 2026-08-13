@@ -77,7 +77,7 @@ export class ResponseBuilder {
 
   async denied(text?: string): Promise<Message | null> {
     const rawEmoji = getEmoji('denied');
-    const reactEmoji = toReactableEmoji(rawEmoji, '🚫');
+    const reactEmoji = toReactableEmoji(rawEmoji, '');
 
     if (this.message?.react) {
       const reaction = await this.message.react(reactEmoji).catch(() => null);

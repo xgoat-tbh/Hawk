@@ -12,12 +12,10 @@ export function buildConfessionPanel(): { embeds: EmbedBuilder[]; components: Ac
     new ButtonBuilder()
       .setCustomId('confess_open_modal')
       .setLabel('Submit Confession')
-      .setEmoji('🤫')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('confess_info')
       .setLabel('Guidelines')
-      .setEmoji('ℹ️')
       .setStyle(ButtonStyle.Secondary),
   );
 

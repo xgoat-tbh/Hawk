@@ -77,7 +77,7 @@ export default defineCommand({
       });
 
       await sendPaginatedV2Container(ctx, {
-        title: '🛡️ **Command & Module Access Rules**',
+        title: '**Command & Module Access Rules**',
         items: lines,
         pageSize: 10,
         emptyText: 'No command or module ignore/whitelist rules exist for this server.',

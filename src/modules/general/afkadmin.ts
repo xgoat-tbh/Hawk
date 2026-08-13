@@ -68,7 +68,7 @@ export default defineCommand({
     });
 
     const payload = buildV2Container({
-      text: `**💤 Active AFK Members (${entries.length})**\n\n` + lines.join('\n'),
+      text: `**Active AFK Members (${entries.length})**\n\n` + lines.join('\n'),
     });
 
     await (channel as GuildTextBasedChannel).send(payload);

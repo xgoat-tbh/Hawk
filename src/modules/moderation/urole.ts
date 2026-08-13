@@ -43,7 +43,7 @@ export default defineCommand({
     let tracker: LiveProgressTracker | null = null;
     if (totalUsers > 3) {
       const initialPayload = buildV2Container({
-        text: `⏳ **Processing URole** (${mentionRole(targetRole.id)})`,
+        text: `**Processing URole** (\`${targetRole.name}\` ${mentionRole(targetRole.id)})`,
         sections: [`**Progress:** ${renderProgressBar(0, totalUsers)} (0/${totalUsers})\nAdded: **0** | Removed: **0** | Skipped: **0**`],
       });
       statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
@@ -98,7 +98,7 @@ export default defineCommand({
     }
 
     const finalPayload = buildV2Container({
-      text: `✅ **URole Completed** (${mentionRole(targetRole.id)})`,
+      text: `**URole Completed** for \`${targetRole.name}\` (${mentionRole(targetRole.id)})`,
       sections: [`Added: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`],
     });
 
