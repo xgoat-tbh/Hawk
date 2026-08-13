@@ -12,7 +12,7 @@ export default defineCommand({
   description: 'Check which voice channel a user is in.',
   usage: 'wv [user]',
   examples: ['wv', 'wv @User', 'wv 123456789012345678'],
-  permitOnly: true,
+  permissions: [],
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {

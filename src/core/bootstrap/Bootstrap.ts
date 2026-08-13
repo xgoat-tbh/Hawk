@@ -3,7 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import url from 'node:url';
 import { env } from '../config/environment.js';
-import { createClient, updateBotActivity } from '../../client/BotClient.js';
+import { createClient, updateBotActivity, runMemoryCleanup } from '../../client/BotClient.js';
 import { loadCommands } from '../commands/CommandLoader.js';
 import { getCommandCount } from '../commands/CommandRegistry.js';
 import { getPrefix } from '../database/repositories/guildConfigRepo.js';
@@ -26,6 +26,7 @@ import type { ModuleManifest } from '../../types/module.js';
 export class Bootstrap {
   private static client: Client | null = null;
   private static manifests: ModuleManifest[] = [];
+  private static heartbeatTimer: NodeJS.Timeout | null = null;
 
   public static async start(): Promise<Client> {
     const startTime = Date.now();
@@ -73,6 +74,17 @@ export class Bootstrap {
       startHealthServer();
       await loadNoPrefixCache();
       await loadAfkCache();
+
+      // 5-minute periodic heartbeat for presence refresh & RAM optimization
+      if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = setInterval(() => {
+        try {
+          updateBotActivity(client);
+          runMemoryCleanup(client);
+        } catch {
+          // Ignore heartbeat error
+        }
+      }, 5 * 60 * 1000);
 
       // Execute module onReady lifecycle hooks concurrently
       const readyHooks = this.manifests
@@ -169,6 +181,7 @@ export class Bootstrap {
 
     client.on(Events.GuildMemberAdd, async (member) => {
       try {
+        updateBotActivity(client);
         const memberJoinHooks = this.manifests
           .filter(m => typeof m.onMemberJoin === 'function')
           .map(m => m.onMemberJoin!(member));
@@ -180,6 +193,7 @@ export class Bootstrap {
 
     client.on(Events.GuildMemberRemove, async (member) => {
       try {
+        updateBotActivity(client);
         const memberLeaveHooks = this.manifests
           .filter(m => typeof m.onMemberLeave === 'function')
           .map(m => m.onMemberLeave!(member as any));
@@ -204,6 +218,11 @@ export class Bootstrap {
   private static setupProcessHandlers(): void {
     const shutdown = async (signal: string) => {
       consoleLog('info', 'shutdown', `Received ${signal}, initiating graceful shutdown...`);
+
+      if (this.heartbeatTimer) {
+        clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = null;
+      }
 
       // Execute onShutdown hooks
       const shutdownHooks = this.manifests

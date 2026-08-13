@@ -1,28 +1,46 @@
 import { Client, GatewayIntentBits, Partials, Options, ActivityType } from 'discord.js';
 import { constants } from '../core/config/constants.js';
-import { guilds } from '../core/config/guilds.js';
 
 export function createClient(): Client {
   return new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMessageReactions],
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildVoiceStates,
+      GatewayIntentBits.GuildMessageReactions,
+    ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
-      MessageManager: 200,
-      GuildMemberManager: { maxSize: 5000 },
-      ReactionManager: 50,
-      ReactionUserManager: 50,
+      MessageManager: 25,
+      GuildMemberManager: { maxSize: 200 },
+      UserManager: 100,
+      ReactionManager: 10,
+      ReactionUserManager: 10,
+      ThreadManager: 0,
+      ThreadMemberManager: 0,
+      StageInstanceManager: 0,
+      GuildScheduledEventManager: 0,
+      AutoModerationRuleManager: 0,
+      GuildEmojiManager: 50,
+      GuildStickerManager: 25,
     }),
     sweepers: {
       ...Options.DefaultSweeperSettings,
-      messages: { interval: 300, lifetime: 60 },
+      messages: { interval: 60, lifetime: 30 },
       guildMembers: {
-        interval: 600,
-        filter: () => (member) => !member.user.bot && member.id !== member.guild.ownerId && !member.voice.channelId,
+        interval: 120,
+        filter: () => (member) => !member.user.bot && member.id !== member.guild.ownerId && !member.voice?.channelId,
       },
       users: {
-        interval: 600,
+        interval: 120,
         filter: () => (user) => !user.bot,
+      },
+      threads: {
+        interval: 300,
+        lifetime: 300,
       },
     },
   });
@@ -30,12 +48,28 @@ export function createClient(): Client {
 
 export function updateBotActivity(client: Client, prefix = constants.defaultPrefix): void {
   if (!client.user) return;
-  const primaryGuild = client.guilds.cache.get(guilds.primary);
-  const memberCount = primaryGuild
-    ? primaryGuild.memberCount
-    : client.guilds.cache.reduce((acc, g) => acc + (g.memberCount || 0), 0);
+  const totalMembers = client.guilds.cache.reduce((acc, g) => acc + (g.memberCount ?? 0), 0);
 
-  client.user.setActivity(`${memberCount} Members | ${prefix}help`, {
+  client.user.setActivity(`${totalMembers.toLocaleString()} Members | ${prefix}help`, {
     type: ActivityType.Watching,
   });
+}
+
+export function runMemoryCleanup(client: Client): void {
+  // Clear any unneeded cached collections
+  for (const guild of client.guilds.cache.values()) {
+    // Keep only voice members & guild owner in member cache
+    guild.members.cache.sweep(
+      (member) => !member.user.bot && member.id !== guild.ownerId && !member.voice?.channelId,
+    );
+  }
+
+  // Trigger V8 Garbage Collection if flag is enabled
+  if (typeof global.gc === 'function') {
+    try {
+      global.gc();
+    } catch {
+      // GC not available
+    }
+  }
 }
