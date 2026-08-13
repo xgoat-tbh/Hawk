@@ -20,9 +20,24 @@ export default defineCommand({
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, channel, message, respond, member } = ctx;
 
-    const stickyContent = parsed.rawArgs.trim();
+    let stickyContent = parsed.rawArgs.trim();
+
+    // If no raw arguments provided, check if the command is a reply to another message
+    if (!stickyContent && message.reference?.messageId) {
+      const referencedMsg = await channel.messages.fetch(message.reference.messageId).catch(() => null);
+      if (referencedMsg) {
+        const parts: string[] = [];
+        if (referencedMsg.content) parts.push(referencedMsg.content);
+        if (referencedMsg.attachments.size > 0) {
+          const attachmentUrls = Array.from(referencedMsg.attachments.values()).map(a => a.url);
+          parts.push(...attachmentUrls);
+        }
+        stickyContent = parts.join('\n').trim();
+      }
+    }
+
     if (!stickyContent) {
-      await respond.error(`Usage: \`${parsed.prefix}stick <message...>\``);
+      await respond.error(`Usage: \`${parsed.prefix}stick <message...>\` or reply to a message with \`${parsed.prefix}stick\``);
       return;
     }
 

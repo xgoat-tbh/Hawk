@@ -6,7 +6,7 @@ import {
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import type { CommandDefinition } from '../../types/command.js';
-import { getModuleCommands } from '../../core/commands/CommandRegistry.js';
+import { getModuleCommands, getAllCommands } from '../../core/commands/CommandRegistry.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
 import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
 import { sanitize } from '../../core/utils/validators.js';
@@ -67,16 +67,30 @@ export function getCategoryCommands(categoryId: string): CommandDefinition[] {
   return cmds;
 }
 
-export function buildCategoryDropdown(userId: string, activeCategoryId?: string): ActionRowBuilder<StringSelectMenuBuilder> {
+export function buildCategoryDropdown(
+  userId: string,
+  activeCategoryId?: string,
+  usableSet?: Set<string>,
+): ActionRowBuilder<StringSelectMenuBuilder> {
   const select = new StringSelectMenuBuilder()
     .setCustomId(`help_category_select_${userId}`)
     .setPlaceholder('Select a category to browse...');
 
   const options = HELP_CATEGORIES.map((cat) => {
+    const allCatCmds = getCategoryCommands(cat.id);
+    const usableCount = usableSet
+      ? allCatCmds.filter(c => usableSet.has(c.name)).length
+      : allCatCmds.length;
+
+    const isRestricted = usableSet && usableCount === 0;
+    const labelStr = isRestricted
+      ? `🔒 ${cat.name} (Restricted)`
+      : `${cat.name} (${usableCount}/${allCatCmds.length})`;
+
     const opt = new StringSelectMenuOptionBuilder()
-      .setLabel(`${cat.name} Commands`)
+      .setLabel(labelStr)
       .setValue(cat.id)
-      .setDescription(cat.description);
+      .setDescription(isRestricted ? 'You do not have permission to use commands in this category.' : cat.description);
 
     if (activeCategoryId && activeCategoryId.toLowerCase() === cat.id.toLowerCase()) {
       opt.setDefault(true);
@@ -88,21 +102,32 @@ export function buildCategoryDropdown(userId: string, activeCategoryId?: string)
   return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
 }
 
-export function buildMainHelpEmbed(prefix: string, userId: string): ComponentV2Payload {
+export function buildMainHelpEmbed(
+  prefix: string,
+  userId: string,
+  usableSet?: Set<string>,
+): ComponentV2Payload {
+  const totalAll = getAllCommands().length;
+  const totalUsable = usableSet ? usableSet.size : totalAll;
+
   const categoryLines = HELP_CATEGORIES.map((cat) => {
-    const count = getCategoryCommands(cat.id).length;
-    return `• **${cat.name}** — \`${count}\` command${count === 1 ? '' : 's'}`;
+    const allCmds = getCategoryCommands(cat.id);
+    const usableCount = usableSet
+      ? allCmds.filter(c => usableSet.has(c.name)).length
+      : allCmds.length;
+    return `• **${cat.name}** — \`${usableCount}/${allCmds.length}\` commands available`;
   });
 
   const headerContent =
     '# Amo Help\n\n' +
     '**Hey there! 👋**\n\n' +
     `Default prefix: \`${prefix}\`\n` +
+    `**Total Commands:** \`${totalAll}\` | **Available to you:** \`${totalUsable}\`\n\n` +
     `Use \`${prefix}help <command>\` to learn more about a command.\n\n` +
     '**Categories:**\n' +
     categoryLines.join('\n');
 
-  const dropdownRow = buildCategoryDropdown(userId);
+  const dropdownRow = buildCategoryDropdown(userId, undefined, usableSet);
 
   return buildV2Container({
     text: headerContent,
@@ -115,9 +140,14 @@ export function buildCategoryHelpEmbed(
   prefix: string,
   userId: string,
   page = 1,
+  usableSet?: Set<string>,
 ): ComponentV2Payload {
   const cat = getCategory(categoryId) || HELP_CATEGORIES[0];
-  const commands = getCategoryCommands(cat.id);
+  const allCatCommands = getCategoryCommands(cat.id);
+  const commands = usableSet
+    ? allCatCommands.filter(c => usableSet.has(c.name))
+    : allCatCommands;
+
   const pageSize = 5;
   const totalPages = Math.max(1, Math.ceil(commands.length / pageSize));
   const currentPage = Math.max(1, Math.min(page, totalPages));
@@ -125,7 +155,7 @@ export function buildCategoryHelpEmbed(
   let bodyContent = `# ${cat.name} Commands\n\n`;
 
   if (commands.length === 0) {
-    bodyContent += 'No commands are currently available in this category.';
+    bodyContent += '🔒 *You do not have permission to execute any commands in this category.*';
   } else {
     const start = (currentPage - 1) * pageSize;
     const pageCmds = commands.slice(start, start + pageSize);
@@ -135,7 +165,7 @@ export function buildCategoryHelpEmbed(
       return `**\`${prefix}${cmd.name}\`**\n${sanitize(cmd.description)}\n\`Aliases:\` ${aliasStr}`;
     });
 
-    bodyContent += `${lines.join('\n\n')}\n\n*Page ${currentPage}/${totalPages} (Total: ${commands.length})*`;
+    bodyContent += `${lines.join('\n\n')}\n\n*Page ${currentPage}/${totalPages} (Available: ${commands.length}/${allCatCommands.length})*`;
   }
 
   const components: ActionRowBuilder<any>[] = [];
@@ -161,7 +191,7 @@ export function buildCategoryHelpEmbed(
     components.push(buttonRow);
   }
 
-  components.push(buildCategoryDropdown(userId, cat.id));
+  components.push(buildCategoryDropdown(userId, cat.id, usableSet));
 
   return buildV2Container({
     text: sanitize(bodyContent),

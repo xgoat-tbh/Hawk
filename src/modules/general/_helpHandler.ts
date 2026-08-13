@@ -27,7 +27,11 @@ export async function handleHelpSelect(interaction: StringSelectMenuInteraction)
     return;
   }
 
-  const payload = buildCategoryHelpEmbed(matchedCat.id, prefix, ownerId || interaction.user.id, 1);
+  const { getUsableCommandsForMember } = await import('../../core/permissions/PermissionChecker.js');
+  const member = interaction.member ? (await interaction.guild.members.fetch(interaction.user.id).catch(() => null)) : null;
+  const usableSet = (member && interaction.channel) ? (await getUsableCommandsForMember(member, interaction.channel as any)).usableSet : undefined;
+
+  const payload = buildCategoryHelpEmbed(matchedCat.id, prefix, ownerId || interaction.user.id, 1, usableSet);
   await interaction.update(payload).catch(() => {});
 }
 
@@ -54,7 +58,12 @@ export async function handleHelpButton(interaction: ButtonInteraction): Promise<
 
   const targetPage = dir === 'prev' ? Math.max(1, page - 1) : page + 1;
   const prefix = await getPrefix(guild.id);
-  const payload = buildCategoryHelpEmbed(categoryId, prefix, ownerId || user.id, targetPage);
+
+  const { getUsableCommandsForMember } = await import('../../core/permissions/PermissionChecker.js');
+  const member = (guild && interaction.member) ? (await guild.members.fetch(interaction.user.id).catch(() => null)) : null;
+  const usableSet = (member && interaction.channel) ? (await getUsableCommandsForMember(member, interaction.channel as any)).usableSet : undefined;
+
+  const payload = buildCategoryHelpEmbed(categoryId, prefix, ownerId || user.id, targetPage, usableSet);
 
   await interaction.update(payload).catch(() => {});
 }

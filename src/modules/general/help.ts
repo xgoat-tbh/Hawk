@@ -22,10 +22,12 @@ export default defineCommand({
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, channel, respond, member } = ctx;
     const prefix = await getPrefix(guild.id);
+    const { getUsableCommandsForMember } = await import('../../core/permissions/PermissionChecker.js');
+    const { usableSet } = await getUsableCommandsForMember(member, channel as GuildTextBasedChannel);
 
     // Case A: No arguments -> Main Help View
     if (parsed.args.length === 0) {
-      const payload = buildMainHelpEmbed(prefix, member.id);
+      const payload = buildMainHelpEmbed(prefix, member.id, usableSet);
       await (channel as GuildTextBasedChannel).send(payload);
       return;
     }
@@ -45,7 +47,7 @@ export default defineCommand({
     const matchedMod = activeModules.find(m => m.toLowerCase() === target);
 
     if (matchedMod) {
-      const payload = buildCategoryHelpEmbed(matchedMod, prefix, member.id);
+      const payload = buildCategoryHelpEmbed(matchedMod, prefix, member.id, 1, usableSet);
       await (channel as GuildTextBasedChannel).send(payload);
       return;
     }

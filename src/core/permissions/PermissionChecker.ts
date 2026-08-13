@@ -1,5 +1,5 @@
 import { PermissionsBitField } from 'discord.js';
-import type { GuildMember, PermissionResolvable } from 'discord.js';
+import type { GuildMember, PermissionResolvable, GuildTextBasedChannel } from 'discord.js';
 import type { CommandDefinition } from '../../types/command.js';
 import type { PermissionCheckResult, PermissionContext } from '../../types/permission.js';
 import { AuthorityLevel } from '../../types/permission.js';
@@ -70,4 +70,73 @@ export async function checkPermission(
 export function checkBotPermissions(botMember: GuildMember, required: PermissionResolvable[]): { hasAll: boolean; missing: string[] } {
   const missing = required.filter((perm) => !botMember.permissions.has(perm)).map(String);
   return { hasAll: missing.length === 0, missing };
+}
+
+export async function getUsableCommandsForMember(
+  member: GuildMember,
+  channel: GuildTextBasedChannel,
+): Promise<{
+  allCommands: CommandDefinition[];
+  usableCommands: CommandDefinition[];
+  usableSet: Set<string>;
+  totalCount: number;
+  usableCount: number;
+}> {
+  const { getAllCommands } = await import('../commands/CommandRegistry.js');
+  const { checkRestrictions } = await import('../restrictions/RestrictionChecker.js');
+  const { isIgnored } = await import('../ignore/IgnoreChecker.js');
+
+  const allCommands = getAllCommands();
+  const guild = member.guild;
+  const categoryId = ('parentId' in channel && channel.parentId) ? channel.parentId : null;
+  const authority = getAuthorityLevel(member.id, guild.ownerId);
+  const roleIds = Array.from(member.roles.cache.keys());
+
+  const usableCommands: CommandDefinition[] = [];
+
+  for (const cmd of allCommands) {
+    if (!cmd.enabled) continue;
+
+    const permCtx: PermissionContext = {
+      userId: member.id,
+      guildId: guild.id,
+      guildOwnerId: guild.ownerId,
+      memberRoleIds: roleIds,
+      commandName: cmd.name,
+      moduleName: cmd.module,
+      channelId: channel.id,
+      categoryId,
+    };
+
+    if (authority < AuthorityLevel.ServerAdmin) {
+      const ignored = await isIgnored(
+        guild.id,
+        member.id,
+        roleIds,
+        channel.id,
+        categoryId,
+        cmd.name,
+        cmd.module,
+        member.roles.cache,
+      );
+      if (ignored) continue;
+    }
+
+    const permResult = await checkPermission(cmd, permCtx, member);
+    if (!permResult.allowed) continue;
+
+    const restrictResult = await checkRestrictions(permCtx, permResult.authority);
+    if (!restrictResult.allowed) continue;
+
+    usableCommands.push(cmd);
+  }
+
+  const usableSet = new Set(usableCommands.map(c => c.name));
+  return {
+    allCommands,
+    usableCommands,
+    usableSet,
+    totalCount: allCommands.length,
+    usableCount: usableCommands.length,
+  };
 }

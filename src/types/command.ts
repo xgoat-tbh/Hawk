@@ -94,6 +94,7 @@ export interface CommandContext {
   member: GuildMember;
   channel: GuildTextBasedChannel;
   respond: ResponseBuilder;
+  canExecute(commandName: string): Promise<boolean>;
 }
 
 // ── Command Builder Helper ──────────────────────────────────

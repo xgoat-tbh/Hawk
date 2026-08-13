@@ -143,6 +143,14 @@ export async function handleMessage(message: Message): Promise<void> {
     member: message.member,
     channel: guildChannel,
     respond,
+    async canExecute(cmdName: string): Promise<boolean> {
+      const targetCmd = resolveCommand(cmdName);
+      if (!targetCmd || !targetCmd.enabled) return false;
+      const res = await checkPermission(targetCmd, permCtx, message.member!);
+      if (!res.allowed) return false;
+      const restr = await checkRestrictions(permCtx, res.authority);
+      return restr.allowed;
+    },
   };
 
   try {
