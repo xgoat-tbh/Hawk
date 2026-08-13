@@ -127,6 +127,11 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
 
       await interaction.editReply(successPayload);
 
+      // Auto-delete success notification after 7s
+      setTimeout(() => {
+        interaction.deleteReply().catch(() => {});
+      }, 7000);
+
       logEvent('info', 'command_execution', `Emoji stolen by ${interaction.user.tag}`, {
         user: interaction.user.tag,
         guild: guild.name,
@@ -153,6 +158,11 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
 
       await interaction.editReply(successPayload);
 
+      // Auto-delete success notification after 7s
+      setTimeout(() => {
+        interaction.deleteReply().catch(() => {});
+      }, 7000);
+
       logEvent('info', 'command_execution', `Sticker stolen by ${interaction.user.tag}`, {
         user: interaction.user.tag,
         guild: guild.name,
@@ -170,5 +180,10 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
     });
 
     await interaction.editReply(failPayload).catch(() => {});
+
+    // Auto-delete failure notification after 7s
+    setTimeout(() => {
+      interaction.deleteReply().catch(() => {});
+    }, 7000);
   }
 }

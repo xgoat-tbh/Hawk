@@ -191,6 +191,14 @@ export default defineCommand({
       components: [row],
     });
 
-    await (channel as GuildTextBasedChannel).send(payload);
+    // Auto-delete the invoking command message
+    await message.delete().catch(() => {});
+
+    const promptMsg = await (channel as GuildTextBasedChannel).send(payload);
+
+    // Auto-delete steal prompt after 60s if abandoned
+    setTimeout(() => {
+      promptMsg.delete().catch(() => {});
+    }, 60_000);
   },
 });
