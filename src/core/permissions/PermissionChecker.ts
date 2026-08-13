@@ -44,8 +44,8 @@ export async function checkPermission(
     return { allowed: hasNative, authority, reason: hasNative ? 'Native Discord permission' : 'You do not have permission to use this command.' };
   }
 
-  if (command.permitOnly) {
-    return { allowed: false, authority, reason: 'You do not have permission to use this command.' };
+  if (command.permissions.length === 0 && !command.permitOnly) {
+    return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Public command access' };
   }
 
   const STAFF_PERMS =
@@ -64,7 +64,7 @@ export async function checkPermission(
     return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Staff member access' };
   }
 
-  return { allowed: false, authority, reason: 'This bot is restricted to staff members. Access can be granted via custom permits.' };
+  return { allowed: false, authority, reason: 'This command requires staff permissions or a custom permit.' };
 }
 
 export function checkBotPermissions(botMember: GuildMember, required: PermissionResolvable[]): { hasAll: boolean; missing: string[] } {

@@ -64,7 +64,7 @@ export function getCategoryCommands(categoryId: string): CommandDefinition[] {
     const modCmds = getModuleCommands(mod);
     cmds.push(...modCmds);
   }
-  return cmds;
+  return cmds.filter(c => c.name !== 'help');
 }
 
 export function buildCategoryDropdown(
@@ -107,8 +107,11 @@ export function buildMainHelpEmbed(
   userId: string,
   usableSet?: Set<string>,
 ): ComponentV2Payload {
-  const totalAll = getAllCommands().length;
-  const totalUsable = usableSet ? usableSet.size : totalAll;
+  const allFiltered = getAllCommands().filter(c => c.name !== 'help');
+  const totalAll = allFiltered.length;
+  const totalUsable = usableSet
+    ? allFiltered.filter(c => usableSet.has(c.name)).length
+    : totalAll;
 
   const categoryLines = HELP_CATEGORIES.map((cat) => {
     const allCmds = getCategoryCommands(cat.id);
@@ -123,7 +126,7 @@ export function buildMainHelpEmbed(
     '**Hey there! 👋**\n\n' +
     `Default prefix: \`${prefix}\`\n` +
     `**Total Commands:** \`${totalAll}\` | **Available to you:** \`${totalUsable}\`\n\n` +
-    `Use \`${prefix}help <command>\` to learn more about a command.\n\n` +
+    'Select a category from the dropdown menu below to view available commands.\n\n' +
     '**Categories:**\n' +
     categoryLines.join('\n');
 
