@@ -80,10 +80,26 @@ export interface IgnoreRecord {
   createdAt: Date;
 }
 
+export interface PermitRevocationRecord {
+  id: number;
+  guildId: string;
+  targetType: 'user' | 'role';
+  targetId: string;
+  commandName: string | null;
+  moduleName: string | null;
+  revokedById: string;
+  revokedByName: string;
+  revokedAt: Date;
+}
+
 // ── Permission Check Result ─────────────────────────────────
 
 export interface PermissionCheckResult {
   allowed: boolean;
   authority: AuthorityLevel;
   reason: string;
+  revocationInfo?: {
+    revokedByName: string;
+    revokedAt: Date;
+  };
 }

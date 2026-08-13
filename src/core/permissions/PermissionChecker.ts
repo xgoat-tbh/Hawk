@@ -64,7 +64,20 @@ export async function checkPermission(
     return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Staff member access' };
   }
 
-  return { allowed: false, authority, reason: 'This command requires staff permissions or a custom permit.' };
+  const revocation = await permissionRepo.getLatestRevocation(
+    ctx.guildId,
+    ctx.userId,
+    ctx.memberRoleIds,
+    ctx.commandName,
+    ctx.moduleName,
+  );
+
+  return {
+    allowed: false,
+    authority,
+    reason: 'This command requires staff permissions or a custom permit.',
+    revocationInfo: revocation ?? undefined,
+  };
 }
 
 export function checkBotPermissions(botMember: GuildMember, required: PermissionResolvable[]): { hasAll: boolean; missing: string[] } {

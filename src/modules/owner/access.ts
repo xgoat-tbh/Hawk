@@ -11,6 +11,7 @@ import {
 } from '../../core/database/repositories/permissionRepo.js';
 import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
 import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
+import { sanitize } from '../../core/utils/validators.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
@@ -151,7 +152,8 @@ export default defineCommand({
 
     // 3. Execute add or remove
     if (isRemoveMode) {
-      const removed = await removePermit(guild.id, targetType, targetId, commandName, moduleName);
+      const sanitizedStaffName = sanitize(member.displayName || member.user.tag);
+      const removed = await removePermit(guild.id, targetType, targetId, commandName, moduleName, member.id, sanitizedStaffName);
       if (removed) {
         await respond.success(`Revoked ${targetDisplay} access to ${scopeDisplay}.`);
         logEvent('info', 'command_execution', `Permit removed by ${member.user.tag}`, {
