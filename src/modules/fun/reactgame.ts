@@ -73,6 +73,7 @@ export default defineCommand({
 
     collector.on('collect', async (_reaction: MessageReaction, user: User) => {
       const reactionTimeMs = Date.now() - startTime;
+      const reactionTimeSec = (reactionTimeMs / 1000).toFixed(2);
       const winnerMember = await guild.members.fetch(user.id).catch(() => null);
       const winnerName = sanitize(winnerMember?.displayName || user.username);
 
@@ -80,7 +81,7 @@ export default defineCommand({
         text:
           `# Emoji Reaction Speed Test — Winner!\n\n` +
           `• **Winner:** **${winnerName}**\n` +
-          `• **Reaction Time:** \`${reactionTimeMs}ms\`\n\n` +
+          `• **Reaction Time:** \`${reactionTimeSec}s\`\n\n` +
           `Congratulations! You had the fastest reaction in the server.`,
       });
 
