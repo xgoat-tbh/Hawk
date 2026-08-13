@@ -30,7 +30,7 @@ import {
   handleConfessionModal,
 } from './modules/confession/_confessionHandler.js';
 import { handleMediaFilter } from './modules/media/_mediaHandler.js';
-import { handleHelpSelect } from './modules/general/_helpHandler.js';
+import { handleHelpSelect, handleHelpButton } from './modules/general/_helpHandler.js';
 import { handleStealButton, handleStealModal } from './modules/general/_stealHandler.js';
 import { handlePingRefresh } from './modules/general/pingUI.js';
 import { handleInfoInteraction } from './modules/general/infoUI.js';
@@ -199,6 +199,8 @@ async function bootstrap() {
           await handleVConfigFallback(interaction);
         } else if (id.startsWith('steal_btn_')) {
           await handleStealButton(interaction);
+        } else if (id.startsWith('help_page_')) {
+          await handleHelpButton(interaction);
         }
       } else if (interaction.isModalSubmit()) {
         const id = interaction.customId;

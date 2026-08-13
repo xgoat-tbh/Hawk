@@ -1,46 +1,91 @@
 import {
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import type { CommandDefinition } from '../../types/command.js';
-import { getModules, getModuleCommands } from '../../core/commands/CommandRegistry.js';
+import { getModuleCommands } from '../../core/commands/CommandRegistry.js';
 import { buildV2Container } from '../../core/utils/componentsV2.js';
 import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
 import { sanitize } from '../../core/utils/validators.js';
 
-const MODULE_LABELS: Record<string, string> = {
-  voice: 'Voice',
-  gaming: 'Gaming',
-  suggestion: 'Suggestion',
-  confession: 'Confession',
-  sticky: 'Sticky',
-  moderation: 'Moderation',
-  welcome: 'Welcome',
-  media: 'Media',
-  general: 'General',
-  owner: 'Owner',
-};
-
-function getModuleLabel(modName: string): string {
-  const lower = modName.toLowerCase();
-  return MODULE_LABELS[lower] ?? (modName.charAt(0).toUpperCase() + modName.slice(1));
+export interface HelpCategory {
+  id: string;
+  name: string;
+  emoji: string;
+  description: string;
+  modules: string[];
 }
 
-export function buildCategoryDropdown(userId: string, activeModule?: string): ActionRowBuilder<StringSelectMenuBuilder> {
-  const modules = getModules().filter(m => getModuleCommands(m).length > 0);
+export const HELP_CATEGORIES: HelpCategory[] = [
+  {
+    id: 'moderation',
+    name: 'Moderation',
+    emoji: '🛡️',
+    description: 'Server management, bans, mutes, locks, purges, and roles',
+    modules: ['moderation'],
+  },
+  {
+    id: 'voice',
+    name: 'Voice Controls',
+    emoji: '🔊',
+    description: 'Voice channel movement, follow-me-vc, locks, and tracking',
+    modules: ['voice'],
+  },
+  {
+    id: 'gaming',
+    name: 'Gaming',
+    emoji: '🎮',
+    description: 'Game LFG ping notifications and game role settings',
+    modules: ['gaming'],
+  },
+  {
+    id: 'community',
+    name: 'Community',
+    emoji: '💬',
+    description: 'Suggestions, confessions, sticky messages, welcome, and media filters',
+    modules: ['suggestion', 'confession', 'sticky', 'welcome', 'media'],
+  },
+  {
+    id: 'general',
+    name: 'General & Info',
+    emoji: '⚙️',
+    description: 'Bot statistics, AFK status, emoji stealing, access & restrictions',
+    modules: ['general', 'owner'],
+  },
+];
 
+export function getCategory(categoryId: string): HelpCategory | undefined {
+  return HELP_CATEGORIES.find(c => c.id.toLowerCase() === categoryId.toLowerCase());
+}
+
+export function getCategoryCommands(categoryId: string): CommandDefinition[] {
+  const cat = getCategory(categoryId);
+  if (!cat) return [];
+
+  const cmds: CommandDefinition[] = [];
+  for (const mod of cat.modules) {
+    const modCmds = getModuleCommands(mod);
+    cmds.push(...modCmds);
+  }
+  return cmds;
+}
+
+export function buildCategoryDropdown(userId: string, activeCategoryId?: string): ActionRowBuilder<StringSelectMenuBuilder> {
   const select = new StringSelectMenuBuilder()
     .setCustomId(`help_category_select_${userId}`)
     .setPlaceholder('Select a category to browse...');
 
-  const options = modules.map((mod) => {
-    const label = getModuleLabel(mod);
+  const options = HELP_CATEGORIES.map((cat) => {
     const opt = new StringSelectMenuOptionBuilder()
-      .setLabel(`${label} Commands`)
-      .setValue(mod.toLowerCase());
+      .setLabel(`${cat.name} Commands`)
+      .setValue(cat.id)
+      .setEmoji(cat.emoji)
+      .setDescription(cat.description);
 
-    if (activeModule && activeModule.toLowerCase() === mod.toLowerCase()) {
+    if (activeCategoryId && activeCategoryId.toLowerCase() === cat.id.toLowerCase()) {
       opt.setDefault(true);
     }
     return opt;
@@ -51,21 +96,18 @@ export function buildCategoryDropdown(userId: string, activeModule?: string): Ac
 }
 
 export function buildMainHelpEmbed(prefix: string, userId: string): ComponentV2Payload {
-  const modules = getModules().filter(m => getModuleCommands(m).length > 0);
-
-  const moduleLines = modules.map((mod) => {
-    const label = getModuleLabel(mod);
-    const count = getModuleCommands(mod).length;
-    return `• **${label}** — \`${count}\` command${count === 1 ? '' : 's'}`;
+  const categoryLines = HELP_CATEGORIES.map((cat) => {
+    const count = getCategoryCommands(cat.id).length;
+    return `• ${cat.emoji} **${cat.name}** — \`${count}\` command${count === 1 ? '' : 's'}`;
   });
 
   const headerContent =
-    '# Amo India Help\n\n' +
+    '# Amo Help\n\n' +
     '**Hey there! 👋**\n\n' +
     `Default prefix: \`${prefix}\`\n` +
     `Use \`${prefix}help <command>\` to learn more about a command.\n\n` +
     '**Categories:**\n' +
-    moduleLines.join('\n');
+    categoryLines.join('\n');
 
   const dropdownRow = buildCategoryDropdown(userId);
 
@@ -75,32 +117,68 @@ export function buildMainHelpEmbed(prefix: string, userId: string): ComponentV2P
   });
 }
 
-export function buildCategoryHelpEmbed(moduleName: string, prefix: string, userId: string): ComponentV2Payload {
-  const commands = getModuleCommands(moduleName);
-  const label = getModuleLabel(moduleName);
+export function buildCategoryHelpEmbed(
+  categoryId: string,
+  prefix: string,
+  userId: string,
+  page = 1,
+): ComponentV2Payload {
+  const cat = getCategory(categoryId) || HELP_CATEGORIES[0];
+  const commands = getCategoryCommands(cat.id);
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil(commands.length / pageSize));
+  const currentPage = Math.max(1, Math.min(page, totalPages));
 
-  let bodyContent = `# ${label} Commands\n\n`;
+  let bodyContent = `# ${cat.emoji} ${cat.name} Commands\n\n`;
 
   if (commands.length === 0) {
     bodyContent += 'No commands are currently available in this category.';
   } else {
-    const lines = commands.map((cmd) => {
+    const start = (currentPage - 1) * pageSize;
+    const pageCmds = commands.slice(start, start + pageSize);
+
+    const lines = pageCmds.map((cmd) => {
       const aliasStr = cmd.aliases.length > 0 ? cmd.aliases.map(a => `\`${prefix}${a}\``).join(', ') : '—';
       return `**\`${prefix}${cmd.name}\`**\n${sanitize(cmd.description)}\n\`Aliases:\` ${aliasStr}`;
     });
-    bodyContent += lines.join('\n\n');
+
+    bodyContent += `${lines.join('\n\n')}\n\n*Page ${currentPage}/${totalPages} (Total: ${commands.length})*`;
   }
 
-  const dropdownRow = buildCategoryDropdown(userId, moduleName);
+  const components: ActionRowBuilder<any>[] = [];
+
+  if (totalPages > 1) {
+    const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`help_page_prev_${cat.id}_${currentPage}_${userId}`)
+        .setLabel('◀ Prev')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(currentPage <= 1),
+      new ButtonBuilder()
+        .setCustomId(`help_page_indicator`)
+        .setLabel(`${currentPage} / ${totalPages}`)
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(true),
+      new ButtonBuilder()
+        .setCustomId(`help_page_next_${cat.id}_${currentPage}_${userId}`)
+        .setLabel('Next ▶')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(currentPage >= totalPages),
+    );
+    components.push(buttonRow);
+  }
+
+  components.push(buildCategoryDropdown(userId, cat.id));
 
   return buildV2Container({
     text: sanitize(bodyContent),
-    components: [dropdownRow],
+    components,
   });
 }
 
 export function buildCommandHelpEmbed(command: CommandDefinition, prefix: string): ComponentV2Payload {
-  const label = getModuleLabel(command.module);
+  const cat = HELP_CATEGORIES.find(c => c.modules.includes(command.module.toLowerCase()));
+  const catLabel = cat ? `${cat.emoji} ${cat.name}` : command.module;
 
   const usageStr = command.usage ? `\`${prefix}${command.usage}\`` : `\`${prefix}${command.name}\``;
   const aliasStr = command.aliases.length > 0 ? command.aliases.map(a => `\`${prefix}${a}\``).join(', ') : '—';
@@ -108,7 +186,7 @@ export function buildCommandHelpEmbed(command: CommandDefinition, prefix: string
   let bodyContent =
     `# Help: ${prefix}${command.name}\n\n` +
     `${sanitize(command.description)}\n\n` +
-    `**Category:** ${label}\n` +
+    `**Category:** ${catLabel}\n` +
     `**Usage:** ${usageStr}\n` +
     `**Aliases:** ${aliasStr}`;
 
