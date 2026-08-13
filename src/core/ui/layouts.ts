@@ -130,17 +130,17 @@ export async function paginated(
       buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`v2_prev_${page}`)
-          .setLabel('◀ Prev')
+          .setLabel('Prev')
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(disabled || page <= 1),
         new ButtonBuilder()
           .setCustomId(`v2_page_indicator`)
           .setLabel(`${page} / ${totalPages}`)
-          .setStyle(ButtonStyle.Primary)
+          .setStyle(ButtonStyle.Secondary)
           .setDisabled(true),
         new ButtonBuilder()
           .setCustomId(`v2_next_${page}`)
-          .setLabel('Next ▶')
+          .setLabel('Next')
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(disabled || page >= totalPages),
       );

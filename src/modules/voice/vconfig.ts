@@ -174,7 +174,7 @@ export default defineCommand({
       new ButtonBuilder()
         .setCustomId(`vconfig_save_${targetCmdName}_${targetRole.id}`)
         .setLabel('Save Configuration')
-        .setStyle(ButtonStyle.Success),
+        .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`vconfig_cancel_${targetCmdName}_${targetRole.id}`)
         .setLabel('Cancel')

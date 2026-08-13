@@ -84,7 +84,7 @@ export default defineCommand({
       new ButtonBuilder()
         .setCustomId(`dragme_approve_${message.id}`)
         .setLabel('Approve')
-        .setStyle(ButtonStyle.Success),
+        .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`dragme_deny_${message.id}`)
         .setLabel('Deny')
@@ -110,7 +110,7 @@ export default defineCommand({
           new ButtonBuilder()
             .setCustomId(`dragme_approve_${message.id}`)
             .setLabel('Approve')
-            .setStyle(ButtonStyle.Success)
+            .setStyle(ButtonStyle.Secondary)
             .setDisabled(true),
           new ButtonBuilder()
             .setCustomId(`dragme_deny_${message.id}`)
@@ -119,7 +119,7 @@ export default defineCommand({
             .setDisabled(true),
         );
         await sentMessage.edit({
-          content: `⌛ Drag request from ${mentionUser(member.id)} to ${mentionUser(targetMember.id)} has expired.`,
+          content: `Drag request from ${mentionUser(member.id)} to ${mentionUser(targetMember.id)} has expired.`,
           components: [disabledRow],
         });
         // Auto-clean expired request after 7 seconds

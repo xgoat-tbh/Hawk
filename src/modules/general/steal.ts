@@ -147,12 +147,10 @@ export default defineCommand({
       new ButtonBuilder()
         .setCustomId(`steal_btn_emoji_${randomId}`)
         .setLabel('Add as Emoji')
-        .setEmoji('😀')
-        .setStyle(ButtonStyle.Primary),
+        .setStyle(ButtonStyle.Secondary),
       new ButtonBuilder()
         .setCustomId(`steal_btn_sticker_${randomId}`)
         .setLabel('Add as Sticker')
-        .setEmoji('🏷️')
         .setStyle(ButtonStyle.Secondary),
     );
 

@@ -44,7 +44,7 @@ export async function handleDragmeInteraction(interaction: ButtonInteraction): P
       new ButtonBuilder()
         .setCustomId(`dragme_approve_${originalMessageId}`)
         .setLabel('Approve')
-        .setStyle(ButtonStyle.Success)
+        .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
       new ButtonBuilder()
         .setCustomId(`dragme_deny_${originalMessageId}`)
@@ -124,7 +124,7 @@ export async function handleDragmeInteraction(interaction: ButtonInteraction): P
       new ButtonBuilder()
         .setCustomId(`dragme_approve_${originalMessageId}`)
         .setLabel('Approved')
-        .setStyle(ButtonStyle.Success)
+        .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
       new ButtonBuilder()
         .setCustomId(`dragme_deny_${originalMessageId}`)

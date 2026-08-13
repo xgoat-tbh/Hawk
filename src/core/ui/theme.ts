@@ -2,29 +2,29 @@ import { ButtonStyle } from 'discord.js';
 
 export const HawkTheme = {
   colors: {
-    primary: 0x5865f2,
-    success: 0x57f287,
+    primary: 0x2b2d31,
+    success: 0x2b2d31,
     error: 0xed4245,
     warning: 0xfee75c,
-    info: 0x5865f2,
+    info: 0x2b2d31,
     neutral: 0x2f3136,
   },
 
   emojis: {
-    success: '✅',
-    error: '❌',
-    warning: '⚠️',
-    info: 'ℹ️',
-    denied: '🚫',
-    prev: '◀',
-    next: '▶',
-    page: '📄',
+    success: '',
+    error: '',
+    warning: '',
+    info: '',
+    denied: '',
+    prev: '',
+    next: '',
+    page: '',
   },
 
   buttons: {
-    primary: ButtonStyle.Primary,
+    primary: ButtonStyle.Secondary,
     secondary: ButtonStyle.Secondary,
-    success: ButtonStyle.Success,
+    success: ButtonStyle.Secondary,
     danger: ButtonStyle.Danger,
     link: ButtonStyle.Link,
   },

@@ -84,7 +84,7 @@ export function buildCategoryDropdown(
 
     const isRestricted = usableSet && usableCount === 0;
     const labelStr = isRestricted
-      ? `🔒 ${cat.name} (Restricted)`
+      ? `${cat.name} [Restricted]`
       : `${cat.name} (${usableCount}/${allCatCmds.length})`;
 
     const opt = new StringSelectMenuOptionBuilder()
@@ -123,7 +123,6 @@ export function buildMainHelpEmbed(
 
   const headerContent =
     '# Amo Help\n\n' +
-    '**Hey there! 👋**\n\n' +
     `Default prefix: \`${prefix}\`\n` +
     `**Total Commands:** \`${totalAll}\` | **Available to you:** \`${totalUsable}\`\n\n` +
     'Select a category from the dropdown menu below to view available commands.\n\n' +
@@ -158,7 +157,7 @@ export function buildCategoryHelpEmbed(
   let bodyContent = `# ${cat.name} Commands\n\n`;
 
   if (commands.length === 0) {
-    bodyContent += '🔒 *You do not have permission to execute any commands in this category.*';
+    bodyContent += '*You do not have permission to execute any commands in this category.*';
   } else {
     const start = (currentPage - 1) * pageSize;
     const pageCmds = commands.slice(start, start + pageSize);
@@ -177,17 +176,17 @@ export function buildCategoryHelpEmbed(
     const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`help_page_prev_${cat.id}_${currentPage}_${userId}`)
-        .setLabel('◀ Prev')
+        .setLabel('Prev')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(currentPage <= 1),
       new ButtonBuilder()
         .setCustomId(`help_page_indicator`)
         .setLabel(`${currentPage} / ${totalPages}`)
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Secondary)
         .setDisabled(true),
       new ButtonBuilder()
         .setCustomId(`help_page_next_${cat.id}_${currentPage}_${userId}`)
-        .setLabel('Next ▶')
+        .setLabel('Next')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(currentPage >= totalPages),
     );
