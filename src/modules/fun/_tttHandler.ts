@@ -9,14 +9,17 @@ import {
 import { buildV2Container } from '../../core/utils/componentsV2.js';
 import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
 import { mentionUser } from '../../core/utils/formatters.js';
+import { sanitize } from '../../core/utils/validators.js';
 
 export interface TttGame {
   id: string;
   guildId: string;
   channelId: string;
   messageId?: string;
-  player1: string; // X (Challenger)
-  player2: string; // O (Opponent)
+  player1: string; // X (Challenger ID)
+  player1Name: string; // Sanitized display name
+  player2: string; // O (Opponent ID)
+  player2Name: string; // Sanitized display name
   turn: string; // current player ID
   board: (string | null)[]; // 9 cells (0..8)
   status: 'pending' | 'playing' | 'ended';
@@ -52,6 +55,7 @@ function checkWinner(board: (string | null)[]): string | 'draw' | null {
 export function buildGameBoardPayload(game: TttGame): ComponentV2Payload {
   const isPlaying = game.status === 'playing';
   const turnSymbol = game.turn === game.player1 ? 'X' : 'O';
+  const currentTurnName = game.turn === game.player1 ? game.player1Name : game.player2Name;
 
   let statusText = '';
   if (game.status === 'pending') {
@@ -59,24 +63,25 @@ export function buildGameBoardPayload(game: TttGame): ComponentV2Payload {
   } else if (isPlaying) {
     statusText =
       `# Tic-Tac-Toe Match\n\n` +
-      `• **Player X:** ${mentionUser(game.player1)}\n` +
-      `• **Player O:** ${mentionUser(game.player2)}\n\n` +
-      `**Current Turn:** ${mentionUser(game.turn)} (\`${turnSymbol}\`) *(30s turn timer)*`;
+      `• **Player X:** **${game.player1Name}**\n` +
+      `• **Player O:** **${game.player2Name}**\n\n` +
+      `**Current Turn:** **${currentTurnName}** (\`${turnSymbol}\`) *(30s turn timer)*`;
   } else if (game.status === 'ended') {
     if (game.winner === 'draw') {
       statusText =
         `# Tic-Tac-Toe Match — Draw!\n\n` +
-        `• **Player X:** ${mentionUser(game.player1)}\n` +
-        `• **Player O:** ${mentionUser(game.player2)}\n\n` +
+        `• **Player X:** **${game.player1Name}**\n` +
+        `• **Player O:** **${game.player2Name}**\n\n` +
         `**Result:** Match ended in a draw! Well played.`;
     } else if (game.winner) {
       const winnerId = game.winner === 'X' ? game.player1 : game.winner === 'O' ? game.player2 : game.winner;
+      const winnerName = winnerId === game.player1 ? game.player1Name : game.player2Name;
       const winningSymbol = winnerId === game.player1 ? 'X' : 'O';
       statusText =
         `# Tic-Tac-Toe Match — Game Over!\n\n` +
-        `• **Player X:** ${mentionUser(game.player1)}\n` +
-        `• **Player O:** ${mentionUser(game.player2)}\n\n` +
-        `**Winner:** ${mentionUser(winnerId)} (\`${winningSymbol}\`) wins!`;
+        `• **Player X:** **${game.player1Name}**\n` +
+        `• **Player O:** **${game.player2Name}**\n\n` +
+        `**Winner:** **${winnerName}** (\`${winningSymbol}\`) wins!`;
     }
   }
 
@@ -188,6 +193,9 @@ export async function handleTttButton(interaction: ButtonInteraction): Promise<v
       return;
     }
 
+    if (interaction.member && 'displayName' in interaction.member) {
+      game.player2Name = sanitize((interaction.member as any).displayName || interaction.user.username);
+    }
     game.status = 'playing';
     game.messageId = interaction.message.id;
     resetGameTimeout(game, interaction);

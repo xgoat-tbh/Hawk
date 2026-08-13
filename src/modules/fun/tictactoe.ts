@@ -4,6 +4,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { activeGames, buildGameBoardPayload, type TttGame } from './_tttHandler.js';
+import { sanitize } from '../../core/utils/validators.js';
 
 export default defineCommand({
   name: 'tictactoe',
@@ -71,13 +72,18 @@ export default defineCommand({
       }
     }
 
+    const p1Name = sanitize(member.displayName || member.user.username);
+    const p2Name = sanitize(targetMember.displayName || targetMember.user.username);
+
     const randomId = Math.random().toString(36).slice(2, 9);
     const game: TttGame = {
       id: randomId,
       guildId: guild.id,
       channelId: channel.id,
       player1: member.id,
+      player1Name: p1Name,
       player2: targetMember.id,
+      player2Name: p2Name,
       turn: member.id,
       board: Array(9).fill(null),
       status: 'pending',
