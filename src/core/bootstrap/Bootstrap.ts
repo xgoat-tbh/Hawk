@@ -20,6 +20,7 @@ import { startCooldownCleanup, stopCooldownCleanup } from '../cooldowns/Cooldown
 import { recordDeletedMessage } from '../../modules/moderation/SnipeManager.js';
 import { loadModuleManifests } from '../modules/ModuleLoader.js';
 import { interactionRouter } from '../interactions/InteractionRouter.js';
+import { startHealthServer, stopHealthServer } from '../server/HealthServer.js';
 import type { ModuleManifest } from '../../types/module.js';
 
 export class Bootstrap {
@@ -69,6 +70,7 @@ export class Bootstrap {
       updateBotActivity(client);
       startInteractionCleanup();
       startCooldownCleanup();
+      startHealthServer();
       await loadNoPrefixCache();
       await loadAfkCache();
 
@@ -211,6 +213,7 @@ export class Bootstrap {
 
       stopInteractionCleanup();
       stopCooldownCleanup();
+      stopHealthServer();
       await stopWebhookLogger();
 
       if (this.client) {
