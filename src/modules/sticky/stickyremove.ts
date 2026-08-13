@@ -8,6 +8,7 @@ import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
 export default defineCommand({
   name: 'stickyremove',
+  aliases: ['unstick', 'rmstick', 'removesticky'],
   module: 'sticky',
   description: 'Remove the active sticky message configuration from the current channel.',
   usage: 'stickyremove',

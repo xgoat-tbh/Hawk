@@ -8,6 +8,7 @@ import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
 export default defineCommand({
   name: 'stick',
+  aliases: ['sticky'],
   module: 'sticky',
   description: 'Create or update the sticky message for the current channel.',
   usage: 'stick <message...>',
