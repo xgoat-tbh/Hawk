@@ -13,59 +13,39 @@ export async function checkVoiceAccess(
   member: GuildMember,
   commandName: string,
   channelId?: string | null,
-  secondChannelId?: string | null, // e.g. for shiftvc (source & dest)
+  secondChannelId?: string | null,
 ): Promise<VoiceAccessResult> {
   if (!member) return { allowed: true };
 
   const ownerId = member.guild?.ownerId ?? '';
   const authority = getAuthorityLevel(member.id, ownerId);
-
-  // Elevated authority bypass: Owner, Bot Admin, Server Admin have server-wide access
-  if (authority >= AuthorityLevel.ServerAdmin) {
-    return { allowed: true };
-  }
+  if (authority >= AuthorityLevel.ServerAdmin) return { allowed: true };
 
   const allRules = await getVConfigRulesForGuild(guildId);
-  // Match specific command name or 'all' / '*' wildcard
-  const commandRules = allRules.filter(
-    (r) => r.commandName === commandName || r.commandName === 'all' || r.commandName === '*',
-  );
-  if (commandRules.length === 0) {
-    return { allowed: true };
-  }
+  const commandRules = allRules.filter((r) => r.commandName === commandName || r.commandName === 'all' || r.commandName === '*');
+  if (commandRules.length === 0) return { allowed: true };
 
-  // Filter rules matching member's roles and map to role positions for hierarchy precedence
   const memberRoles = member.roles?.cache ? Array.from(member.roles.cache.values()) : [];
   const memberRoleMap = new Map<string, number>(memberRoles.map((role) => [role.id, role.position]));
 
-  const applicableRules = commandRules.filter((r) => memberRoleMap.has(r.roleId));
-  if (applicableRules.length === 0) {
-    return { allowed: true };
-  }
+  const applicableRules = commandRules
+    .filter((r) => memberRoleMap.has(r.roleId))
+    .sort((a, b) => (memberRoleMap.get(b.roleId) ?? 0) - (memberRoleMap.get(a.roleId) ?? 0));
 
-  // Sort rules by Discord role hierarchy (highest role position first)
-  applicableRules.sort((a, b) => {
-    const posA = memberRoleMap.get(a.roleId) ?? 0;
-    const posB = memberRoleMap.get(b.roleId) ?? 0;
-    return posB - posA;
-  });
+  if (applicableRules.length === 0) return { allowed: true };
 
-  // Role Hierarchy Failsafe: Evaluate rules of the member's HIGHEST configured role
   const highestPos = memberRoleMap.get(applicableRules[0].roleId) ?? 0;
-  const highestRoleRules = applicableRules.filter(
-    (r) => (memberRoleMap.get(r.roleId) ?? 0) === highestPos,
-  );
+  const highestRoleRules = applicableRules.filter((r) => (memberRoleMap.get(r.roleId) ?? 0) === highestPos);
 
   const targetChannels = [channelId, secondChannelId].filter(Boolean) as string[];
-  if (targetChannels.length === 0) {
-    return { allowed: true };
-  }
+  if (targetChannels.length === 0) return { allowed: true };
 
-  // 1. Blacklist (bl) Evaluation on Highest Role
-  const blRules = highestRoleRules.filter((r) => r.mode === 'bl');
-  for (const rule of blRules) {
+  const isChannelMatch = (chans: string[], target: string) => chans.includes(target) || chans.includes('all') || chans.includes('*');
+
+  // 1. Blacklist check
+  for (const rule of highestRoleRules.filter((r) => r.mode === 'bl')) {
     for (const targetChan of targetChannels) {
-      if (rule.channelIds.includes(targetChan) || rule.channelIds.includes('all') || rule.channelIds.includes('*')) {
+      if (isChannelMatch(rule.channelIds, targetChan)) {
         return {
           allowed: false,
           reason: `Your role (<@&${rule.roleId}>) is blacklisted from using \`${commandName}\` in that voice channel.`,
@@ -74,17 +54,12 @@ export async function checkVoiceAccess(
     }
   }
 
-  // 2. Whitelist (wl) Evaluation on Highest Role
+  // 2. Whitelist check
   const wlRules = highestRoleRules.filter((r) => r.mode === 'wl');
   if (wlRules.length > 0) {
     for (const targetChan of targetChannels) {
-      const isWhitelistedInAny = wlRules.some(
-        (rule) =>
-          rule.channelIds.includes(targetChan) ||
-          rule.channelIds.includes('all') ||
-          rule.channelIds.includes('*'),
-      );
-      if (!isWhitelistedInAny) {
+      const isWhitelisted = wlRules.some((r) => isChannelMatch(r.channelIds, targetChan));
+      if (!isWhitelisted) {
         return {
           allowed: false,
           reason: `Your role is restricted to specific voice channels for \`${commandName}\`. That voice channel is not whitelisted.`,
