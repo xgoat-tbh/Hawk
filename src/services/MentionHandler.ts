@@ -6,9 +6,8 @@ export function classifyMessage(message: Message, prefix: string): MessageType {
   const content = message.content.trim();
   if (content.toLowerCase().startsWith(prefix.toLowerCase())) return MessageType.PrefixCommand;
   const botId = message.client.user?.id;
-  if (botId) {
-    const mentionPattern = new RegExp(`^<@!?${botId}>\\s*$`);
-    if (mentionPattern.test(content)) return MessageType.BotMention;
+  if (botId && (content === `<@${botId}>` || content === `<@!${botId}>`)) {
+    return MessageType.BotMention;
   }
   return MessageType.Normal;
 }
