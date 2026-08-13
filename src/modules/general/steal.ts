@@ -14,7 +14,7 @@ interface ExtractedMedia {
 function extractMediaFromText(text: string): ExtractedMedia | null {
   if (!text) return null;
 
-  // 1. Custom Emoji: <a:name:id> or <:name:id>
+  // 1. Custom Emoji in chat: <a:name:id> or <:name:id>
   const customEmojiRegex = /<(a)?:([a-zA-Z0-9_]+):(\d{17,20})>/;
   const emojiMatch = customEmojiRegex.exec(text);
   if (emojiMatch) {
@@ -25,7 +25,38 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
     return { mediaUrl, defaultName: emojiName };
   }
 
-  // 2. Masked Markdown Link: [text](https://url)
+  // 2. Direct Discord Emoji CDN link (cdn.discordapp.com/emojis/... or media.discordapp.net/emojis/...)
+  const discordEmojiCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/emojis\/(\d{17,20})\.(png|gif|webp|jpg|jpeg)(?:\?[^\s\)]*)?/i;
+  const cdnEmojiMatch = discordEmojiCdnRegex.exec(text);
+  if (cdnEmojiMatch) {
+    const emojiId = cdnEmojiMatch[1];
+    const ext = cdnEmojiMatch[2].toLowerCase() === 'gif' ? 'gif' : 'png';
+    const mediaUrl = `https://cdn.discordapp.com/emojis/${emojiId}.${ext}?quality=lossless`;
+    return { mediaUrl, defaultName: `emoji_${emojiId.slice(-6)}` };
+  }
+
+  // 3. Direct Discord Sticker CDN link (cdn.discordapp.com/stickers/...)
+  const discordStickerCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/stickers\/(\d{17,20})\.(png|webp|gif|json)(?:\?[^\s\)]*)?/i;
+  const cdnStickerMatch = discordStickerCdnRegex.exec(text);
+  if (cdnStickerMatch) {
+    const stickerId = cdnStickerMatch[1];
+    const mediaUrl = `https://cdn.discordapp.com/stickers/${stickerId}.png`;
+    return { mediaUrl, defaultName: `sticker_${stickerId.slice(-6)}` };
+  }
+
+  // 4. Discord Attachment CDN link (cdn.discordapp.com/attachments/... or media.discordapp.net/attachments/...)
+  const discordAttachmentRegex = /(https?:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/attachments\/\d+\/\d+\/[^\s\)]+)/i;
+  const attachmentMatch = discordAttachmentRegex.exec(text);
+  if (attachmentMatch) {
+    const mediaUrl = attachmentMatch[1];
+    const cleanUrl = mediaUrl.split('?')[0];
+    const urlParts = cleanUrl.split('/');
+    const rawFilename = urlParts[urlParts.length - 1].split('.')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+    const defaultName = rawFilename.length >= 2 ? rawFilename : 'stolen_media';
+    return { mediaUrl, defaultName };
+  }
+
+  // 5. Masked Markdown Link: [text](https://url)
   const maskedLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/;
   const maskedMatch = maskedLinkRegex.exec(text);
   if (maskedMatch) {
@@ -35,14 +66,15 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
     return { mediaUrl, defaultName };
   }
 
-  // 3. Raw URL: https://...
+  // 6. Generic Raw URL: https://...
   const rawUrlRegex = /https?:\/\/[^\s]+/;
   const urlMatch = rawUrlRegex.exec(text);
   if (urlMatch) {
     const mediaUrl = urlMatch[0];
-    const urlParts = mediaUrl.split('/');
-    const filename = urlParts[urlParts.length - 1].split('?')[0].split('.')[0];
-    const defaultName = filename.length >= 2 ? filename.replace(/[^a-zA-Z0-9_]/g, '_') : 'stolen_media';
+    const cleanUrl = mediaUrl.split('?')[0];
+    const urlParts = cleanUrl.split('/');
+    const filename = urlParts[urlParts.length - 1].split('.')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+    const defaultName = filename.length >= 2 ? filename : 'stolen_media';
     return { mediaUrl, defaultName };
   }
 
