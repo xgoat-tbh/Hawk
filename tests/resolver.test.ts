@@ -234,6 +234,31 @@ test('sanitize strips @ and masks mentions in bold without @ prefix', async () =
   assert.equal(sanitize('<@!222222222222222222>', mockGuild), '**Yoshi**');
 });
 
+test('sanitizeAsync resolves uncached members via Discord API fetch', async () => {
+  const { sanitizeAsync } = await import('../src/core/utils/validators.js');
+
+  const mockGuild = {
+    roles: { cache: new Map() },
+    members: {
+      cache: new Map(),
+      fetch: async (id: string) => {
+        if (id === '731014816197771284') {
+          return { id, displayName: 'Vanshu', user: { username: 'vanshu' } };
+        }
+        return null;
+      },
+    },
+    client: {
+      users: {
+        fetch: async (id: string) => ({ id, username: `user_${id}` }),
+      },
+    },
+  } as any;
+
+  const result = await sanitizeAsync('<@731014816197771284> (user)', mockGuild);
+  assert.equal(result, '**Vanshu** (user)');
+});
+
 test('toggleRoleForMember allows self-targeting and performs hybrid role toggling', async () => {
   const { toggleRoleForMember } = await import('../src/modules/moderation/roleHelpers.ts');
 

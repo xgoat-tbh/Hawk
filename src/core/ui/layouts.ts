@@ -6,7 +6,7 @@ import {
 } from 'discord.js';
 import type { Message, GuildTextBasedChannel } from 'discord.js';
 import type { CommandContext } from '../../types/command.js';
-import { sanitize } from '../utils/validators.js';
+import { sanitize, sanitizeAsync } from '../utils/validators.js';
 import { createContainer, createTextDisplay, createSeparator } from './components.js';
 
 export interface StandardLayoutOptions {
@@ -109,7 +109,7 @@ export async function paginated(
 
   const title = sanitize(options.title, guild);
   const emptyText = sanitize(options.emptyText ?? 'No items found.', guild);
-  const items = options.items.map((it) => sanitize(it, guild));
+  const items = await Promise.all(options.items.map((it) => sanitizeAsync(it, guild)));
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
 
   function buildPagePayload(page: number, disabled = false) {
