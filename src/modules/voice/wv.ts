@@ -1,11 +1,4 @@
-import {
-  PermissionsBitField,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  type GuildMember,
-  type GuildTextBasedChannel,
-} from 'discord.js';
+import type { GuildMember, GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
@@ -62,32 +55,11 @@ export default defineCommand({
     const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? `${chan.userLimit}` : '∞';
     const targetName = targetMember.displayName || targetMember.user.username;
 
-    // Check permissions and capacity for the invoking user to join
-    const userPerms = chan.permissionsFor(member);
-    const canConnect = Boolean(userPerms?.has(PermissionsBitField.Flags.Connect));
-    const isFull = Boolean(
-      chan.userLimit &&
-      chan.userLimit > 0 &&
-      count >= chan.userLimit &&
-      !userPerms?.has(PermissionsBitField.Flags.MoveMembers) &&
-      !userPerms?.has(PermissionsBitField.Flags.Administrator)
-    );
-
-    const components: ActionRowBuilder<ButtonBuilder>[] = [];
-    if (canConnect && !isFull) {
-      const joinBtn = new ButtonBuilder()
-        .setLabel('Join VC')
-        .setStyle(ButtonStyle.Link)
-        .setURL(`https://discord.com/channels/${guild.id}/${chan.id}`);
-
-      components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(joinBtn));
-    }
-
     const payload = buildV2Container({
       text:
         `• **Member:** **${targetName}** is in ${mentionChannel(chan.id)}\n` +
         `• **Occupancy:** \`${count}/${limit}\` connected`,
-      components,
+      components: [],
     });
 
     await (ctx.channel as GuildTextBasedChannel).send(payload);
