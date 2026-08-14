@@ -88,15 +88,19 @@ export default defineCommand({
     }
 
     const finalPayload = buildV2Container({
-      text: `**Role Purge Completed** for \`${targetRole.name}\` (${mentionRole(targetRole.id)})`,
-      sections: [`Removed from: **${removedCount}** member(s)${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`],
+      text:
+        `### Role Purge Completed\n` +
+        `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole.id)})\n` +
+        `• **Removed From:** **${removedCount}** member(s)` +
+        (skippedCount > 0 ? `\n• **Skipped:** **${skippedCount}** member(s)` : ''),
     });
 
     if (statusMsg) {
-      await statusMsg.edit({ content: undefined, components: finalPayload.components }).catch(() => {});
+      await statusMsg.edit(finalPayload).catch(() => {});
     } else {
       await respond.success(
-        `Purged role ${mentionRole(targetRole.id)} from **${removedCount}** member(s).${skippedCount > 0 ? ` Skipped: **${skippedCount}**` : ''}`,
+        `Purged role \`${targetRole.name}\` (${mentionRole(targetRole.id)}) from **${removedCount}** member(s).` +
+        (skippedCount > 0 ? ` Skipped: **${skippedCount}**` : ''),
       );
     }
 

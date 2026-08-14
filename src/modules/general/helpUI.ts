@@ -128,11 +128,11 @@ export function buildMainHelpEmbed(
   });
 
   const headerContent =
-    '# Amo Help\n\n' +
-    `Default prefix: \`${prefix}\`\n` +
-    `**Total Commands:** \`${totalAll}\` | **Available to you:** \`${totalUsable}\`\n\n` +
-    'Select a category from the dropdown menu below to view available commands.\n\n' +
-    '**Categories:**\n' +
+    '# Hawk Terminal\n\n' +
+    '> Use the category selector below to explore commands and operational scopes.\n\n' +
+    `• **Prefix:** \`${prefix}\`\n` +
+    `• **Commands Available:** \`${totalUsable}/${totalAll}\`\n\n` +
+    '**Category Directory:**\n' +
     categoryLines.join('\n');
 
   const dropdownRow = buildCategoryDropdown(userId, undefined, usableSet);
@@ -160,20 +160,26 @@ export function buildCategoryHelpEmbed(
   const totalPages = Math.max(1, Math.ceil(commands.length / pageSize));
   const currentPage = Math.max(1, Math.min(page, totalPages));
 
-  let bodyContent = `# ${cat.name} Commands\n\n`;
+  let bodyContent = `# ${cat.name} Commands\n\n> ${cat.description}\n\n`;
 
   if (commands.length === 0) {
-    bodyContent += '*You do not have permission to execute any commands in this category.*';
+    bodyContent += '*You do not have permission or a custom permit to execute commands in this category.*';
   } else {
     const start = (currentPage - 1) * pageSize;
     const pageCmds = commands.slice(start, start + pageSize);
 
     const lines = pageCmds.map((cmd) => {
-      const aliasStr = cmd.aliases.length > 0 ? cmd.aliases.map(a => `\`${prefix}${a}\``).join(', ') : '—';
-      return `**\`${prefix}${cmd.name}\`**\n${sanitize(cmd.description)}\n\`Aliases:\` ${aliasStr}`;
+      const aliasStr = cmd.aliases.length > 0 ? cmd.aliases.map(a => `\`${prefix}${a}\``).join(', ') : 'None';
+      const syntaxStr = cmd.usage ? `\`${prefix}${cmd.usage}\`` : `\`${prefix}${cmd.name}\``;
+      return (
+        `### \`${prefix}${cmd.name}\`\n` +
+        `> ${sanitize(cmd.description)}\n` +
+        `• **Syntax:** ${syntaxStr}\n` +
+        `• **Aliases:** ${aliasStr}`
+      );
     });
 
-    bodyContent += `${lines.join('\n\n')}\n\n*Page ${currentPage}/${totalPages} (Available: ${commands.length}/${allCatCommands.length})*`;
+    bodyContent += `${lines.join('\n\n')}\n\n*Page ${currentPage}/${totalPages} — Showing ${pageCmds.length} of ${commands.length} commands*`;
   }
 
   const components: ActionRowBuilder<any>[] = [];

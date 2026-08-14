@@ -22,19 +22,21 @@ export function buildNukeConfirmationPayload(channelId: string, authorId: string
   const confirmBtn = new ButtonBuilder()
     .setCustomId(`nuke_confirm_${channelId}_${authorId}`)
     .setLabel('Confirm Nuke')
-    .setEmoji('💥')
     .setStyle(ButtonStyle.Danger);
 
   const cancelBtn = new ButtonBuilder()
     .setCustomId(`nuke_cancel_${channelId}_${authorId}`)
     .setLabel('Cancel')
-    .setEmoji('✖️')
     .setStyle(ButtonStyle.Secondary);
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
 
   return buildV2Container({
-    text: `⚠️ **Channel Nuke Confirmation**\n\nAre you sure you want to nuke <#${channelId}>?\n\nThis will clone the channel (retaining all permissions, topic, and server position) and **permanently delete** the current channel and all its messages.`,
+    text:
+      `# Channel Nuke Confirmation\n\n` +
+      `> Are you sure you want to nuke <#${channelId}>?\n\n` +
+      `• **Target Channel:** <#${channelId}>\n` +
+      `• **Consequence:** Clones the channel (retaining permissions, topic, and position) and **permanently deletes** the current channel and all message history.`,
     components: [row],
   });
 }
@@ -83,7 +85,7 @@ export async function handleNukeInteraction(interaction: ButtonInteraction): Pro
 
   if (action === 'cancel') {
     const cancelPayload = buildV2Container({
-      text: '⚪ **Nuke Cancelled**\n\nThe channel nuke operation was cancelled.',
+      text: '### Operation Cancelled\n> The channel nuke request was safely cancelled.',
     });
     await interaction.update(cancelPayload);
     setTimeout(() => {
@@ -113,7 +115,10 @@ export async function handleNukeInteraction(interaction: ButtonInteraction): Pro
       await clonedChannel.setPosition(position).catch(() => {});
 
       const noticePayload = buildV2Container({
-        text: `💥 **Channel Nuked**\n\nThis channel was nuked by ${mentionUser(user.id)}.\nAll messages were wiped while retaining channel permissions, topic, and server position.`,
+        text:
+          `### Channel Nuked\n` +
+          `> This channel was recreated and cleared by ${mentionUser(user.id)}.\n` +
+          `• All messages were wiped while retaining channel permissions, topic, and position.`,
       });
 
       if ('send' in clonedChannel && typeof (clonedChannel as any).send === 'function') {

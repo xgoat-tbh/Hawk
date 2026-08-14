@@ -1,6 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import type { Message, MessageCreateOptions, GuildTextBasedChannel } from 'discord.js';
-import { branding, getEmoji, toReactableEmoji } from '../config/branding.js';
+import { branding } from '../config/branding.js';
 import { sanitize, truncate } from '../utils/validators.js';
 import { buildV2Container } from '../utils/componentsV2.js';
 import type { ComponentV2Options } from '../utils/componentsV2.js';
@@ -40,8 +40,9 @@ export class ResponseBuilder {
   }
 
   async success(text: string): Promise<Message> {
+    const formatted = `### Success\n> ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('success')} ${this.cleanSanitize(text)}`,
+      content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent);
@@ -49,8 +50,9 @@ export class ResponseBuilder {
   }
 
   async error(text: string): Promise<Message> {
+    const formatted = `### Error\n> ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('error')} ${this.cleanSanitize(text)}`,
+      content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent, true);
@@ -58,8 +60,9 @@ export class ResponseBuilder {
   }
 
   async warning(text: string): Promise<Message> {
+    const formatted = `### Notice\n> ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('warning')} ${this.cleanSanitize(text)}`,
+      content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent, true);
@@ -67,8 +70,9 @@ export class ResponseBuilder {
   }
 
   async info(text: string): Promise<Message> {
+    const formatted = `### Information\n> ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
-      content: `${getEmoji('info')} ${this.cleanSanitize(text)}`,
+      content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent);
@@ -76,17 +80,10 @@ export class ResponseBuilder {
   }
 
   async denied(text?: string): Promise<Message | null> {
-    const rawEmoji = getEmoji('denied');
-    const reactEmoji = toReactableEmoji(rawEmoji, '');
-
-    if (this.message?.react) {
-      const reaction = await this.message.react(reactEmoji).catch(() => null);
-      if (reaction) return this.message;
-    }
-
     if (text) {
+      const formatted = `### Access Denied\n> ${this.cleanSanitize(text)}`;
       const sent = await this.sendableChannel.send({
-        content: `${rawEmoji} ${this.cleanSanitize(text)}`,
+        content: formatted,
         allowedMentions: SAFE_ALLOWED_MENTIONS,
       });
       this.scheduleClean(sent);

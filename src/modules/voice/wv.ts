@@ -54,9 +54,15 @@ export default defineCommand({
 
     const chan = voiceState.channel;
     const count = chan.members.size;
-    const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? chan.userLimit : '∞';
-    const vcInfo = `\`[ ${count}/${limit} ]\``;
+    const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? `${chan.userLimit}` : 'Unlimited';
+    const targetName = targetMember.displayName || targetMember.user.username;
 
-    await respond.send(`**${targetMember.user.username}** is in **${mentionChannel(chan.id)}** ${vcInfo}`);
+    const hudMessage =
+      `### Voice Channel Status\n` +
+      `• **Member:** **${targetName}**\n` +
+      `• **Channel:** ${mentionChannel(chan.id)}\n` +
+      `• **Occupancy:** \`${count}/${limit}\` connected`;
+
+    await respond.send(hudMessage);
   },
 });
