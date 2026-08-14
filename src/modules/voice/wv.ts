@@ -1,10 +1,9 @@
-import type { GuildMember, GuildTextBasedChannel } from 'discord.js';
+import type { GuildMember } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { mentionChannel } from '../../core/utils/formatters.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
 
 export default defineCommand({
   name: 'wv',
@@ -54,14 +53,8 @@ export default defineCommand({
     const count = chan.members.size;
     const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? `${chan.userLimit}` : '∞';
     const targetName = targetMember.displayName || targetMember.user.username;
+    const vcInfo = `\`[ ${count}/${limit} ]\``;
 
-    const payload = buildV2Container({
-      text:
-        `• **Member:** **${targetName}** is in ${mentionChannel(chan.id)}\n` +
-        `• **Occupancy:** \`${count}/${limit}\` connected`,
-      components: [],
-    });
-
-    await (ctx.channel as GuildTextBasedChannel).send(payload);
+    await respond.send(`**${targetName}** is in **${mentionChannel(chan.id)}** ${vcInfo}`);
   },
 });
