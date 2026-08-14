@@ -7,7 +7,7 @@ import { createClient, updateBotActivity, runMemoryCleanup } from '../../client/
 import { loadCommands } from '../commands/CommandLoader.js';
 import { getCommandCount } from '../commands/CommandRegistry.js';
 import { getPrefix } from '../database/repositories/guildConfigRepo.js';
-import { classifyMessage, handleBotMention, MessageType } from '../../services/MentionHandler.js';
+import { classifyMessage, MessageType } from '../../services/MentionHandler.js';
 import { handleMessage } from '../commands/CommandExecutor.js';
 import { runMigrations } from '../database/migrations/runner.js';
 import { validateConnection, closeDb } from '../database/pool.js';
@@ -118,9 +118,6 @@ export class Bootstrap {
         switch (type) {
           case MessageType.PrefixCommand:
             await handleMessage(message);
-            break;
-          case MessageType.BotMention:
-            await handleBotMention(message, prefix);
             break;
           case MessageType.Normal:
             if (isNoPrefixEnabled(message.guild.id, message.author.id)) {

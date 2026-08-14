@@ -5,10 +5,9 @@ import { AuthorityLevel } from '../../types/permission.js';
 import { env } from '../config/environment.js';
 import * as permissionRepo from '../database/repositories/permissionRepo.js';
 
-export function getAuthorityLevel(userId: string, guildOwnerId: string): AuthorityLevel {
+export function getAuthorityLevel(userId: string, _guildOwnerId?: string): AuthorityLevel {
   if (env.botOwnerIds.includes(userId) || userId === env.botOwnerId) return AuthorityLevel.Owner;
   if (env.botAdminIds.includes(userId)) return AuthorityLevel.BotAdmin;
-  if (userId === guildOwnerId) return AuthorityLevel.ServerAdmin;
   return AuthorityLevel.Normal;
 }
 
@@ -29,13 +28,13 @@ export async function checkPermission(
     return { allowed: isBotAdmin, authority, reason: isBotAdmin ? 'Bot admin bypass' : 'This command is restricted to bot administrators.' };
   }
 
-  if (authority >= AuthorityLevel.ServerAdmin) {
-    return { allowed: true, authority, reason: 'Authority bypass' };
+  if (authority === AuthorityLevel.Owner) {
+    return { allowed: true, authority, reason: 'Bot owner bypass' };
   }
 
   const hasCustomPermit = await permissionRepo.hasPermit(ctx.guildId, ctx.userId, ctx.memberRoleIds, ctx.commandName, ctx.moduleName);
   if (hasCustomPermit) {
-    return { allowed: true, authority: AuthorityLevel.Permitted, reason: 'Custom permit granted' };
+    return { allowed: true, authority: AuthorityLevel.Permitted, reason: 'Custom access override granted' };
   }
 
   const revocation = await permissionRepo.getLatestRevocation(

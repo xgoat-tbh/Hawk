@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getUsableCommandsForMember, checkPermission, getAuthorityLevel } from '../src/core/permissions/PermissionChecker.js';
+import { getUsableCommandsForMember } from '../src/core/permissions/PermissionChecker.js';
 import { registerCommand } from '../src/core/commands/CommandRegistry.js';
 import { defineCommand } from '../src/types/command.js';
 import { PermissionsBitField } from 'discord.js';
+import { env } from '../src/core/config/environment.js';
 
 describe('PermissionChecker Private Owner & Custom Permit Only Model', () => {
-  it('denies commands by default to normal members without permits', async () => {
+  it('denies commands by default to members without permits', async () => {
     registerCommand(defineCommand({
       name: 'wv',
       module: 'voice',
@@ -36,9 +37,10 @@ describe('PermissionChecker Private Owner & Custom Permit Only Model', () => {
     expect(res.usableSet.has('wv')).toBe(false);
   });
 
-  it('allows commands to server owner', async () => {
-    const ownerMember = {
-      id: '999999999999999999',
+  it('allows commands to bot owner', async () => {
+    const ownerId = env.botOwnerId || '111111111111111111';
+    const botOwnerMember = {
+      id: ownerId,
       guild: {
         id: '987654321098765432',
         ownerId: '999999999999999999',
@@ -46,7 +48,7 @@ describe('PermissionChecker Private Owner & Custom Permit Only Model', () => {
       roles: {
         cache: new Map(),
       },
-      permissions: new PermissionsBitField([PermissionsBitField.Flags.Administrator]),
+      permissions: new PermissionsBitField([]),
     } as any;
 
     const mockChannel = {
@@ -54,7 +56,7 @@ describe('PermissionChecker Private Owner & Custom Permit Only Model', () => {
       parentId: null,
     } as any;
 
-    const res = await getUsableCommandsForMember(ownerMember, mockChannel);
+    const res = await getUsableCommandsForMember(botOwnerMember, mockChannel);
     expect(res.usableCount).toBeGreaterThan(0);
     expect(res.usableSet.has('wv')).toBe(true);
   });
