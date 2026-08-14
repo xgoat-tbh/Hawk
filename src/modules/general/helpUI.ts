@@ -128,7 +128,7 @@ export function buildMainHelpEmbed(
   });
 
   const headerContent =
-    '# Hawk Terminal\n\n' +
+    '**Amo Help**\n\n' +
     '> Use the category selector below to explore commands and operational scopes.\n\n' +
     `• **Prefix:** \`${prefix}\`\n` +
     `• **Commands Available:** \`${totalUsable}/${totalAll}\`\n\n` +
@@ -160,7 +160,7 @@ export function buildCategoryHelpEmbed(
   const totalPages = Math.max(1, Math.ceil(commands.length / pageSize));
   const currentPage = Math.max(1, Math.min(page, totalPages));
 
-  let bodyContent = `# ${cat.name} Commands\n\n> ${cat.description}\n\n`;
+  let bodyContent = `**${cat.name} Commands**\n\n> ${cat.description}\n\n`;
 
   if (commands.length === 0) {
     bodyContent += '*You do not have permission or a custom permit to execute commands in this category.*';
