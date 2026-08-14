@@ -84,25 +84,11 @@ export async function handleMessage(message: Message): Promise<void> {
 
   const permResult = await checkPermission(command, permCtx, message.member);
   if (!permResult.allowed) {
-    let reasonText = permResult.reason;
-    if (permResult.revocationInfo) {
-      const formattedDate = permResult.revocationInfo.revokedAt.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      reasonText += `\nAccess to \`${command.name}\` was revoked on **${formattedDate}** by **${permResult.revocationInfo.revokedByName}**.`;
-    }
-    await respond.denied(reasonText);
-    logEvent('info', 'permission_denial', `${message.author.tag} denied: ${command.name}`, { user: message.author.id, guild: message.guild.id, reason: reasonText });
     return;
   }
 
   const restrictResult = await checkRestrictions(permCtx, permResult.authority);
   if (!restrictResult.allowed) {
-    await respond.denied(restrictResult.reason);
     return;
   }
 
