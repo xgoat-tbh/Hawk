@@ -5,12 +5,28 @@ import { defineCommand } from '../src/types/command.js';
 import { PermissionsBitField } from 'discord.js';
 import { env } from '../src/core/config/environment.js';
 
-describe('PermissionChecker Private Owner & Custom Permit Only Model', () => {
-  it('denies commands by default to members without permits', async () => {
+describe('PermissionChecker Private Owner & Custom Permit Only Model with Global AFK', () => {
+  it('allows afk globally but denies other commands by default to members without permits', async () => {
     registerCommand(defineCommand({
       name: 'wv',
       module: 'voice',
       description: 'Check which voice channel a user is in',
+      permissions: [],
+      execute: async () => {},
+    }));
+
+    registerCommand(defineCommand({
+      name: 'help',
+      module: 'general',
+      description: 'Show bot commands',
+      permissions: [],
+      execute: async () => {},
+    }));
+
+    registerCommand(defineCommand({
+      name: 'afk',
+      module: 'general',
+      description: 'Set AFK status',
       permissions: [],
       execute: async () => {},
     }));
@@ -33,7 +49,8 @@ describe('PermissionChecker Private Owner & Custom Permit Only Model', () => {
     } as any;
 
     const res = await getUsableCommandsForMember(normalMember, mockChannel);
-    expect(res.usableCount).toBe(0);
+    expect(res.usableSet.has('afk')).toBe(true);
+    expect(res.usableSet.has('help')).toBe(false);
     expect(res.usableSet.has('wv')).toBe(false);
   });
 
@@ -59,5 +76,7 @@ describe('PermissionChecker Private Owner & Custom Permit Only Model', () => {
     const res = await getUsableCommandsForMember(botOwnerMember, mockChannel);
     expect(res.usableCount).toBeGreaterThan(0);
     expect(res.usableSet.has('wv')).toBe(true);
+    expect(res.usableSet.has('help')).toBe(true);
+    expect(res.usableSet.has('afk')).toBe(true);
   });
 });
