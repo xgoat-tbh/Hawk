@@ -59,7 +59,7 @@ export default defineCommand({
 
     const chan = voiceState.channel;
     const count = chan.members.size;
-    const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? `${chan.userLimit}` : 'Unlimited';
+    const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? `${chan.userLimit}` : '∞';
     const targetName = targetMember.displayName || targetMember.user.username;
 
     // Check permissions and capacity for the invoking user to join
