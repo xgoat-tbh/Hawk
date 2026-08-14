@@ -1,4 +1,3 @@
-import { PermissionsBitField } from 'discord.js';
 import type { GuildMember, PermissionResolvable, GuildTextBasedChannel } from 'discord.js';
 import type { CommandDefinition } from '../../types/command.js';
 import type { PermissionCheckResult, PermissionContext } from '../../types/permission.js';
@@ -16,7 +15,7 @@ export function getAuthorityLevel(userId: string, guildOwnerId: string): Authori
 export async function checkPermission(
   command: CommandDefinition,
   ctx: PermissionContext,
-  member: GuildMember,
+  _member?: GuildMember,
 ): Promise<PermissionCheckResult> {
   const authority = getAuthorityLevel(ctx.userId, ctx.guildOwnerId);
 
@@ -39,31 +38,6 @@ export async function checkPermission(
     return { allowed: true, authority: AuthorityLevel.Permitted, reason: 'Custom permit granted' };
   }
 
-  if (command.permissions.length > 0) {
-    const hasNative = command.permissions.every((perm) => member.permissions.has(perm));
-    return { allowed: hasNative, authority, reason: hasNative ? 'Native Discord permission' : 'You do not have permission to use this command.' };
-  }
-
-  if (command.permissions.length === 0 && !command.permitOnly) {
-    return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Public command access' };
-  }
-
-  const STAFF_PERMS =
-    PermissionsBitField.Flags.Administrator |
-    PermissionsBitField.Flags.ManageGuild |
-    PermissionsBitField.Flags.ManageRoles |
-    PermissionsBitField.Flags.ManageChannels |
-    PermissionsBitField.Flags.ManageMessages |
-    PermissionsBitField.Flags.MoveMembers |
-    PermissionsBitField.Flags.ModerateMembers |
-    PermissionsBitField.Flags.BanMembers |
-    PermissionsBitField.Flags.KickMembers;
-
-  const isStaff = member.permissions.has(STAFF_PERMS);
-  if (isStaff) {
-    return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Staff member access' };
-  }
-
   const revocation = await permissionRepo.getLatestRevocation(
     ctx.guildId,
     ctx.userId,
@@ -75,7 +49,7 @@ export async function checkPermission(
   return {
     allowed: false,
     authority,
-    reason: 'This command requires staff permissions or a custom permit.',
+    reason: 'This bot is private. Commands require a custom permit granted by the owner.',
     revocationInfo: revocation ?? undefined,
   };
 }
