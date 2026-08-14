@@ -38,12 +38,6 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     modules: ['gaming'],
   },
   {
-    id: 'fun',
-    name: 'Fun & Games',
-    description: 'Interactive entertainment, mini-games & fun utilities',
-    modules: ['fun'],
-  },
-  {
     id: 'community',
     name: 'Community',
     description: 'Suggestions, confessions, sticky messages, welcome, and media filters',
