@@ -1,9 +1,17 @@
-import type { GuildMember } from 'discord.js';
+import {
+  PermissionsBitField,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  type GuildMember,
+  type GuildTextBasedChannel,
+} from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { mentionChannel } from '../../core/utils/formatters.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
+import { buildV2Container } from '../../core/utils/componentsV2.js';
 
 export default defineCommand({
   name: 'wv',
@@ -21,7 +29,6 @@ export default defineCommand({
     let targetMember: GuildMember;
 
     if (parsed.args.length > 0) {
-      // Explicit argument provided
       const result = await resolveUser(parsed.args.join(' '), guild);
       if (!result.success) {
         await respond.error(result.error);
@@ -33,10 +40,8 @@ export default defineCommand({
       }
       targetMember = result.value.member;
     } else if (replyTarget) {
-      // Reply-based resolution
       targetMember = replyTarget;
     } else {
-      // Default to command author
       targetMember = member;
     }
 
@@ -57,12 +62,34 @@ export default defineCommand({
     const limit = 'userLimit' in chan && chan.userLimit && chan.userLimit > 0 ? `${chan.userLimit}` : 'Unlimited';
     const targetName = targetMember.displayName || targetMember.user.username;
 
-    const hudMessage =
-      `### Voice Channel Status\n` +
-      `• **Member:** **${targetName}**\n` +
-      `• **Channel:** ${mentionChannel(chan.id)}\n` +
-      `• **Occupancy:** \`${count}/${limit}\` connected`;
+    // Check permissions and capacity for the invoking user to join
+    const userPerms = chan.permissionsFor(member);
+    const canConnect = Boolean(userPerms?.has(PermissionsBitField.Flags.Connect));
+    const isFull = Boolean(
+      chan.userLimit &&
+      chan.userLimit > 0 &&
+      count >= chan.userLimit &&
+      !userPerms?.has(PermissionsBitField.Flags.MoveMembers) &&
+      !userPerms?.has(PermissionsBitField.Flags.Administrator)
+    );
 
-    await respond.send(hudMessage);
+    const components: ActionRowBuilder<ButtonBuilder>[] = [];
+    if (canConnect && !isFull) {
+      const joinBtn = new ButtonBuilder()
+        .setLabel('Join VC')
+        .setStyle(ButtonStyle.Link)
+        .setURL(`https://discord.com/channels/${guild.id}/${chan.id}`);
+
+      components.push(new ActionRowBuilder<ButtonBuilder>().addComponents(joinBtn));
+    }
+
+    const payload = buildV2Container({
+      text:
+        `• **Member:** **${targetName}** is in ${mentionChannel(chan.id)}\n` +
+        `• **Occupancy:** \`${count}/${limit}\` connected`,
+      components,
+    });
+
+    await (ctx.channel as GuildTextBasedChannel).send(payload);
   },
 });
