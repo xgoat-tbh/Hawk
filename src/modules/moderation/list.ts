@@ -3,7 +3,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { mentionRole, mentionUser } from '../../core/utils/formatters.js';
-import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
@@ -72,8 +72,8 @@ export default defineCommand({
 
       const memberLines = roleMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
 
-      await sendPaginatedV2Container(ctx, {
-        title: `**Members with Role \`${targetRole.name}\`** (${mentionRole(targetRole.id)})`,
+      await ui.paginated(ctx, {
+        title: `Members with Role: ${targetRole.name}`,
         items: memberLines,
         pageSize: 10,
         emptyText: `No members currently possess the role \`${targetRole.name}\` (${mentionRole(targetRole.id)}).`,
@@ -94,8 +94,8 @@ export default defineCommand({
 
       const adminLines = adminMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)${m.id === guild.ownerId ? ' *(Server Owner)*' : ''}`);
 
-      await sendPaginatedV2Container(ctx, {
-        title: `**Server Administrators (Human Users)**`,
+      await ui.paginated(ctx, {
+        title: 'Server Administrators',
         items: adminLines,
         pageSize: 10,
         emptyText: 'No human administrator accounts found in this server.',
@@ -111,8 +111,8 @@ export default defineCommand({
 
       const botLines = botMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
 
-      await sendPaginatedV2Container(ctx, {
-        title: `**Server Bot Accounts**`,
+      await ui.paginated(ctx, {
+        title: 'Server Bot Accounts',
         items: botLines,
         pageSize: 10,
         emptyText: 'No bot accounts found in this server.',

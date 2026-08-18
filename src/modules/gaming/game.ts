@@ -14,7 +14,7 @@ import {
   getGameTestChannel,
 } from '../../core/database/repositories/gameRepo.js';
 import { mentionRole, mentionChannel, bold, inlineCode } from '../../core/utils/formatters.js';
-import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 
 export default defineCommand({
   name: 'game',
@@ -235,8 +235,8 @@ async function handleList(ctx: CommandContext): Promise<void> {
     return `• ${inlineCode(p.identifier)} — ${bold(p.gameName)} — ${roleStr}${p.vcId ? ` — ${mentionChannel(p.vcId)}` : ''} (\`${p.cooldownSeconds}s\` cooldown)`;
   });
 
-  await sendPaginatedV2Container(ctx, {
-    title: '**Gaming Ping Configurations**',
+  await ui.paginated(ctx, {
+    title: 'Gaming Ping Configurations',
     items: pingLines,
     pageSize: 10,
     emptyText: 'No game ping configurations found for this server.',

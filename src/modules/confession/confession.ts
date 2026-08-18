@@ -165,7 +165,11 @@ async function handlePanel(ctx: CommandContext): Promise<void> {
   const textChannel = channel as GuildTextBasedChannel;
   const panel = buildConfessionPanel();
 
-  const panelMsg = await textChannel.send(panel);
+  const panelMsg = await textChannel.send({
+    components: panel.components,
+    flags: panel.flags as any,
+    allowedMentions: { parse: [], roles: [], users: [] },
+  });
   await setConfessionPanelMessageId(guild.id, panelMsg.id);
 
   await respond.success('Confession submission panel has been posted.');

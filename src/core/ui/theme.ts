@@ -1,13 +1,14 @@
 import { ButtonStyle } from 'discord.js';
 
-export const HawkTheme = {
+export const AmoTheme = {
   colors: {
-    primary: 0x2b2d31,
-    success: 0x2b2d31,
-    error: 0xed4245,
-    warning: 0xfee75c,
-    info: 0x2b2d31,
-    neutral: 0x2f3136,
+    primary: 0x1e1f22,
+    accent: 0x5865f2,
+    success: 0x23a55a,
+    error: 0xda373c,
+    warning: 0xf0b232,
+    info: 0x5865f2,
+    neutral: 0x2b2d31,
   },
 
   emojis: {
@@ -35,4 +36,7 @@ export const HawkTheme = {
   },
 } as const;
 
+export const HawkTheme = AmoTheme;
+export type AmoThemeType = typeof AmoTheme;
 export type HawkThemeType = typeof HawkTheme;
+

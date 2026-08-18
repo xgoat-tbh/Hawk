@@ -1,13 +1,7 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 
-export function buildConfessionPanel(): { embeds: EmbedBuilder[]; components: ActionRowBuilder<ButtonBuilder>[] } {
-  const embed = new EmbedBuilder()
-    .setTitle('Anonymous Confessions')
-    .setDescription(
-      'Share your thoughts, stories, or confessions completely anonymously.\n\n' +
-      'Click **Submit Confession** below to open the modal submission form. Your identity is never shown on the public post.',
-    );
-
+export function buildConfessionPanel(): ComponentV2Payload {
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('confess_open_modal')
@@ -19,12 +13,18 @@ export function buildConfessionPanel(): { embeds: EmbedBuilder[]; components: Ac
       .setStyle(ButtonStyle.Secondary),
   );
 
-  return { embeds: [embed], components: [row] };
+  return ui.standard({
+    title: 'Anonymous Confessions',
+    text:
+      'Share your thoughts, stories, or confessions completely anonymously.\n\n' +
+      'Click **Submit Confession** below to submit. Your identity is never displayed on the public post.',
+    components: [row],
+  });
 }
 
-export function buildAnonymousConfessionEmbed(content: string): EmbedBuilder {
-  return new EmbedBuilder()
-    .setTitle('Anonymous Confession')
-    .setDescription(content)
-    .setTimestamp();
+export function buildAnonymousConfessionPayload(content: string): ComponentV2Payload {
+  return ui.standard({
+    title: 'Anonymous Confession',
+    text: content,
+  });
 }

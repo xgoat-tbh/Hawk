@@ -11,7 +11,7 @@ import {
   type StageChannel,
   type ForumChannel,
 } from 'discord.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { mentionUser } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
@@ -31,12 +31,12 @@ export function buildNukeConfirmationPayload(channelId: string, authorId: string
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
 
-  return buildV2Container({
+  return ui.standard({
+    title: 'Channel Nuke Confirmation',
     text:
-      `# Channel Nuke Confirmation\n\n` +
-      `> Are you sure you want to nuke <#${channelId}>?\n\n` +
+      `Are you sure you want to nuke <#${channelId}>?\n\n` +
       `• **Target Channel:** <#${channelId}>\n` +
-      `• **Consequence:** Clones the channel (retaining permissions, topic, and position) and **permanently deletes** the current channel and all message history.`,
+      `• **Consequence:** Clones the channel (retaining permissions, topic, and position) and **permanently deletes** all message history.`,
     components: [row],
   });
 }
@@ -84,8 +84,9 @@ export async function handleNukeInteraction(interaction: ButtonInteraction): Pro
   }
 
   if (action === 'cancel') {
-    const cancelPayload = buildV2Container({
-      text: '### Operation Cancelled\n> The channel nuke request was safely cancelled.',
+    const cancelPayload = ui.standard({
+      title: 'Operation Cancelled',
+      text: 'The channel nuke request was safely cancelled.',
     });
     await interaction.update(cancelPayload);
     setTimeout(() => {
@@ -114,10 +115,10 @@ export async function handleNukeInteraction(interaction: ButtonInteraction): Pro
 
       await clonedChannel.setPosition(position).catch(() => {});
 
-      const noticePayload = buildV2Container({
+      const noticePayload = ui.standard({
+        title: 'Channel Nuked',
         text:
-          `### Channel Nuked\n` +
-          `> This channel was recreated and cleared by ${mentionUser(user.id)}.\n` +
+          `This channel was recreated and cleared by ${mentionUser(user.id)}.\n\n` +
           `• All messages were wiped while retaining channel permissions, topic, and position.`,
       });
 

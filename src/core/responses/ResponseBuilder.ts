@@ -1,9 +1,7 @@
-import { EmbedBuilder } from 'discord.js';
 import type { Message, MessageCreateOptions, GuildTextBasedChannel } from 'discord.js';
-import { branding } from '../config/branding.js';
-import { sanitize, truncate } from '../utils/validators.js';
-import { buildV2Container } from '../utils/componentsV2.js';
-import type { ComponentV2Options } from '../utils/componentsV2.js';
+import { sanitize } from '../utils/validators.js';
+import { ui } from '../ui/index.js';
+import type { StandardLayoutOptions } from '../ui/layouts.js';
 
 const SAFE_ALLOWED_MENTIONS = {
   parse: [] as [],
@@ -40,7 +38,7 @@ export class ResponseBuilder {
   }
 
   async success(text: string): Promise<Message> {
-    const formatted = `### Success\n> ${this.cleanSanitize(text)}`;
+    const formatted = `> ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -50,7 +48,7 @@ export class ResponseBuilder {
   }
 
   async error(text: string): Promise<Message> {
-    const formatted = `### Error\n> ${this.cleanSanitize(text)}`;
+    const formatted = `> **Error:** ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -60,7 +58,7 @@ export class ResponseBuilder {
   }
 
   async warning(text: string): Promise<Message> {
-    const formatted = `### Notice\n> ${this.cleanSanitize(text)}`;
+    const formatted = `> **Notice:** ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -70,7 +68,7 @@ export class ResponseBuilder {
   }
 
   async info(text: string): Promise<Message> {
-    const formatted = `### Information\n> ${this.cleanSanitize(text)}`;
+    const formatted = `> ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -81,7 +79,7 @@ export class ResponseBuilder {
 
   async denied(text?: string): Promise<Message | null> {
     if (text) {
-      const formatted = `### Access Denied\n> ${this.cleanSanitize(text)}`;
+      const formatted = `> **Access Denied:** ${this.cleanSanitize(text)}`;
       const sent = await this.sendableChannel.send({
         content: formatted,
         allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -102,45 +100,19 @@ export class ResponseBuilder {
     return sent;
   }
 
-  async embed(options: {
-    title?: string;
-    description?: string;
-    color?: number;
-    fields?: { name: string; value: string; inline?: boolean }[];
-    footer?: string;
-    thumbnail?: string;
-  }): Promise<Message> {
-    const embed = new EmbedBuilder();
-    if (options.color !== undefined) {
-      embed.setColor(options.color);
-    }
-    if (options.title) embed.setTitle(this.cleanSanitize(options.title));
-    if (options.description) embed.setDescription(truncate(this.cleanSanitize(options.description), 4000));
-    if (options.footer || branding.footerText) embed.setFooter({ text: this.cleanSanitize(options.footer ?? branding.footerText) });
-    if (options.thumbnail) embed.setThumbnail(options.thumbnail);
-    if (options.fields) {
-      for (const field of options.fields) {
-        embed.addFields({
-          name: truncate(this.cleanSanitize(field.name), 256),
-          value: truncate(this.cleanSanitize(field.value), 1024),
-          inline: field.inline,
-        });
-      }
-    }
-    const sent = await this.sendableChannel.send({ embeds: [embed], allowedMentions: SAFE_ALLOWED_MENTIONS });
-    this.scheduleClean(sent);
-    return sent;
-  }
-
-  async v2Container(options: ComponentV2Options): Promise<Message> {
-    const payload = buildV2Container(options);
+  async v2Container(options: StandardLayoutOptions): Promise<Message> {
+    const payload = ui.standard(options);
     const sent = await this.sendableChannel.send({
       components: payload.components,
-      flags: payload.flags,
+      flags: payload.flags as any,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
     });
     this.scheduleClean(sent);
     return sent;
+  }
+
+  async v2(options: StandardLayoutOptions): Promise<Message> {
+    return this.v2Container(options);
   }
 
   async raw(options: MessageCreateOptions): Promise<Message> {

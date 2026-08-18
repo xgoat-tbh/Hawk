@@ -1,6 +1,5 @@
 import { getEmoji } from '../../core/config/branding.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
-import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
+import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { sanitizeAfkReason, formatDuration } from './afkSanitizer.js';
 
 export const AFK_ALLOWED_MENTIONS = {
@@ -17,7 +16,7 @@ export function buildAfkSetPayload(userId: string, reason?: string): ComponentV2
     ? `${successEmoji} <@${userId}> · You're now AFK with status: **${cleanReason}**`
     : `${successEmoji} <@${userId}> · You're now AFK`;
 
-  return buildV2Container({
+  return ui.standard({
     text,
   });
 }
@@ -31,12 +30,12 @@ export function buildAfkNoticePayload(
   afkUsers.forEach((user, index) => {
     const unixSeconds = Math.floor(user.startedAt.getTime() / 1000);
     const cleanReason = sanitizeAfkReason(user.reason);
-    const prefix = index === 0 ? `${noticeEmoji} ` : '';
+    const prefix = index === 0 && noticeEmoji ? `${noticeEmoji} ` : '';
 
     lines.push(`${prefix}<@${user.userId}> went AFK <t:${unixSeconds}:R>\nWith Reason: ${cleanReason}`);
   });
 
-  return buildV2Container({
+  return ui.standard({
     text: lines.join('\n\n'),
   });
 }
@@ -44,8 +43,9 @@ export function buildAfkNoticePayload(
 export function buildAfkWelcomeBackPayload(userId: string, elapsedMs: number): ComponentV2Payload {
   const welcomeEmoji = getEmoji('AFK_WELCOME_BACK');
   const durationStr = formatDuration(elapsedMs);
+  const prefix = welcomeEmoji ? `${welcomeEmoji} ` : '';
 
-  return buildV2Container({
-    text: `${welcomeEmoji} Welcome back, <@${userId}>! You were gone for **${durationStr}**.`,
+  return ui.standard({
+    text: `${prefix}Welcome back, <@${userId}>! You were gone for **${durationStr}**.`,
   });
 }

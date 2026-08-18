@@ -4,10 +4,15 @@ import {
   ButtonBuilder,
   ButtonStyle,
 } from 'discord.js';
-import type { Message, GuildTextBasedChannel } from 'discord.js';
+import type { Message, GuildTextBasedChannel, ContainerBuilder } from 'discord.js';
 import type { CommandContext } from '../../types/command.js';
 import { sanitize, sanitizeAsync } from '../utils/validators.js';
 import { createContainer, createTextDisplay, createSeparator } from './components.js';
+
+export interface ComponentV2Payload {
+  components: ContainerBuilder[];
+  flags: number;
+}
 
 export interface StandardLayoutOptions {
   title?: string;
@@ -18,7 +23,7 @@ export interface StandardLayoutOptions {
   divider?: boolean;
 }
 
-export function standard(options: StandardLayoutOptions) {
+export function standard(options: StandardLayoutOptions): ComponentV2Payload {
   const container = createContainer({ accentColor: options.accentColor });
 
   if (options.title) {

@@ -7,8 +7,7 @@ import {
 } from 'discord.js';
 import type { CommandDefinition } from '../../types/command.js';
 import { getModuleCommands, getAllCommands } from '../../core/commands/CommandRegistry.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
-import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
+import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { sanitize } from '../../core/utils/validators.js';
 
 export interface HelpCategory {
@@ -122,8 +121,6 @@ export function buildMainHelpEmbed(
   });
 
   const headerContent =
-    '# Amo Help\n\n' +
-    '> Use the category selector below to explore commands and operational scopes.\n\n' +
     `• **Prefix:** \`${prefix}\`\n` +
     `• **Commands Available:** \`${totalUsable}/${totalAll}\`\n\n` +
     '**Category Directory:**\n' +
@@ -131,7 +128,8 @@ export function buildMainHelpEmbed(
 
   const dropdownRow = buildCategoryDropdown(userId, undefined, usableSet);
 
-  return buildV2Container({
+  return ui.standard({
+    title: 'Amo Command Directory',
     text: headerContent,
     components: [dropdownRow],
   });
@@ -154,7 +152,7 @@ export function buildCategoryHelpEmbed(
   const totalPages = Math.max(1, Math.ceil(commands.length / pageSize));
   const currentPage = Math.max(1, Math.min(page, totalPages));
 
-  let bodyContent = `# ${cat.name} Commands\n\n> ${cat.description}\n\n`;
+  let bodyContent = `> ${cat.description}\n\n`;
 
   if (commands.length === 0) {
     bodyContent += '*You do not have permission or a custom permit to execute commands in this category.*';
@@ -166,8 +164,7 @@ export function buildCategoryHelpEmbed(
       const aliasStr = cmd.aliases.length > 0 ? cmd.aliases.map(a => `\`${prefix}${a}\``).join(', ') : 'None';
       const syntaxStr = cmd.usage ? `\`${prefix}${cmd.usage}\`` : `\`${prefix}${cmd.name}\``;
       return (
-        `### \`${prefix}${cmd.name}\`\n` +
-        `> ${sanitize(cmd.description)}\n` +
+        `**\`${prefix}${cmd.name}\`** — ${sanitize(cmd.description)}\n` +
         `• **Syntax:** ${syntaxStr}\n` +
         `• **Aliases:** ${aliasStr}`
       );
@@ -201,7 +198,8 @@ export function buildCategoryHelpEmbed(
 
   components.push(buildCategoryDropdown(userId, cat.id, usableSet));
 
-  return buildV2Container({
+  return ui.standard({
+    title: `${cat.name} Commands`,
     text: sanitize(bodyContent),
     components,
   });
@@ -215,18 +213,18 @@ export function buildCommandHelpEmbed(command: CommandDefinition, prefix: string
   const aliasStr = command.aliases.length > 0 ? command.aliases.map(a => `\`${prefix}${a}\``).join(', ') : '—';
 
   let bodyContent =
-    `# Help: ${prefix}${command.name}\n\n` +
     `${sanitize(command.description)}\n\n` +
-    `**Category:** ${catLabel}\n` +
-    `**Usage:** ${usageStr}\n` +
-    `**Aliases:** ${aliasStr}`;
+    `• **Category:** ${catLabel}\n` +
+    `• **Usage:** ${usageStr}\n` +
+    `• **Aliases:** ${aliasStr}`;
 
   if (command.examples.length > 0) {
     const formattedExamples = command.examples.map(ex => `• \`${prefix}${ex}\``).join('\n');
     bodyContent += `\n\n**Examples:**\n${formattedExamples}`;
   }
 
-  return buildV2Container({
+  return ui.standard({
+    title: `Help: ${prefix}${command.name}`,
     text: sanitize(bodyContent),
   });
 }

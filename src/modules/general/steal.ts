@@ -3,7 +3,7 @@ import type { Message, GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { setState } from '../../core/interactions/InteractionState.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import type { StealStateData } from './_stealHandler.js';
 
 interface ExtractedMedia {
@@ -186,8 +186,9 @@ export default defineCommand({
         .setStyle(ButtonStyle.Secondary),
     );
 
-    const payload = buildV2Container({
-      text: `**Steal Emoji / Sticker**\n\nTarget Media: [View Image](${media.mediaUrl})\nSuggested Name: \`${finalDefaultName}\`\n\nTap a button below to add this as a Server Emoji or Sticker:`,
+    const payload = ui.standard({
+      title: 'Steal Emoji / Sticker',
+      text: `• Target Media: [View Image](${media.mediaUrl})\n• Suggested Name: \`${finalDefaultName}\`\n\nTap a button below to add this as a Server Emoji or Sticker:`,
       components: [row],
     });
 

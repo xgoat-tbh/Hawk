@@ -8,7 +8,7 @@ import {
 } from '../../core/database/repositories/afkRepo.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { mentionUser, timestamp } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -67,8 +67,9 @@ export default defineCommand({
       return `• ${mentionUser(e.userId)} — **${e.reason}** (${relTime})`;
     });
 
-    const payload = buildV2Container({
-      text: `**Active AFK Members (${entries.length})**\n\n` + lines.join('\n'),
+    const payload = ui.standard({
+      title: `Active AFK Members (${entries.length})`,
+      text: lines.join('\n'),
     });
 
     await (channel as GuildTextBasedChannel).send(payload);

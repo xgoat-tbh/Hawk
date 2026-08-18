@@ -6,7 +6,7 @@ import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js
 import { mentionUser } from '../../core/utils/formatters.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
@@ -117,11 +117,11 @@ export default defineCommand({
     let tracker: LiveProgressTracker | null = null;
 
     if (totalMembers > 3) {
-      const initialPayload = buildV2Container({
-        text: `⏳ **Shifting Voice Members** (${sourceVc.name} ➔ ${destVc.name})`,
-        sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nMoved: **0** | Failed: **0**`],
+      const initialPayload = ui.standard({
+        title: `Shifting Voice Members (${sourceVc.name} ➔ ${destVc.name})`,
+        text: `Target: ${totalMembers} members\n**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nMoved: **0** | Failed: **0**`,
       });
-      statusMsg = await (ctx.channel as GuildTextBasedChannel).send({ components: initialPayload.components, flags: initialPayload.flags }).catch(() => null);
+      statusMsg = await (ctx.channel as GuildTextBasedChannel).send({ components: initialPayload.components, flags: initialPayload.flags as any }).catch(() => null);
       if (statusMsg) {
         tracker = new LiveProgressTracker(statusMsg, `ShiftVC (${sourceVc.name} ➔ ${destVc.name})`, totalMembers);
       }
@@ -159,11 +159,11 @@ export default defineCommand({
     }
 
     if (statusMsg) {
-      const finalPayload = buildV2Container({
-        text: `✅ **ShiftVC Completed** (${sourceVc.name} ➔ ${destVc.name})`,
-        sections: [parts.join('\n')],
+      const finalPayload = ui.standard({
+        title: `ShiftVC Completed (${sourceVc.name} ➔ ${destVc.name})`,
+        text: parts.join('\n'),
       });
-      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags }).catch(() => {});
+      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
     } else {
       if (moved > 0 && failures.length === 0) {
         await respond.success(parts.join('\n'));

@@ -4,7 +4,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
@@ -50,11 +50,11 @@ export default defineCommand({
     let tracker: LiveProgressTracker | null = null;
 
     if (amount > 50) {
-      const initialPayload = buildV2Container({
-        text: `⏳ **Purging Messages**`,
+      const initialPayload = ui.standard({
+        title: 'Purging Messages',
         sections: [`**Progress:** ${renderProgressBar(0, amount)} (0/${amount})\nFilter: \`${filterArg ?? 'none'}\``],
       });
-      statusMsg = await textChannel.send({ components: initialPayload.components, flags: initialPayload.flags }).catch(() => null);
+      statusMsg = await textChannel.send({ components: initialPayload.components, flags: initialPayload.flags as any }).catch(() => null);
       if (statusMsg) {
         tracker = new LiveProgressTracker(statusMsg, 'Purge Operations', amount);
       }
@@ -62,58 +62,34 @@ export default defineCommand({
 
     // Fetch recent message history in batches
     let deletedCount = 0;
-    let lastId: string | undefined = undefined;
-    let iterations = 0;
-    const MAX_ITERATIONS = 25;
+    const batchLimit = 100;
 
     while (deletedCount < amount) {
-      if (++iterations > MAX_ITERATIONS) break;
-
-      const limit = Math.min(100, Math.max(20, (amount - deletedCount) * 2));
-      const fetchOptions: import('discord.js').FetchMessagesOptions = { limit };
-      if (lastId) fetchOptions.before = lastId;
-
-      const fetched: Collection<string, Message> = await textChannel.messages.fetch(fetchOptions).catch(() => new Map() as any);
+      const fetchCount = Math.min(batchLimit, amount - deletedCount);
+      const fetched: Collection<string, Message> = await textChannel.messages.fetch({ limit: fetchCount }).catch(() => new Map() as any);
       if (fetched.size === 0) break;
 
-      const messages = Array.from(fetched.values());
-      lastId = messages[messages.length - 1].id;
-
-      // Filter messages (exclude progress status message if sent)
-      const FourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-      
-      const allOlder = messages.every(m => m.createdTimestamp < FourteenDaysAgo);
-      if (allOlder) break;
-
-      const eligible = messages.filter(m => {
-        if (statusMsg && m.id === statusMsg.id) return false;
-        if (m.createdTimestamp < FourteenDaysAgo) return false;
+      const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+      const validMessages = fetched.filter((m: Message) => {
+        if (m.createdTimestamp < fourteenDaysAgo) return false;
+        if (filterArg === 'bot') return m.author.bot;
+        if (filterArg === 'human') return !m.author.bot;
+        if (filterArg === 'embeds') return m.embeds.length > 0;
+        if (filterArg === 'links') return /(https?:\/\/[^\s]+)/g.test(m.content);
+        if (filterArg === 'images') return m.attachments.size > 0;
         if (targetUserId) return m.author.id === targetUserId;
-        if (!filterArg) return true;
-        switch (filterArg) {
-          case 'bot': return m.author.bot;
-          case 'human': return !m.author.bot;
-          case 'embeds': return m.embeds.length > 0;
-          case 'links': return /https?:\/\/\S+/i.test(m.content);
-          case 'images': return m.attachments.some(a => a.contentType?.startsWith('image/')) || m.embeds.some(e => e.image || e.thumbnail);
-          default: return true;
-        }
-      }).slice(0, amount - deletedCount);
+        return true;
+      });
 
-      if (eligible.length === 0) continue;
+      if (validMessages.size === 0) break;
 
-      const deleted = await textChannel.bulkDelete(eligible, true).catch(() => null);
+      const deleted = await textChannel.bulkDelete(validMessages, true).catch(() => null);
       if (!deleted || deleted.size === 0) break;
 
       deletedCount += deleted.size;
       if (tracker) {
         await tracker.update(deletedCount, `Filter: \`${filterArg ?? 'none'}\``);
       }
-
-      if (deleted.size < eligible.length) break; // Older than 14 days reached
-
-      // Rate limit backoff pause between bulk delete batches
-      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     if (tracker) {
@@ -121,11 +97,11 @@ export default defineCommand({
     }
 
     if (statusMsg) {
-      const finalPayload = buildV2Container({
-        text: `✅ **Purge Completed**`,
-        sections: [`Purged **${deletedCount}** message(s).`],
+      const finalPayload = ui.standard({
+        title: 'Purge Completed',
+        text: `Purged **${deletedCount}** message(s).`,
       });
-      await statusMsg.edit({ components: finalPayload.components }).catch(() => {});
+      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
       setTimeout(() => {
         statusMsg?.delete().catch(() => {});
       }, 5000);

@@ -9,7 +9,7 @@ import {
   removePermit,
   getPermitsForGuild,
 } from '../../core/database/repositories/permissionRepo.js';
-import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
 import { sanitize } from '../../core/utils/validators.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
@@ -60,8 +60,8 @@ export default defineCommand({
         return `• ${targetStr} (${p.targetType}) ➜ ${scopeStr}`;
       });
 
-      await sendPaginatedV2Container(ctx, {
-        title: '🔐 **Active Custom Permits**',
+      await ui.paginated(ctx, {
+        title: 'Active Custom Permits',
         items: lines,
         pageSize: 10,
         emptyText: 'No custom permits have been granted in this server.',

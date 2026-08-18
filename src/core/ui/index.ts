@@ -1,4 +1,4 @@
-import { HawkTheme } from './theme.js';
+import { AmoTheme } from './theme.js';
 import { buildCustomId, parseCustomId, isInteractionOwner } from './customId.js';
 import {
   createContainer,
@@ -11,7 +11,7 @@ import { status } from './status.js';
 import { standard, dashboard, paginated } from './layouts.js';
 
 export const ui = {
-  theme: HawkTheme,
+  theme: AmoTheme,
 
   // Custom ID utilities
   customId: {
@@ -41,9 +41,11 @@ export const ui = {
   paginated,
 } as const;
 
+export type AmoUI = typeof ui;
 export type HawkUI = typeof ui;
-export { HawkTheme } from './theme.js';
+export { AmoTheme, HawkTheme } from './theme.js';
 export * from './customId.js';
 export * from './components.js';
 export * from './status.js';
 export * from './layouts.js';
+

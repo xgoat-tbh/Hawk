@@ -1,5 +1,5 @@
 import type { Message } from 'discord.js';
-import { buildV2Container } from './componentsV2.js';
+import { ui } from '../ui/index.js';
 
 export function renderProgressBar(current: number, total: number, width = 10): string {
   const safeTotal = Math.max(1, total);
@@ -38,8 +38,8 @@ export class LiveProgressTracker {
       sections.push(extraStats);
     }
 
-    const payload = buildV2Container({
-      text: `**${this.title}**`,
+    const payload = ui.standard({
+      title: this.title,
       sections,
     });
 

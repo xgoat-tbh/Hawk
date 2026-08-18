@@ -6,7 +6,7 @@ import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { removeRoleFromMember } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
@@ -47,11 +47,14 @@ export default defineCommand({
     }
 
     // Send initial live progress message
-    const initialPayload = buildV2Container({
-      text: `**Purging Role** \`${targetRole.name}\` (${mentionRole(targetRole.id)}) from **${totalMembers}** member(s)...`,
-      sections: [`**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nRemoved: **0** | Skipped: **0**`],
+    const initialPayload = ui.standard({
+      title: `Purging Role: ${targetRole.name}`,
+      text: `Target: ${mentionRole(targetRole.id)} (${totalMembers} members)\n**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nRemoved: **0** | Skipped: **0**`,
     });
-    const statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
+    const statusMsg = await (ctx.channel as GuildTextBasedChannel).send({
+      components: initialPayload.components,
+      flags: initialPayload.flags as any,
+    }).catch(() => null);
     const tracker = statusMsg ? new LiveProgressTracker(statusMsg, `Purging Role (${targetRole.name})`, totalMembers) : null;
 
     let removedCount = 0;
@@ -87,16 +90,16 @@ export default defineCommand({
       await tracker.update(totalMembers, `Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
     }
 
-    const finalPayload = buildV2Container({
+    const finalPayload = ui.standard({
+      title: 'Role Purge Completed',
       text:
-        `### Role Purge Completed\n` +
         `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole.id)})\n` +
         `• **Removed From:** **${removedCount}** member(s)` +
         (skippedCount > 0 ? `\n• **Skipped:** **${skippedCount}** member(s)` : ''),
     });
 
     if (statusMsg) {
-      await statusMsg.edit(finalPayload).catch(() => {});
+      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
     } else {
       await respond.success(
         `Purged role \`${targetRole.name}\` (${mentionRole(targetRole.id)}) from **${removedCount}** member(s).` +

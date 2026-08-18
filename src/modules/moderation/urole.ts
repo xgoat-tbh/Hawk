@@ -7,7 +7,7 @@ import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { toggleRoleForMember } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
 export default defineCommand({
@@ -42,11 +42,14 @@ export default defineCommand({
     let statusMsg = null;
     let tracker: LiveProgressTracker | null = null;
     if (totalUsers > 3) {
-      const initialPayload = buildV2Container({
-        text: `**Processing URole** (\`${targetRole.name}\` ${mentionRole(targetRole.id)})`,
-        sections: [`**Progress:** ${renderProgressBar(0, totalUsers)} (0/${totalUsers})\nAdded: **0** | Removed: **0** | Skipped: **0**`],
+      const initialPayload = ui.standard({
+        title: `URole: ${targetRole.name}`,
+        text: `Target: ${mentionRole(targetRole.id)} (${totalUsers} users)\n**Progress:** ${renderProgressBar(0, totalUsers)} (0/${totalUsers})\nAdded: **0** | Removed: **0** | Skipped: **0**`,
       });
-      statusMsg = await (ctx.channel as GuildTextBasedChannel).send(initialPayload).catch(() => null);
+      statusMsg = await (ctx.channel as GuildTextBasedChannel).send({
+        components: initialPayload.components,
+        flags: initialPayload.flags as any,
+      }).catch(() => null);
       if (statusMsg) {
         tracker = new LiveProgressTracker(statusMsg, `URole (${targetRole.name})`, totalUsers);
       }
@@ -97,13 +100,16 @@ export default defineCommand({
       await tracker.update(totalUsers, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
     }
 
-    const finalPayload = buildV2Container({
-      text: `**URole Completed** for \`${targetRole.name}\` (${mentionRole(targetRole.id)})`,
-      sections: [`Added: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`],
+    const finalPayload = ui.standard({
+      title: 'URole Completed',
+      text:
+        `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole.id)})\n` +
+        `• **Added:** **${addedCount}** | **Removed:** **${removedCount}**` +
+        (skippedCount > 0 ? ` | **Skipped:** **${skippedCount}**` : ''),
     });
 
     if (statusMsg) {
-      await statusMsg.edit({ content: undefined, components: finalPayload.components }).catch(() => {});
+      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
     } else {
       await respond.success(
         `Role update for ${mentionRole(targetRole.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`,

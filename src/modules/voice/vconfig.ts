@@ -17,7 +17,7 @@ import {
   removeVConfigRule,
   getVConfigRulesForGuild,
 } from '../../core/database/repositories/vconfigRepo.js';
-import { buildV2Container, sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -65,8 +65,8 @@ export default defineCommand({
         return `• **\`${r.commandName}\`** | Mode: **${r.mode.toUpperCase()}** | Role: ${mentionRole(r.roleId)} | Channels: ${chans}`;
       });
 
-      await sendPaginatedV2Container(ctx, {
-        title: '🔊 **Voice Command Access Configurations**',
+      await ui.paginated(ctx, {
+        title: 'Voice Command Access Configurations',
         items: lines,
         pageSize: 10,
         emptyText: 'No voice command access configurations exist for this server.',
@@ -181,9 +181,9 @@ export default defineCommand({
         .setStyle(ButtonStyle.Secondary),
     );
 
-    const payload = buildV2Container({
+    const payload = ui.standard({
+      title: 'Voice Access Configuration',
       text:
-        `**Voice Access Configuration**\n\n` +
         `• **Command:** \`${targetCmdName}\`\n` +
         `• **Role:** ${mentionRole(targetRole.id)}\n` +
         `• **Mode:** **${modeText}**\n\n` +
@@ -191,7 +191,10 @@ export default defineCommand({
       components: [selectRow, buttonRow],
     });
 
-    const sentMsg = await (channel as GuildTextBasedChannel).send(payload);
+    const sentMsg = await (channel as GuildTextBasedChannel).send({
+      components: payload.components,
+      flags: payload.flags as any,
+    });
 
     // Collector for configuration interaction
     let selectedChannelIds: string[] = [];
@@ -225,16 +228,19 @@ export default defineCommand({
           await saveVConfigRule(guild.id, targetCmdName, targetRole.id, mode, selectedChannelIds);
           collector.stop('saved');
 
-          const updatePayload = buildV2Container({
+          const updatePayload = ui.standard({
+            title: 'Voice Access Configuration Saved',
             text:
-              `✅ **Voice Access Configuration Saved**\n\n` +
               `• **Command:** \`${targetCmdName}\`\n` +
               `• **Role:** ${mentionRole(targetRole.id)}\n` +
               `• **Mode:** **${modeText}**\n` +
               `• **Affected Channels:** ${selectedChannelIds.map((id) => `<#${id}>`).join(', ')}`,
           });
 
-          await i.update(updatePayload);
+          await i.update({
+            components: updatePayload.components,
+            flags: updatePayload.flags as any,
+          });
 
           logEvent('info', 'command_execution', `vconfig rule saved by ${member.user.tag}`, {
             administrator: member.user.tag,

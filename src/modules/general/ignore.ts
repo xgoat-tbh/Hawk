@@ -10,7 +10,7 @@ import {
   removeIgnore,
   getIgnoreEntries,
 } from '../../core/database/repositories/ignoreRepo.js';
-import { sendPaginatedV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { mentionRole, mentionChannel, mentionUser } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -76,8 +76,8 @@ export default defineCommand({
         return `• **${modeStr}** | ${scopeStr} | Target: ${targetStr} (${e.entityType})`;
       });
 
-      await sendPaginatedV2Container(ctx, {
-        title: '**Command & Module Access Rules**',
+      await ui.paginated(ctx, {
+        title: 'Command & Module Access Rules',
         items: lines,
         pageSize: 10,
         emptyText: 'No command or module ignore/whitelist rules exist for this server.',

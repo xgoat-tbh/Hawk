@@ -6,7 +6,7 @@ import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { mentionUser } from '../../core/utils/formatters.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
 import { createFmvRequest, cancelFmvRequest } from './FmvManager.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
 
@@ -110,11 +110,15 @@ export default defineCommand({
     }
 
     // Send initial FMV Notice Payload
-    const initialPayload = buildV2Container({
-      text: `🟡 **Force Move**\n\n${mentionUser(targetMember.id)}\nCreating force-move request to <#${destVc.id}>...`,
+    const initialPayload = ui.standard({
+      title: 'Force Move',
+      text: `${mentionUser(targetMember.id)}\nCreating force-move request to <#${destVc.id}>...`,
     });
 
-    const noticeMessage = await (channel as GuildTextBasedChannel).send(initialPayload);
+    const noticeMessage = await (channel as GuildTextBasedChannel).send({
+      components: initialPayload.components,
+      flags: initialPayload.flags as any,
+    });
     message.delete().catch(() => {});
 
     try {

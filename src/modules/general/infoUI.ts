@@ -7,13 +7,11 @@ import {
   type Client,
   type Guild,
 } from 'discord.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
-import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
+import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { getCommandCount } from '../../core/commands/CommandRegistry.js';
 import { buildMainHelpEmbed } from './helpUI.js';
 import { getPrefix } from '../../core/database/repositories/guildConfigRepo.js';
 import { env } from '../../core/config/environment.js';
-import { sanitize } from '../../core/utils/validators.js';
 
 function formatUptime(seconds: number): string {
   const d = Math.floor(seconds / (3600 * 24));
@@ -30,66 +28,43 @@ function formatUptime(seconds: number): string {
 
 export function buildInfoV2Embed(client: Client, _guild: Guild, prefix: string, userId: string): ComponentV2Payload {
   const botUser = client.user;
-  const botTag = botUser?.tag ?? 'Hawk Bot';
+  const botTag = botUser?.tag ?? 'Amo';
   const botId = botUser?.id ?? '';
   const totalGuilds = client.guilds.cache.size;
   const totalUsers = client.guilds.cache.reduce((acc, g) => acc + (g.memberCount ?? 0), 0);
-  const totalChannels = client.channels.cache.size;
   const commandCount = getCommandCount();
 
   const memory = process.memoryUsage();
   const heapUsedMb = (memory.heapUsed / 1024 / 1024).toFixed(1);
-  const heapTotalMb = (memory.heapTotal / 1024 / 1024).toFixed(1);
-  const rssMb = (memory.rss / 1024 / 1024).toFixed(1);
   const uptimeStr = formatUptime(process.uptime());
 
   const ownersList = env.botOwnerIds.length > 0
-    ? env.botOwnerIds.map(id => `<@${id}>`).join(', ')
+    ? env.botOwnerIds.map(id => `<@${id}>`).join(' ')
     : `<@${env.botOwnerId}>`;
 
-  const filteredAdmins = env.botAdminIds.filter(id => !env.botOwnerIds.includes(id));
-  const adminsList = filteredAdmins.length > 0
-    ? filteredAdmins.map(id => `<@${id}>`).join(', ')
-    : 'None';
-
-  const section1 =
-    `# Hawk Core Information & Specifications\n\n` +
-    `> Prefix-based Discord framework designed for high performance & system telemetry.\n\n` +
-    `**Bot Profile**\n` +
-    `• **Identity:** ${botTag} (<@${botId}>)\n` +
-    `• **Command Prefix:** \`${prefix}\`\n` +
-    `• **Total Commands:** \`${commandCount}\` active commands\n` +
-    `• **Version:** \`1.0.0\` (Components V2)\n\n` +
-    `**Bot Leadership & Administration**\n` +
-    `• **Bot Owners:** ${ownersList}\n` +
-    `• **Bot Admins:** ${adminsList}`;
-
-  const section2 =
-    `**Global Network Telemetry**\n` +
-    `• **Guilds Served:** \`${totalGuilds.toLocaleString()}\` servers\n` +
-    `• **Members Managed:** \`${totalUsers.toLocaleString()}\` users\n` +
-    `• **Cached Channels:** \`${totalChannels.toLocaleString()}\` channels\n\n` +
-    `**Infrastructure & Health**\n` +
-    `• **Process Uptime:** \`${uptimeStr}\`\n` +
-    `• **RAM Memory:** \`${heapUsedMb} MB\` / \`${heapTotalMb} MB\` *(RSS: \`${rssMb} MB\`)*\n` +
-    `• **Database:** PostgreSQL Connected\n` +
-    `• **Environment:** Node.js \`${process.version}\` | \`discord.js v14.18.0\``;
+  const content =
+    `• **Bot:** ${botTag} (<@${botId}>)\n` +
+    `• **Prefix:** \`${prefix}\` · **Commands:** \`${commandCount}\` active\n` +
+    `• **Network:** \`${totalGuilds.toLocaleString()}\` servers · \`${totalUsers.toLocaleString()}\` users\n` +
+    `• **Health:** \`${uptimeStr}\` uptime · \`${heapUsedMb} MB\` heap\n` +
+    `• **Engine:** Node.js \`${process.version}\` · \`discord.js v14.18\`\n` +
+    `• **Developers:** ${ownersList}`;
 
   const refreshBtn = new ButtonBuilder()
     .setCustomId(`info_refresh_${userId}`)
-    .setLabel('Refresh Telemetry')
+    .setLabel('Refresh')
     .setStyle(ButtonStyle.Secondary);
 
   const helpBtn = new ButtonBuilder()
     .setCustomId(`info_help_${userId}`)
-    .setLabel('Open Help Menu')
+    .setLabel('Help')
     .setStyle(ButtonStyle.Secondary);
 
   const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(refreshBtn, helpBtn);
 
-  return buildV2Container({
-    text: sanitize(section1),
-    sections: [sanitize(section2)],
+  return ui.standard({
+    title: 'Amo System Telemetry',
+    text: content,
     components: [actionRow],
   });
 }

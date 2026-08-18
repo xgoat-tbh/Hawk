@@ -4,7 +4,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { updateSuggestionStatus, updateSuggestionMessageId } from '../../core/database/repositories/suggestionRepo.js';
 import { buildSuggestionPayload, resolveSuggestionTarget } from './suggestionUI.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
@@ -75,15 +75,19 @@ export default defineCommand({
     // Direct Message notification to suggestion author
     const authorUser = await guild.client.users.fetch(updated.authorId).catch(() => null);
     if (authorUser) {
-      const dmPayload = buildV2Container({
-        text: `🟢 **Suggestion Accepted!**`,
+      const dmPayload = ui.standard({
+        title: 'Suggestion Accepted',
         sections: [
           `Your suggestion **#${updated.number}** in **${guild.name}** has been **ACCEPTED**.`,
           `**Suggestion Content:**\n${updated.content}`,
           ...(reason ? [`**Comment/Reason:**\n${reason}`] : []),
         ],
       });
-      await authorUser.send(dmPayload).catch(() => {});
+      await authorUser.send({
+        components: dmPayload.components,
+        flags: dmPayload.flags as any,
+        allowedMentions: { parse: [], roles: [], users: [] },
+      }).catch(() => {});
     }
 
     await respond.success(`Suggestion **#${String(updated.number).padStart(3, '0')}** has been accepted.`);

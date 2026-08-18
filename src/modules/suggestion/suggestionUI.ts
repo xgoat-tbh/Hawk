@@ -1,8 +1,7 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import type { Message } from 'discord.js';
 import type { SuggestionRecord } from '../../types/suggestion.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
-import type { ComponentV2Payload } from '../../core/utils/componentsV2.js';
+import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { getSuggestionByNumber, getSuggestionByMessageId } from '../../core/database/repositories/suggestionRepo.js';
 
 export function buildSuggestionPayload(
@@ -12,13 +11,13 @@ export function buildSuggestionPayload(
 ): ComponentV2Payload {
   const authorDisplay = authorTag ?? `<@${suggestion.authorId}>`;
 
-  let statusHeader = `**Suggestion #${suggestion.number}**`;
+  let statusHeader = `Suggestion #${suggestion.number}`;
   if (suggestion.status === 'accepted') {
-    statusHeader += ` | 🟢 **ACCEPTED**`;
+    statusHeader += ' · Accepted';
   } else if (suggestion.status === 'considered') {
-    statusHeader += ` | 🟡 **UNDER CONSIDERATION**`;
+    statusHeader += ' · Under Consideration';
   } else if (suggestion.status === 'denied') {
-    statusHeader += ` | 🔴 **DENIED**`;
+    statusHeader += ' · Denied';
   }
 
   const sections: string[] = [
@@ -34,36 +33,23 @@ export function buildSuggestionPayload(
     sections.push(statusNote);
   }
 
-  return buildV2Container({
-    text: statusHeader,
+  return ui.standard({
+    title: statusHeader,
     sections,
   });
-}
-
-export function buildSuggestionEmbed(
-  suggestion: SuggestionRecord,
-  authorTag?: string,
-): EmbedBuilder {
-  const authorDisplay = authorTag ?? `<@${suggestion.authorId}>`;
-  return new EmbedBuilder()
-    .setTitle(`Suggestion #${suggestion.number}`)
-    .setDescription(suggestion.content)
-    .setFooter({ text: `Suggested by ${authorDisplay}` });
 }
 
 export function buildSuggestionPanelPayload(): ComponentV2Payload {
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('suggest_open_modal')
-      .setLabel('Suggest')
+      .setLabel('Submit Suggestion')
       .setStyle(ButtonStyle.Secondary),
   );
 
-  return buildV2Container({
-    text: '**Suggestions**',
-    sections: [
-      'Have feedback? Tap the button to submit a suggestion.\n\n**Note:** Keep suggestions respectful and relevant. Inappropriate suggestions may result in a timeout.',
-    ],
+  return ui.standard({
+    title: 'Server Suggestions',
+    text: 'Have feedback or an idea for the server? Tap the button below to submit a suggestion.',
     components: [row],
   });
 }

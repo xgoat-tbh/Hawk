@@ -19,8 +19,8 @@ import {
   getAllConfessionConfigs,
   createConfessionRecord,
 } from '../../core/database/repositories/confessionRepo.js';
-import { buildAnonymousConfessionEmbed, buildConfessionPanel } from './confessionUI.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { buildAnonymousConfessionPayload, buildConfessionPanel } from './confessionUI.js';
+import { ui } from '../../core/ui/index.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
@@ -117,9 +117,10 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
     }
 
     // 2. Post user's anonymous confession message
-    const embed = buildAnonymousConfessionEmbed(content);
+    const confessionPayload = buildAnonymousConfessionPayload(content);
     const postedMsg = await targetChannel.send({
-      embeds: [embed],
+      components: confessionPayload.components,
+      flags: confessionPayload.flags as any,
       allowedMentions: {
         parse: [],
         roles: [],
@@ -132,7 +133,11 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
 
     // 4. Post NEW confession panel message below it
     const panelPayload = buildConfessionPanel();
-    const newPanelMsg = await targetChannel.send(panelPayload);
+    const newPanelMsg = await targetChannel.send({
+      components: panelPayload.components,
+      flags: panelPayload.flags as any,
+      allowedMentions: { parse: [], roles: [], users: [] },
+    });
 
     // 5. Track new panel message ID in DB and memory
     activeConfessionPanels.set(guild.id, newPanelMsg.id);
@@ -142,15 +147,18 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
     if (config && config.logChannelId) {
       const logChannel = (await guild.channels.fetch(config.logChannelId).catch(() => null)) as GuildTextBasedChannel | null;
       if (logChannel) {
-        const logPayload = buildV2Container({
-          text: `**Confession Log #${record.id}**`,
+        const logPayload = ui.standard({
+          title: `Confession Log #${record.id}`,
           sections: [
-            `**Author:** <@${user.id}> (\`${user.tag}\`) [ID: \`${user.id}\`]`,
+            `• **Author:** <@${user.id}> (\`${user.tag}\`) [ID: \`${user.id}\`]\n• **Message Link:** ${postedMsg.url}`,
             `**Content:**\n${content}`,
-            `**Message Link:** ${postedMsg.url}`,
           ],
         });
-        await logChannel.send(logPayload).catch(() => {});
+        await logChannel.send({
+          components: logPayload.components,
+          flags: logPayload.flags as any,
+          allowedMentions: { parse: [], roles: [], users: [] },
+        }).catch(() => {});
       }
     }
 
@@ -201,7 +209,11 @@ export async function initializeConfessionPanels(client: Client): Promise<void> 
 
       if (!validMessageExists) {
         const panel = buildConfessionPanel();
-        const newMsg = await channel.send(panel);
+        const newMsg = await channel.send({
+          components: panel.components,
+          flags: panel.flags as any,
+          allowedMentions: { parse: [], roles: [], users: [] },
+        });
         activeConfessionPanels.set(conf.guildId, newMsg.id);
         await setConfessionPanelMessageId(conf.guildId, newMsg.id);
       }

@@ -8,7 +8,7 @@ import {
   PermissionsBitField,
 } from 'discord.js';
 import { getStateAnyUser, deleteState } from '../../core/interactions/InteractionState.js';
-import { buildV2Container } from '../../core/utils/componentsV2.js';
+import { ui } from '../../core/ui/index.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -120,8 +120,9 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
 
       deleteState(fullStateKey);
 
-      const successPayload = buildV2Container({
-        text: `**Successfully Added Emoji!**\n\nName: \`:${createdEmoji.name}:\`\nPreview: ${createdEmoji}`,
+      const successPayload = ui.standard({
+        title: 'Successfully Added Emoji',
+        text: `• Name: \`:${createdEmoji.name}:\`\n• Preview: ${createdEmoji}`,
         components: [],
       });
 
@@ -151,8 +152,9 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
 
       deleteState(fullStateKey);
 
-      const successPayload = buildV2Container({
-        text: `**Successfully Added Sticker!**\n\nName: **${createdSticker.name}**\nSticker: **${createdSticker.name}**`,
+      const successPayload = ui.standard({
+        title: 'Successfully Added Sticker',
+        text: `• Name: **${createdSticker.name}**`,
         components: [],
       });
 
@@ -174,8 +176,9 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
     const msg = error instanceof Error ? error.message : String(error);
     consoleLog('error', 'command_failure', `steal: failed to create ${action}`, { error: msg });
 
-    const failPayload = buildV2Container({
-      text: `**Failed to add ${action}:** ${msg}`,
+    const failPayload = ui.standard({
+      title: `Failed to Add ${action.toUpperCase()}`,
+      text: msg,
       components: [],
     });
 
