@@ -226,9 +226,15 @@ export class Bootstrap {
     });
 
     // 9. Login & Setup Process Signals
-    consoleLog('info', 'startup', 'Connecting to Discord gateway...');
+    const token = env.botToken;
+    const maskedToken = token ? `${token.slice(0, 10)}...${token.slice(-5)} (len=${token.length})` : 'EMPTY/UNDEFINED';
+    consoleLog('info', 'startup', `Connecting to Discord gateway... token=${maskedToken}`);
     try {
-      await client.login(env.botToken);
+      const loginPromise = client.login(token);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('LOGIN TIMEOUT: client.login() did not resolve within 30 seconds')), 30_000),
+      );
+      await Promise.race([loginPromise, timeoutPromise]);
       consoleLog('info', 'startup', 'client.login() resolved successfully.');
     } catch (loginError) {
       const msg = loginError instanceof Error ? loginError.message : String(loginError);
