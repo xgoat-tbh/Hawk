@@ -1,17 +1,20 @@
 import { PermissionsBitField } from 'discord.js';
+import type { VoiceBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
+import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { isMemberManageable } from './roleHelpers.js';
+import { mentionChannel } from '../../core/utils/formatters.js';
 
 export default defineCommand({
   name: 'vcmute',
   aliases: ['vm', 'voicemute', 'vmute'],
   module: 'moderation',
-  description: 'Server mute one or multiple members in voice.',
-  usage: 'vcmute <targets...>',
-  examples: ['vcmute @User', 'vcmute @User1 @User2'],
+  description: 'Server mute one or multiple members in voice, or all members in a voice channel.',
+  usage: 'vcmute <targets...> | vcmute all [channel]',
+  examples: ['vcmute @User', 'vcmute @User1 @User2', 'vcmute all', 'vcmute all #General'],
   permissions: [PermissionsBitField.Flags.MuteMembers],
   botPermissions: [PermissionsBitField.Flags.MuteMembers],
   cooldown: 3,
@@ -20,7 +23,71 @@ export default defineCommand({
     const { parsed, guild, respond, member } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error(`Usage: \`${parsed.prefix}vcmute <targets...>\``);
+      await respond.error(`Usage: \`${parsed.prefix}vcmute <targets...> | ${parsed.prefix}vcmute all [channel]\``);
+      return;
+    }
+
+    const isAll = parsed.args.some((a) => ['all', '?all', '*'].includes(a.toLowerCase()));
+
+    if (isAll) {
+      const nonAllArgs = parsed.args.filter((a) => !['all', '?all', '*'].includes(a.toLowerCase()));
+      let targetVc: VoiceBasedChannel | null = null;
+
+      if (nonAllArgs.length > 0) {
+        const vcQuery = nonAllArgs.join(' ');
+        const vcRes = resolveVoiceChannel(vcQuery, guild);
+        if (!vcRes.success) {
+          await respond.error(vcRes.error);
+          return;
+        }
+        targetVc = vcRes.value.channel;
+      } else {
+        targetVc = member.voice.channel;
+      }
+
+      if (!targetVc) {
+        await respond.error('You must be connected to a voice channel or specify a voice channel to mute all.');
+        return;
+      }
+
+      const connectedMembers = Array.from(targetVc.members.values());
+      const eligibleMembers = connectedMembers.filter((m) => {
+        if (m.id === member.id) return false;
+        if (!isMemberManageable(guild, m, member)) return false;
+        if (m.voice.serverMute) return false;
+        return true;
+      });
+
+      if (eligibleMembers.length === 0) {
+        await respond.info(`No unmuted manageable members found in ${mentionChannel(targetVc.id)}.`);
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      const results = await Promise.allSettled(
+        eligibleMembers.map((m) => m.voice.setMute(true, `VCMute All by ${member.user.tag}`)),
+      );
+
+      for (const res of results) {
+        if (res.status === 'fulfilled') successCount++;
+        else failCount++;
+      }
+
+      await respond.success(
+        `Muted **${successCount}** user(s) in ${mentionChannel(targetVc.id)}.${failCount > 0 ? ` (Failed: ${failCount})` : ''}`,
+      );
+
+      logEvent('info', 'command_execution', `VCMute All by ${member.user.tag}`, {
+        executor: member.user.tag,
+        executorId: member.id,
+        guild: guild.name,
+        guildId: guild.id,
+        channel: targetVc.name,
+        successCount,
+        failCount,
+      });
       return;
     }
 

@@ -7,47 +7,83 @@ import mvCmd from '../src/modules/voice/mv.js';
 import pingCmd from '../src/modules/general/ping.js';
 import infoCmd from '../src/modules/general/info.js';
 
-test('UserResolver strictly rejects non-snowflake and non-mention text input', async () => {
-  const mockGuild = {} as any;
-  const result = await resolveUser('john_doe', mockGuild);
-  assert.equal(result.success, false);
-  assert.match(result.error || '', /Invalid user format/);
-});
+test('UserResolver resolves users by name, username, mention, and snowflake', async () => {
+  const mockMember = {
+    id: '123456789012345678',
+    displayName: 'John Doe',
+    nickname: 'Johnny',
+    user: { id: '123456789012345678', username: 'johndoe', tag: 'johndoe#0000', globalName: 'John Global' },
+  };
 
-test('UserResolver parses valid user mention or snowflake format', async () => {
   const mockGuild = {
     members: {
-      fetch: async (id: string) => {
-        if (id === '123456789012345678') {
-          return {
-            id,
-            displayName: 'TestUser',
-            nickname: null,
-            user: { id, username: 'testuser', tag: 'testuser#0000' },
-          };
+      cache: new Map([
+        ['123456789012345678', mockMember],
+      ]),
+      fetch: async (opt: any) => {
+        if (typeof opt === 'string' && opt === '123456789012345678') {
+          return mockMember;
         }
-        throw new Error('Not found');
+        return mockGuild.members.cache;
+      },
+    },
+    client: {
+      users: {
+        fetch: async () => mockMember.user,
       },
     },
   } as any;
 
+  // Resolve by username
+  const resultUsername = await resolveUser('johndoe', mockGuild);
+  assert.equal(resultUsername.success, true);
+  if (resultUsername.success) {
+    assert.equal(resultUsername.value.id, '123456789012345678');
+  }
+
+  // Resolve by display name
+  const resultDisplayName = await resolveUser('John Doe', mockGuild);
+  assert.equal(resultDisplayName.success, true);
+  if (resultDisplayName.success) {
+    assert.equal(resultDisplayName.value.id, '123456789012345678');
+  }
+
+  // Resolve by mention
   const resultMention = await resolveUser('<@123456789012345678>', mockGuild);
   assert.equal(resultMention.success, true);
   if (resultMention.success) {
     assert.equal(resultMention.value.id, '123456789012345678');
   }
 
+  // Resolve by Snowflake ID
   const resultId = await resolveUser('123456789012345678', mockGuild);
   assert.equal(resultId.success, true);
   if (resultId.success) {
     assert.equal(resultId.value.id, '123456789012345678');
   }
+
+  // Non-existent user
+  const resultMissing = await resolveUser('non_existent_person_xyz', mockGuild);
+  assert.equal(resultMissing.success, false);
+  assert.match(resultMissing.error || '', /Could not find a user matching/);
 });
 
 test('Voice commands have correct requested aliases', () => {
   assert.ok(multimoveCmd.aliases.includes('mmv'), 'multimove command should have mmv alias');
   assert.ok(shiftvcCmd.aliases.includes('svc'), 'shiftvc command should have svc alias');
   assert.ok(mvCmd.aliases.includes('pull'), 'mv command should have pull alias');
+});
+
+test('vcmute, vcdeafen, vcunmute, and vcundeafen support all in usage and examples', async () => {
+  const vcmuteCmd = (await import('../src/modules/moderation/vcmute.js')).default;
+  const vcdeafenCmd = (await import('../src/modules/moderation/vcdeafen.js')).default;
+  const vcunmuteCmd = (await import('../src/modules/moderation/vcunmute.js')).default;
+  const vcundeafenCmd = (await import('../src/modules/moderation/vcundeafen.js')).default;
+
+  assert.ok(vcmuteCmd.usage.includes('all'));
+  assert.ok(vcdeafenCmd.usage.includes('all'));
+  assert.ok(vcunmuteCmd.usage.includes('all'));
+  assert.ok(vcundeafenCmd.usage.includes('all'));
 });
 
 test('Ping and Info commands exist with proper metadata', () => {
