@@ -26,10 +26,9 @@ function formatUptime(seconds: number): string {
   return parts.join(' ');
 }
 
-export function buildInfoV2Embed(client: Client, _guild: Guild, prefix: string, userId: string): ComponentV2Payload {
+export async function buildInfoV2Embed(client: Client, _guild: Guild, prefix: string, userId: string): Promise<ComponentV2Payload> {
   const botUser = client.user;
   const botTag = botUser?.tag ?? 'Amo';
-  const botId = botUser?.id ?? '';
   const totalGuilds = client.guilds.cache.size;
   const totalUsers = client.guilds.cache.reduce((acc, g) => acc + (g.memberCount ?? 0), 0);
   const commandCount = getCommandCount();
@@ -38,17 +37,28 @@ export function buildInfoV2Embed(client: Client, _guild: Guild, prefix: string, 
   const heapUsedMb = (memory.heapUsed / 1024 / 1024).toFixed(1);
   const uptimeStr = formatUptime(process.uptime());
 
-  const ownersList = env.botOwnerIds.length > 0
-    ? env.botOwnerIds.map(id => `<@${id}>`).join(' ')
-    : `<@${env.botOwnerId}>`;
+  const ownerIds = env.botOwnerIds.length > 0 ? env.botOwnerIds : (env.botOwnerId ? [env.botOwnerId] : []);
+  const developerTags: string[] = [];
+
+  for (const id of ownerIds) {
+    const user = client.users.cache.get(id) ?? await client.users.fetch(id).catch(() => null);
+    if (user) {
+      developerTags.push(`\`${user.username}\``);
+    } else {
+      developerTags.push(`\`${id}\``);
+    }
+  }
+
+  const developersStr = developerTags.length > 0 ? developerTags.join(' ') : '`Anonymous`';
 
   const content =
-    `• **Bot:** ${botTag} (<@${botId}>)\n` +
+    `• **Bot:** **${botUser?.username ?? 'Amo'}** (\`${botTag}\`)\n` +
     `• **Prefix:** \`${prefix}\` · **Commands:** \`${commandCount}\` active\n` +
     `• **Network:** \`${totalGuilds.toLocaleString()}\` servers · \`${totalUsers.toLocaleString()}\` users\n` +
-    `• **Health:** \`${uptimeStr}\` uptime · \`${heapUsedMb} MB\` heap\n` +
+    `• **Uptime:** \`${uptimeStr}\`\n` +
+    `• **Memory:** \`${heapUsedMb} MB\` heap\n` +
     `• **Engine:** Node.js \`${process.version}\` · \`discord.js v14.18\`\n` +
-    `• **Developers:** ${ownersList}`;
+    `• **Developers:** ${developersStr}`;
 
   const refreshBtn = new ButtonBuilder()
     .setCustomId(`info_refresh_${userId}`)
@@ -82,7 +92,7 @@ export async function handleInfoInteraction(interaction: ButtonInteraction): Pro
   if (action === 'refresh') {
     if (!interaction.guild) return;
     const prefix = await getPrefix(interaction.guild.id);
-    const payload = buildInfoV2Embed(interaction.client, interaction.guild, prefix, userId);
+    const payload = await buildInfoV2Embed(interaction.client, interaction.guild, prefix, userId);
     await interaction.update(payload);
   } else if (action === 'help') {
     const prefix = interaction.guild ? await getPrefix(interaction.guild.id) : '!';

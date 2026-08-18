@@ -19,7 +19,7 @@ export default defineCommand({
     const { message, guild, channel, member } = ctx;
     const client = message.client;
     const prefix = await getPrefix(guild.id);
-    const payload = buildInfoV2Embed(client, guild, prefix, member.id);
-    await (channel as GuildTextBasedChannel).send(payload);
+    const payload = await buildInfoV2Embed(client, guild, prefix, member.id);
+    await (channel as GuildTextBasedChannel).send({ components: payload.components, flags: payload.flags as any });
   },
 });
