@@ -32,7 +32,7 @@ export async function checkPermission(
     return { allowed: true, authority, reason: 'Bot owner bypass' };
   }
 
-  if (command.name === 'afk') {
+  if (['help', 'afk', 'ping', 'info'].includes(command.name)) {
     return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Global public command' };
   }
 

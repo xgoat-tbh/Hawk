@@ -208,6 +208,23 @@ export class Bootstrap {
       await interactionRouter.dispatch(interaction);
     });
 
+    // Gateway diagnostics
+    client.on(Events.Error, (err) => {
+      consoleLog('error', 'gateway', `Discord client error: ${err.message}`);
+    });
+    client.on(Events.Warn, (warn) => {
+      consoleLog('warning', 'gateway', `Discord client warning: ${warn}`);
+    });
+    client.on(Events.ShardReady, (shardId) => {
+      consoleLog('info', 'gateway', `Shard ${shardId} connected & ready.`);
+    });
+    client.on(Events.ShardDisconnect, (event, shardId) => {
+      consoleLog('warning', 'gateway', `Shard ${shardId} disconnected (${event.code}): ${event.reason}`);
+    });
+    client.on(Events.ShardReconnecting, (shardId) => {
+      consoleLog('info', 'gateway', `Shard ${shardId} reconnecting to gateway...`);
+    });
+
     // 9. Login & Setup Process Signals
     consoleLog('info', 'startup', 'Connecting to Discord gateway...');
     await client.login(env.botToken);
