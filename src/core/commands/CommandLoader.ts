@@ -5,7 +5,7 @@ import type { CommandDefinition } from '../../types/command.js';
 import { registerCommand } from './CommandRegistry.js';
 import { consoleLog } from '../logging/ConsoleLogger.js';
 
-export async function loadCommands(modulesDir: string): Promise<number> {
+export async function loadCommands(modulesDir: string, enabledModules?: string[]): Promise<number> {
   let count = 0;
   let moduleDirs: string[];
   try {
@@ -16,6 +16,11 @@ export async function loadCommands(modulesDir: string): Promise<number> {
   }
 
   for (const dir of moduleDirs) {
+    if (enabledModules && enabledModules.length > 0 && !enabledModules.includes(dir)) {
+      consoleLog('info', 'startup', `Commands skipped for disabled module: ${dir}`);
+      continue;
+    }
+
     const modulePath = join(modulesDir, dir);
     const dirStat = await stat(modulePath).catch(() => null);
     if (!dirStat?.isDirectory()) continue;

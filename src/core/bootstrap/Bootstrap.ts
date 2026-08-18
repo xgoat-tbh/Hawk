@@ -32,6 +32,9 @@ export class Bootstrap {
     const startTime = Date.now();
     consoleLog('info', 'startup', 'Starting Hawk Discord Bot (Amo Architecture)...');
 
+    // 0. Start HTTP Health Server Immediately (required for Render / cloud container port scanning)
+    startHealthServer();
+
     // 1. Database Connection & Migrations
     try {
       await validateConnection();
@@ -52,8 +55,8 @@ export class Bootstrap {
     }
 
     // 3. Load Command Definitions
-    await loadCommands(modulesDir);
-    consoleLog('info', 'startup', `Loaded ${getCommandCount()} commands across all modules.`);
+    await loadCommands(modulesDir, env.enabledModules);
+    consoleLog('info', 'startup', `Loaded ${getCommandCount()} commands across enabled modules.`);
 
     // 4. Load Module Manifests & Register Interaction Routes
     this.manifests = await loadModuleManifests(modulesDir, env.enabledModules);
@@ -71,7 +74,6 @@ export class Bootstrap {
       updateBotActivity(client);
       startInteractionCleanup();
       startCooldownCleanup();
-      startHealthServer();
       await loadNoPrefixCache();
       await loadAfkCache();
 

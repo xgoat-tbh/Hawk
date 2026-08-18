@@ -36,6 +36,7 @@ export async function checkPermission(
     return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Global public command' };
   }
 
+
   const hasCustomPermit = await permissionRepo.hasPermit(ctx.guildId, ctx.userId, ctx.memberRoleIds, ctx.commandName, ctx.moduleName);
   if (hasCustomPermit) {
     return { allowed: true, authority: AuthorityLevel.Permitted, reason: 'Custom access override granted' };

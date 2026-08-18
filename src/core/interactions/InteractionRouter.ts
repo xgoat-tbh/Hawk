@@ -72,7 +72,11 @@ export class InteractionRouter {
         return await this.dispatchModal(interaction);
       }
     } catch (error) {
-      consoleLog('error', 'unhandled_exception', `Unhandled error in interaction router: ${error instanceof Error ? error.message : String(error)}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('Interaction has already been acknowledged') || msg.includes('Unknown interaction')) {
+        return false;
+      }
+      consoleLog('error', 'unhandled_exception', `Unhandled error in interaction router: ${msg}`);
     }
     return false;
   }

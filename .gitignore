@@ -3,3 +3,8 @@ dist/
 .env
 *.log
 *.tsbuildinfo
+temp_lobbies*.json
+src/modules/owner/tempLobbies.ts
+dist/modules/owner/tempLobbies.js
+dist/modules/owner/tempLobbies.d.ts
+dist/modules/owner/tempLobbies.js.map

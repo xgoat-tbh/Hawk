@@ -4,7 +4,10 @@ import { consoleLog } from '../logging/ConsoleLogger.js';
 let server: http.Server | null = null;
 
 export function startHealthServer(): void {
+  if (server) return;
+
   const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
+  const host = '0.0.0.0';
 
   server = http.createServer((_req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -16,8 +19,8 @@ export function startHealthServer(): void {
     }));
   });
 
-  server.listen(port, () => {
-    consoleLog('info', 'startup', `HTTP health server listening on port ${port}`);
+  server.listen(port, host, () => {
+    consoleLog('info', 'startup', `HTTP health server listening on ${host}:${port}`);
   });
 
   server.on('error', (error) => {
