@@ -70,6 +70,8 @@ export class Bootstrap {
     // 6. Register ClientReady Event
     client.on(Events.ClientReady, async () => {
       const elapsed = Date.now() - startTime;
+      consoleLog('info', 'startup', `Logged in as ${client.user?.tag} \u2014 ${getCommandCount()} commands loaded \u2014 ${elapsed}ms startup`);
+
       (globalThis as any).hawkClient = client;
       updateBotActivity(client);
       startInteractionCleanup();
@@ -94,7 +96,6 @@ export class Bootstrap {
         .map(m => m.onReady!(client));
       await Promise.allSettled(readyHooks);
 
-      consoleLog('info', 'startup', `Logged in as ${client.user?.tag} \u2014 ${getCommandCount()} commands loaded \u2014 ${elapsed}ms startup`);
       logEvent('info', 'startup', `Bot started: ${client.user?.tag}`, {
         commands: getCommandCount(),
         modules: this.manifests.length,
@@ -208,6 +209,7 @@ export class Bootstrap {
     });
 
     // 9. Login & Setup Process Signals
+    consoleLog('info', 'startup', 'Connecting to Discord gateway...');
     await client.login(env.botToken);
     this.setupProcessHandlers();
 
