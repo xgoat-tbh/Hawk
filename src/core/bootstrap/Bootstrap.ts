@@ -227,7 +227,15 @@ export class Bootstrap {
 
     // 9. Login & Setup Process Signals
     consoleLog('info', 'startup', 'Connecting to Discord gateway...');
-    await client.login(env.botToken);
+    try {
+      await client.login(env.botToken);
+      consoleLog('info', 'startup', 'client.login() resolved successfully.');
+    } catch (loginError) {
+      const msg = loginError instanceof Error ? loginError.message : String(loginError);
+      consoleLog('critical', 'startup', `FATAL: client.login() failed — ${msg}`);
+      console.error('LOGIN FAILED:', loginError);
+      // Keep process alive so Render logs are visible
+    }
     this.setupProcessHandlers();
 
     return client;
