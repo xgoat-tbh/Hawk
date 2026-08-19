@@ -1,15 +1,15 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import type { User } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
-import { ui } from '../../core/ui/index.js';
+import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
   name: 'banner',
   aliases: ['userbanner', 'ubanner'],
   module: 'general',
-  description: 'Display a user\'s or server\'s banner with download links.',
+  description: 'Display a user\'s or server\'s banner image with download links.',
   usage: 'banner [user|server] OR reply with banner',
   examples: ['banner', 'banner @User', 'banner server'],
   cooldown: 3,
@@ -32,15 +32,18 @@ export default defineCommand({
         .setURL(bannerUrl);
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
 
-      const payload = ui.standard({
-        title: `${guild.name}'s Server Banner`,
-        sections: [`[View Full Resolution Banner](${bannerUrl})`],
-        components: [row],
-      });
+      const embed = new EmbedBuilder()
+        .setColor(HawkTheme.colors.primary)
+        .setAuthor({
+          name: `${guild.name}'s Server Banner`,
+          iconURL: guild.iconURL() ?? undefined,
+          url: bannerUrl,
+        })
+        .setImage(bannerUrl);
 
       await respond.raw({
-        components: payload.components,
-        flags: payload.flags as any,
+        embeds: [embed],
+        components: [row],
       });
       return;
     }
@@ -96,18 +99,19 @@ export default defineCommand({
 
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttons.slice(0, 5));
 
-      const payload = ui.standard({
-        title: `${targetUser.username}'s Banner`,
-        sections: [
-          `**User:** \`${targetUser.tag}\` (${targetUser.id})\n` +
-          `[Open Banner in Browser](${bannerUrl})`,
-        ],
-        components: [row],
-      });
+      const embed = new EmbedBuilder()
+        .setColor(HawkTheme.colors.primary)
+        .setAuthor({
+          name: `${targetUser.username}'s Banner`,
+          iconURL: targetUser.displayAvatarURL(),
+          url: bannerUrl,
+        })
+        .setDescription(`**User:** \`${targetUser.tag}\` (${targetUser.id})`)
+        .setImage(bannerUrl);
 
       await respond.raw({
-        components: payload.components,
-        flags: payload.flags as any,
+        embeds: [embed],
+        components: [row],
       });
     } catch {
       await respond.error(`Could not fetch banner for **${targetUser.username}**.`);

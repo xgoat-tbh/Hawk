@@ -1,14 +1,14 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { mentionUser } from '../../core/utils/formatters.js';
-import { ui } from '../../core/ui/index.js';
+import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
   name: 'serverinfo',
   aliases: ['sinfo', 'guildinfo', 'si', 'server'],
   module: 'general',
-  description: 'Display detailed server information, statistics, and counts.',
+  description: 'Display detailed server information, icon thumbnail, statistics, and counts.',
   usage: 'serverinfo',
   examples: ['serverinfo'],
   cooldown: 3,
@@ -35,23 +35,46 @@ export default defineCommand({
     const boostTier = guild.premiumTier === 0 ? 'None' : `Tier ${guild.premiumTier}`;
     const boostCount = guild.premiumSubscriptionCount ?? 0;
 
-    const sections: string[] = [
-      `**Owner:** ${mentionUser(guild.ownerId)} (\`${guild.ownerId}\`)\n` +
-      `**Server ID:** \`${guild.id}\`\n` +
-      `**Created:** <t:${createdUnix}:F> (<t:${createdUnix}:R>)\n` +
-      `**Verification Level:** \`${guild.verificationLevel}\``,
+    const iconUrl = guild.iconURL({ size: 4096, extension: 'png' });
+    const bannerUrl = guild.bannerURL({ size: 4096, extension: 'png' });
+    const splashUrl = guild.splashURL({ size: 4096, extension: 'png' });
 
-      `**Members (${totalMembers}):** ${humanCount} Humans • ${botCount} Bots\n` +
-      `**Channels (${channels.size}):** ${textChannels} Text • ${voiceChannels} Voice • ${stageChannels} Stage • ${forumChannels} Forum • ${categoryChannels} Categories\n` +
-      `**Roles:** ${rolesCount} • **Emojis:** ${emojisCount} • **Stickers:** ${stickersCount}`,
+    const embed = new EmbedBuilder()
+      .setColor(HawkTheme.colors.primary)
+      .setAuthor({
+        name: guild.name,
+        iconURL: iconUrl ?? undefined,
+      })
+      .addFields(
+        {
+          name: 'General Information',
+          value:
+            `**Owner:** ${mentionUser(guild.ownerId)} (\`${guild.ownerId}\`)\n` +
+            `**Server ID:** \`${guild.id}\`\n` +
+            `**Created:** <t:${createdUnix}:F> (<t:${createdUnix}:R>)\n` +
+            `**Verification Level:** \`${guild.verificationLevel}\``,
+        },
+        {
+          name: 'Counts & Statistics',
+          value:
+            `**Members (${totalMembers}):** ${humanCount} Humans • ${botCount} Bots\n` +
+            `**Channels (${channels.size}):** ${textChannels} Text • ${voiceChannels} Voice • ${stageChannels} Stage • ${forumChannels} Forum • ${categoryChannels} Categories\n` +
+            `**Roles:** ${rolesCount} • **Emojis:** ${emojisCount} • **Stickers:** ${stickersCount}`,
+        },
+        {
+          name: 'Boost & Features',
+          value:
+            `**Boost Status:** ${boostTier} (${boostCount} Boost${boostCount === 1 ? '' : 's'})` +
+            (guild.vanityURLCode ? `\n**Vanity URL:** \`discord.gg/${guild.vanityURLCode}\`` : ''),
+        }
+      );
 
-      `**Boost Status:** ${boostTier} (${boostCount} Boost${boostCount === 1 ? '' : 's'})` +
-      (guild.vanityURLCode ? `\n**Vanity URL:** \`discord.gg/${guild.vanityURLCode}\`` : ''),
-    ];
+    if (iconUrl) {
+      embed.setThumbnail(iconUrl);
+    }
 
     const buttons: ButtonBuilder[] = [];
 
-    const iconUrl = guild.iconURL({ size: 4096, extension: 'png' });
     if (iconUrl) {
       buttons.push(
         new ButtonBuilder()
@@ -61,7 +84,6 @@ export default defineCommand({
       );
     }
 
-    const bannerUrl = guild.bannerURL({ size: 4096, extension: 'png' });
     if (bannerUrl) {
       buttons.push(
         new ButtonBuilder()
@@ -71,7 +93,6 @@ export default defineCommand({
       );
     }
 
-    const splashUrl = guild.splashURL({ size: 4096, extension: 'png' });
     if (splashUrl) {
       buttons.push(
         new ButtonBuilder()
@@ -83,15 +104,9 @@ export default defineCommand({
 
     const row = buttons.length > 0 ? new ActionRowBuilder<ButtonBuilder>().addComponents(buttons.slice(0, 5)) : undefined;
 
-    const payload = ui.standard({
-      title: `${guild.name}`,
-      sections,
-      components: row ? [row] : undefined,
-    });
-
     await respond.raw({
-      components: payload.components,
-      flags: payload.flags as any,
+      embeds: [embed],
+      components: row ? [row] : undefined,
     });
   },
 });

@@ -1,16 +1,16 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionsBitField } from 'discord.js';
 import type { User, GuildMember } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
-import { ui } from '../../core/ui/index.js';
+import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
   name: 'userinfo',
   aliases: ['whois', 'ui', 'user', 'memberinfo'],
   module: 'general',
-  description: 'Display detailed information and permissions for a user or member.',
+  description: 'Display detailed information, avatar, and permissions for a user or member.',
   usage: 'userinfo [user] OR reply with userinfo',
   examples: ['userinfo', 'userinfo @User', 'userinfo 123456789012345678'],
   cooldown: 3,
@@ -40,16 +40,22 @@ export default defineCommand({
     const createdUnix = Math.floor(targetUser.createdTimestamp / 1000);
     const joinedUnix = targetMember?.joinedTimestamp ? Math.floor(targetMember.joinedTimestamp / 1000) : null;
 
-    const sections: string[] = [];
-
-    // General Identity Section
-    sections.push(
-      `**User:** ${mentionUser(targetUser.id)} (\`${targetUser.tag}\`)\n` +
-      `**User ID:** \`${targetUser.id}\`\n` +
-      `**Bot:** ${targetUser.bot ? 'Yes' : 'No'}\n` +
-      `**Account Created:** <t:${createdUnix}:F> (<t:${createdUnix}:R>)` +
-      (joinedUnix ? `\n**Joined Server:** <t:${joinedUnix}:F> (<t:${joinedUnix}:R>)` : '')
-    );
+    const embed = new EmbedBuilder()
+      .setColor(HawkTheme.colors.primary)
+      .setAuthor({
+        name: `User Information — ${targetUser.username}`,
+        iconURL: targetUser.displayAvatarURL(),
+      })
+      .setThumbnail(targetUser.displayAvatarURL({ size: 1024 }))
+      .addFields({
+        name: 'Identity',
+        value:
+          `**User:** ${mentionUser(targetUser.id)} (\`${targetUser.tag}\`)\n` +
+          `**User ID:** \`${targetUser.id}\`\n` +
+          `**Bot:** ${targetUser.bot ? 'Yes' : 'No'}\n` +
+          `**Account Created:** <t:${createdUnix}:F> (<t:${createdUnix}:R>)` +
+          (joinedUnix ? `\n**Joined Server:** <t:${joinedUnix}:F> (<t:${joinedUnix}:R>)` : ''),
+      });
 
     // Roles Section (if in server)
     if (targetMember) {
@@ -76,10 +82,15 @@ export default defineCommand({
         if (perms.has(PermissionsBitField.Flags.MoveMembers)) keyPerms.push('Move Members');
       }
 
-      sections.push(
-        `**Highest Role:** ${targetMember.roles.highest.id !== guild.id ? mentionRole(targetMember.roles.highest.id) : 'None'}\n` +
-        `**Roles (${roles.size}):** ${roleText}\n` +
-        `**Key Permissions:** ${keyPerms.length > 0 ? keyPerms.join(', ') : 'Standard Member'}`
+      embed.addFields(
+        {
+          name: `Roles [${roles.size}]`,
+          value: roleText,
+        },
+        {
+          name: 'Key Permissions',
+          value: keyPerms.length > 0 ? keyPerms.join(', ') : 'Standard Member',
+        }
       );
     }
 
@@ -90,15 +101,9 @@ export default defineCommand({
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(avatarBtn);
 
-    const payload = ui.standard({
-      title: `User Information — ${targetUser.username}`,
-      sections,
-      components: [row],
-    });
-
     await respond.raw({
-      components: payload.components,
-      flags: payload.flags as any,
+      embeds: [embed],
+      components: [row],
     });
   },
 });

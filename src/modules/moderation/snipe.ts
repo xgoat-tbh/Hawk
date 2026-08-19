@@ -1,9 +1,9 @@
-import { PermissionsBitField } from 'discord.js';
+import { PermissionsBitField, EmbedBuilder } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getSnipe } from './SnipeManager.js';
 import { mentionUser } from '../../core/utils/formatters.js';
-import { ui } from '../../core/ui/index.js';
+import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
   name: 'snipe',
@@ -26,26 +26,33 @@ export default defineCommand({
     }
 
     const unixTimestamp = Math.floor(snipe.deletedAt.getTime() / 1000);
-    const sections: string[] = [];
 
-    sections.push(`**Author:** ${mentionUser(snipe.authorId)} (\`${snipe.authorTag}\`)\n**Deleted:** <t:${unixTimestamp}:R> (<t:${unixTimestamp}:T>)`);
-    sections.push(snipe.content || '*[No text content]*');
+    const embed = new EmbedBuilder()
+      .setColor(HawkTheme.colors.primary)
+      .setAuthor({
+        name: `${snipe.authorTag} (${snipe.authorId})`,
+        iconURL: snipe.authorAvatar,
+      })
+      .setDescription(
+        `**Author:** ${mentionUser(snipe.authorId)}\n` +
+        `**Deleted:** <t:${unixTimestamp}:R> (<t:${unixTimestamp}:T>)\n\n` +
+        (snipe.content ? snipe.content : '*[No text content]*')
+      );
 
     if (snipe.attachments.length > 0) {
-      sections.push(
-        `**Attachments (${snipe.attachments.length}):**\n` +
-        snipe.attachments.map((url, i) => `[Attachment ${i + 1}](${url})`).join(' • ')
-      );
+      embed.addFields({
+        name: `Attachments [${snipe.attachments.length}]`,
+        value: snipe.attachments.map((url, i) => `[Attachment ${i + 1}](${url})`).join(' • '),
+      });
+
+      const firstImg = snipe.attachments.find((url) => /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url));
+      if (firstImg) {
+        embed.setImage(firstImg);
+      }
     }
 
-    const payload = ui.standard({
-      title: 'Deleted Message Snipe',
-      sections,
-    });
-
     await respond.raw({
-      components: payload.components,
-      flags: payload.flags as any,
+      embeds: [embed],
     });
   },
 });

@@ -1,15 +1,15 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import type { User, GuildMember } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
-import { ui } from '../../core/ui/index.js';
+import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
   name: 'avatar',
   aliases: ['av', 'pfp', 'useravatar'],
   module: 'general',
-  description: 'Display a user\'s avatar with download links.',
+  description: 'Display a user\'s avatar image with high-resolution download links.',
   usage: 'avatar [user] OR reply with avatar',
   examples: ['avatar', 'avatar @User', 'avatar 123456789012345678'],
   cooldown: 3,
@@ -76,21 +76,22 @@ export default defineCommand({
 
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttons.slice(0, 5));
 
-    const sections: string[] = [
-      `**User:** \`${targetUser.tag}\` (${targetUser.id})\n` +
-      `[Open Avatar in Browser](${globalAvatarUrl})` +
-      (serverAvatarUrl ? ` • [Server Avatar](${serverAvatarUrl})` : ''),
-    ];
-
-    const payload = ui.standard({
-      title: `${targetUser.username}'s Avatar`,
-      sections,
-      components: [row],
-    });
+    const embed = new EmbedBuilder()
+      .setColor(HawkTheme.colors.primary)
+      .setAuthor({
+        name: `${targetUser.username}'s Avatar`,
+        iconURL: globalAvatarUrl,
+        url: globalAvatarUrl,
+      })
+      .setDescription(
+        `**User:** \`${targetUser.tag}\` (${targetUser.id})` +
+        (serverAvatarUrl ? ` • [Server Avatar](${serverAvatarUrl})` : '')
+      )
+      .setImage(globalAvatarUrl);
 
     await respond.raw({
-      components: payload.components,
-      flags: payload.flags as any,
+      embeds: [embed],
+      components: [row],
     });
   },
 });
