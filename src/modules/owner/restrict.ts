@@ -41,7 +41,7 @@ export default defineCommand({
       if (roleResult.success) {
         targetType = 'role';
         targetId = roleResult.value.id;
-        targetDisplay = mentionRole(targetId);
+        targetDisplay = mentionRole(roleResult.value.role, guild);
       } else {
         await respond.error(`Could not resolve user or role \`${targetArg}\`.`);
         return;

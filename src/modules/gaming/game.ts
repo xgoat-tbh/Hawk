@@ -140,7 +140,7 @@ async function handleCreate(ctx: CommandContext, args: string[]): Promise<void> 
   });
 
   await respond.success(
-    `Created ping configuration ${inlineCode(identifier)}:\nGame: ${bold(gameName)}\nRole: ${mentionRole(roleId)}\nVC: ${mentionChannel(vcId)}\nCooldown: ${cooldownSeconds}s`,
+    `Created ping configuration ${inlineCode(identifier)}:\nGame: ${bold(gameName)}\nRole: ${mentionRole(roleId, guild)}\nVC: ${mentionChannel(vcId)}\nCooldown: ${cooldownSeconds}s`,
   );
 }
 
@@ -193,7 +193,7 @@ async function handleEdit(ctx: CommandContext, args: string[]): Promise<void> {
   }
 
   await respond.success(
-    `Updated ping configuration ${inlineCode(identifier)}:\nGame: ${bold(gameName)}\nRole: ${mentionRole(roleId)}\nVC: ${mentionChannel(vcId)}\nCooldown: ${cooldownSeconds}s`,
+    `Updated ping configuration ${inlineCode(identifier)}:\nGame: ${bold(gameName)}\nRole: ${mentionRole(roleId, guild)}\nVC: ${mentionChannel(vcId)}\nCooldown: ${cooldownSeconds}s`,
   );
 }
 
@@ -230,8 +230,7 @@ async function handleList(ctx: CommandContext): Promise<void> {
   }
 
   const pingLines = pings.map((p) => {
-    const role = guild.roles.cache.get(p.roleId);
-    const roleStr = role ? inlineCode(role.name) : mentionRole(p.roleId);
+    const roleStr = mentionRole(p.roleId, guild);
     return `• ${inlineCode(p.identifier)} — ${bold(p.gameName)} — ${roleStr}${p.vcId ? ` — ${mentionChannel(p.vcId)}` : ''} (\`${p.cooldownSeconds}s\` cooldown)`;
   });
 

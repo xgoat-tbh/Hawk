@@ -36,7 +36,7 @@ export default defineCommand({
       await targetChannel.permissionOverwrites.edit(everyoneRole.id, {
         ViewChannel: null,
       }).catch(() => {});
-      await respond.success(`Unhidden ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole.id)} (inherited).`);
+      await respond.success(`Unhidden ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole, guild)} (inherited).`);
     }
     // Mode 3: "all" argument -> @everyone: INHERIT (null) + every existing role override: INHERIT (null)
     else if (parsed.args[0].toLowerCase() === 'all') {
@@ -68,7 +68,7 @@ export default defineCommand({
       await targetChannel.permissionOverwrites.edit(targetRole.id, {
         ViewChannel: true,
       });
-      await respond.success(`Unhidden ${mentionChannel(targetChannel.id)} for ${mentionRole(targetRole.id)} (explicitly allowed).`);
+      await respond.success(`Unhidden ${mentionChannel(targetChannel.id)} for ${mentionRole(targetRole, guild)} (explicitly allowed).`);
     }
 
     logEvent('info', 'command_execution', `Channel unhide by ${member.user.tag}`, {

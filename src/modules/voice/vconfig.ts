@@ -62,7 +62,7 @@ export default defineCommand({
             : r.channelIds.length > 0
             ? r.channelIds.map((id) => `<#${id}>`).join(', ')
             : 'None';
-        return `• **\`${r.commandName}\`** | Mode: **${r.mode.toUpperCase()}** | Role: ${mentionRole(r.roleId)} | Channels: ${chans}`;
+        return `• **\`${r.commandName}\`** | Mode: **${r.mode.toUpperCase()}** | Role: ${mentionRole(r.roleId, guild)} | Channels: ${chans}`;
       });
 
       await ui.paginated(ctx, {
@@ -100,7 +100,7 @@ export default defineCommand({
 
       const removed = await removeVConfigRule(guild.id, targetCmdName, roleRes.value.role.id, modeArg as 'wl' | 'bl');
       if (removed) {
-        await respond.success(`Removed **${modeArg.toUpperCase()}** configuration for \`${targetCmdName}\` on ${mentionRole(roleRes.value.role.id)}.`);
+        await respond.success(`Removed **${modeArg.toUpperCase()}** configuration for \`${targetCmdName}\` on ${mentionRole(roleRes.value.role, guild)}.`);
         logEvent('info', 'command_execution', `vconfig rule removed by ${member.user.tag}`, {
           administrator: member.user.tag,
           command: targetCmdName,
@@ -156,7 +156,7 @@ export default defineCommand({
     if (fourthArg === 'all' || fourthArg === '?all' || fourthArg === '*') {
       await saveVConfigRule(guild.id, targetCmdName, targetRole.id, mode, ['all']);
       await respond.success(
-        `Configured **${modeText}** for \`${targetCmdName}\` on ${mentionRole(targetRole.id)} across **ALL voice channels**.`
+        `Configured **${modeText}** for \`${targetCmdName}\` on ${mentionRole(targetRole, guild)} across **ALL voice channels**.`
       );
       return;
     }
@@ -185,7 +185,7 @@ export default defineCommand({
       title: 'Voice Access Configuration',
       text:
         `• **Command:** \`${targetCmdName}\`\n` +
-        `• **Role:** ${mentionRole(targetRole.id)}\n` +
+        `• **Role:** ${mentionRole(targetRole, guild)}\n` +
         `• **Mode:** **${modeText}**\n\n` +
         `Select the voice channels this role should be ${mode === 'wl' ? 'whitelisted for' : 'blacklisted from'} using the dropdown below:`,
       components: [selectRow, buttonRow],

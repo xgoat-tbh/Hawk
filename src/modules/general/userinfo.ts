@@ -65,7 +65,7 @@ export default defineCommand({
         .filter((r) => r.id !== guild.id)
         .sort((a, b) => b.position - a.position);
 
-      const roleMentions = roles.map((r) => mentionRole(r.id));
+      const roleMentions = roles.map((r) => mentionRole(r, guild));
       const roleText = roleMentions.length > 0
         ? (roleMentions.length <= 15 ? roleMentions.join(' ') : `${roleMentions.slice(0, 15).join(' ')} +${roleMentions.length - 15} more`)
         : 'None';

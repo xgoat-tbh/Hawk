@@ -37,7 +37,7 @@ export default defineCommand({
     if (parsed.args.length === 0) {
       const everyoneRole = guild.roles.everyone;
       await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permToEdit).catch(() => {});
-      await respond.success(`Locked ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole.id)}.`);
+      await respond.success(`Locked ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole, guild)}.`);
     }
     // Mode 3: "all" argument -> @everyone: DENY + every existing role override: DENY
     else if (parsed.args[0].toLowerCase() === 'all') {
@@ -63,7 +63,7 @@ export default defineCommand({
       }
       const targetRole = roleRes.value.role;
       await (targetChannel as any).permissionOverwrites.edit(targetRole.id, permToEdit);
-      await respond.success(`Locked ${mentionChannel(targetChannel.id)} for ${mentionRole(targetRole.id)}.`);
+      await respond.success(`Locked ${mentionChannel(targetChannel.id)} for ${mentionRole(targetRole, guild)}.`);
     }
 
     logEvent('info', 'command_execution', `Channel lock by ${member.user.tag}`, {

@@ -36,7 +36,7 @@ export default defineCommand({
       await targetChannel.permissionOverwrites.edit(everyoneRole.id, {
         ViewChannel: false,
       }).catch(() => {});
-      await respond.success(`Hidden ${mentionChannel(targetChannel.id)} from ${mentionRole(everyoneRole.id)}.`);
+      await respond.success(`Hidden ${mentionChannel(targetChannel.id)} from ${mentionRole(everyoneRole, guild)}.`);
     }
     // Mode 3: "all" argument -> @everyone: DENY + every existing role override: DENY
     else if (parsed.args[0].toLowerCase() === 'all') {
@@ -68,7 +68,7 @@ export default defineCommand({
       await targetChannel.permissionOverwrites.edit(targetRole.id, {
         ViewChannel: false,
       });
-      await respond.success(`Hidden ${mentionChannel(targetChannel.id)} from ${mentionRole(targetRole.id)}.`);
+      await respond.success(`Hidden ${mentionChannel(targetChannel.id)} from ${mentionRole(targetRole, guild)}.`);
     }
 
     logEvent('info', 'command_execution', `Channel hide by ${member.user.tag}`, {

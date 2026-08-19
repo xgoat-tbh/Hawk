@@ -1,4 +1,4 @@
-import type { Guild, GuildMember, User } from 'discord.js';
+import type { Guild, GuildMember, Role, User } from 'discord.js';
 
 export function formatUser(target: GuildMember | User | string, guild?: Guild | null): string {
   if (!target) return '**Unknown**';
@@ -32,8 +32,31 @@ export function mentionUser(target: GuildMember | User | string, guild?: Guild |
   return formatUser(target, guild);
 }
 
-export function mentionRole(id: string): string {
-  return `<@&${id}>`;
+export function formatRole(target: Role | string, guild?: Guild | null): string {
+  if (!target) return '`@Unknown`';
+
+  if (typeof target === 'string') {
+    if (guild && (target === guild.id || target === 'everyone')) {
+      return '`@everyone`';
+    }
+    const role = guild?.roles.cache.get(target);
+    if (role) return `\`@${role.name}\``;
+
+    const client = guild?.client ?? (globalThis as any).hawkClient;
+    if (client) {
+      for (const g of client.guilds.cache.values()) {
+        const r = g.roles.cache.get(target);
+        if (r) return `\`@${r.name}\``;
+      }
+    }
+    return `\`@${target}\``;
+  }
+
+  return `\`@${target.name}\``;
+}
+
+export function mentionRole(target: Role | string, guild?: Guild | null): string {
+  return formatRole(target, guild);
 }
 
 export function mentionChannel(id: string): string {

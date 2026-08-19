@@ -51,7 +51,7 @@ export default defineCommand({
       }
 
       const lines = permits.map((p) => {
-        const targetStr = p.targetType === 'user' ? mentionUser(p.targetId, guild) : mentionRole(p.targetId);
+        const targetStr = p.targetType === 'user' ? mentionUser(p.targetId, guild) : mentionRole(p.targetId, guild);
         const scopeStr = p.commandName
           ? `Command: **\`${p.commandName}\`**`
           : p.moduleName
@@ -106,7 +106,7 @@ export default defineCommand({
       if (roleResult.success) {
         targetType = 'role';
         targetId = roleResult.value.id;
-        targetDisplay = mentionRole(targetId);
+        targetDisplay = mentionRole(roleResult.value.role, guild);
       } else {
         await respond.error(`Could not resolve user or role \`${targetArg}\`.`);
         return;

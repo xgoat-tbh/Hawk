@@ -42,14 +42,14 @@ export default defineCommand({
     const totalMembers = membersWithRole.length;
 
     if (totalMembers === 0) {
-      await respond.info(`No members currently possess the role ${mentionRole(targetRole.id)}.`);
+      await respond.info(`No members currently possess the role ${mentionRole(targetRole, guild)}.`);
       return;
     }
 
     // Send initial live progress message
     const initialPayload = ui.standard({
       title: `Purging Role: ${targetRole.name}`,
-      text: `Target: ${mentionRole(targetRole.id)} (${totalMembers} members)\n**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nRemoved: **0** | Skipped: **0**`,
+      text: `Target: ${mentionRole(targetRole, guild)} (${totalMembers} members)\n**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nRemoved: **0** | Skipped: **0**`,
     });
     const statusMsg = await (ctx.channel as GuildTextBasedChannel).send({
       components: initialPayload.components,
@@ -93,7 +93,7 @@ export default defineCommand({
     const finalPayload = ui.standard({
       title: 'Role Purge Completed',
       text:
-        `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole.id)})\n` +
+        `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole, guild)})\n` +
         `• **Removed From:** **${removedCount}** member(s)` +
         (skippedCount > 0 ? `\n• **Skipped:** **${skippedCount}** member(s)` : ''),
     });
@@ -102,7 +102,7 @@ export default defineCommand({
       await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
     } else {
       await respond.success(
-        `Purged role \`${targetRole.name}\` (${mentionRole(targetRole.id)}) from **${removedCount}** member(s).` +
+        `Purged role \`${targetRole.name}\` (${mentionRole(targetRole, guild)}) from **${removedCount}** member(s).` +
         (skippedCount > 0 ? ` Skipped: **${skippedCount}**` : ''),
       );
     }

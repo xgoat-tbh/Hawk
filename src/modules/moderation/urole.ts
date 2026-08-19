@@ -44,7 +44,7 @@ export default defineCommand({
     if (totalUsers > 3) {
       const initialPayload = ui.standard({
         title: `URole: ${targetRole.name}`,
-        text: `Target: ${mentionRole(targetRole.id)} (${totalUsers} users)\n**Progress:** ${renderProgressBar(0, totalUsers)} (0/${totalUsers})\nAdded: **0** | Removed: **0** | Skipped: **0**`,
+        text: `Target: ${mentionRole(targetRole, guild)} (${totalUsers} users)\n**Progress:** ${renderProgressBar(0, totalUsers)} (0/${totalUsers})\nAdded: **0** | Removed: **0** | Skipped: **0**`,
       });
       statusMsg = await (ctx.channel as GuildTextBasedChannel).send({
         components: initialPayload.components,
@@ -103,7 +103,7 @@ export default defineCommand({
     const finalPayload = ui.standard({
       title: 'URole Completed',
       text:
-        `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole.id)})\n` +
+        `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole, guild)})\n` +
         `• **Added:** **${addedCount}** | **Removed:** **${removedCount}**` +
         (skippedCount > 0 ? ` | **Skipped:** **${skippedCount}**` : ''),
     });
@@ -112,7 +112,7 @@ export default defineCommand({
       await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
     } else {
       await respond.success(
-        `Role update for ${mentionRole(targetRole.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`,
+        `Role update for ${mentionRole(targetRole, guild)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`,
       );
     }
 

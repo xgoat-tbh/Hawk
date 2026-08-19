@@ -39,7 +39,7 @@ export default defineCommand({
 
     const targetRole = roleRes.value.role;
     if (!isRoleManageable(guild, targetRole, member)) {
-      await respond.error(`Cannot modify ${mentionRole(targetRole.id)} due to role hierarchy or permissions.`);
+      await respond.error(`Cannot modify ${mentionRole(targetRole, guild)} due to role hierarchy or permissions.`);
       return;
     }
 
@@ -47,7 +47,7 @@ export default defineCommand({
     if (parsed.args.length < 2 || ['none', 'clear', 'remove', 'delete', 'off'].includes(parsed.args[1].toLowerCase())) {
       try {
         await targetRole.setIcon(null, `Role icon removed by ${member.user.tag}`);
-        await respond.success(`Removed role icon from ${mentionRole(targetRole.id)}.`);
+        await respond.success(`Removed role icon from ${mentionRole(targetRole, guild)}.`);
         logEvent('info', 'command_execution', `Role icon removed by ${member.user.tag}`, {
           executor: member.user.tag,
           role: targetRole.name,
@@ -109,7 +109,7 @@ export default defineCommand({
 
     try {
       await targetRole.setIcon(targetIcon, `Role icon updated by ${member.user.tag}`);
-      await respond.success(`Successfully set role icon for ${mentionRole(targetRole.id)}!`);
+      await respond.success(`Successfully set role icon for ${mentionRole(targetRole, guild)}!`);
 
       logEvent('info', 'command_execution', `Role icon updated by ${member.user.tag}`, {
         executor: member.user.tag,

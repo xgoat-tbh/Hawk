@@ -66,7 +66,7 @@ export default defineCommand({
       const totalCount = roleMembers.length;
 
       if (totalCount === 0) {
-        await respond.info(`No members currently possess the role \`${targetRole.name}\` (${mentionRole(targetRole.id)}).`);
+        await respond.info(`No members currently possess the role \`${targetRole.name}\` (${mentionRole(targetRole, guild)}).`);
         return;
       }
 
@@ -76,7 +76,7 @@ export default defineCommand({
         title: `Members with Role: ${targetRole.name}`,
         items: memberLines,
         pageSize: 10,
-        emptyText: `No members currently possess the role \`${targetRole.name}\` (${mentionRole(targetRole.id)}).`,
+        emptyText: `No members currently possess the role \`${targetRole.name}\` (${mentionRole(targetRole, guild)}).`,
       });
     } else if (mode === 'admin') {
       const adminMembers = Array.from(
