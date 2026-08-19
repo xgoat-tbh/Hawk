@@ -1,6 +1,7 @@
 import type { Message, VoiceState, GuildMember } from 'discord.js';
 import { ui } from '../../core/ui/index.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { formatUser } from '../../core/utils/formatters.js';
 
 export type FmvStatus = 'COUNTDOWN' | 'WAITING_FOR_VC' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED' | 'FAILED';
 
@@ -108,9 +109,10 @@ export async function createFmvRequest(options: {
     state.status = 'COUNTDOWN';
     const countdownTimestamp = Math.floor((now + 5000) / 1000);
 
+    const userDisplay = formatUser(state.targetId);
     const payload = ui.standard({
       title: 'Force Move Scheduled',
-      text: `<@${state.targetId}>\nYou will be moved to <#${destinationChannelId}> in <t:${countdownTimestamp}:R>.`,
+      text: `${userDisplay}\nYou will be moved to <#${destinationChannelId}> in <t:${countdownTimestamp}:R>.`,
     });
     await requestMessage.edit({ components: payload.components, flags: payload.flags as any }).catch(() => {});
 
@@ -135,7 +137,7 @@ export async function createFmvRequest(options: {
           await refreshedMember.voice.setChannel(destinationChannelId);
           const donePayload = ui.standard({
             title: 'Force Move Completed',
-            text: `<@${state.targetId}> was moved to <#${destinationChannelId}>.`,
+            text: `${userDisplay} was moved to <#${destinationChannelId}>.`,
           });
           await state.requestMessage.edit({ components: donePayload.components, flags: donePayload.flags as any });
           scheduleMessageDeletion(state.requestMessage, 5000);
@@ -143,7 +145,7 @@ export async function createFmvRequest(options: {
           state.status = 'FAILED';
           const failPayload = ui.standard({
             title: 'Force Move Failed',
-            text: `Failed to move <@${state.targetId}> to <#${destinationChannelId}>.`,
+            text: `Failed to move ${userDisplay} to <#${destinationChannelId}>.`,
           });
           await state.requestMessage.edit({ components: failPayload.components, flags: failPayload.flags as any }).catch(() => {});
           scheduleMessageDeletion(state.requestMessage, 5000);
@@ -160,17 +162,18 @@ export async function createFmvRequest(options: {
         state.status = 'WAITING_FOR_VC';
         const waitPayload = ui.standard({
           title: 'Force Move Waiting',
-          text: `<@${state.targetId}>\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
+          text: `${userDisplay}\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
         });
         await state.requestMessage.edit({ components: waitPayload.components, flags: waitPayload.flags as any }).catch(() => {});
       }
     }, 5000);
   } else {
     // CASE B — Target is NOT in a VC
+    const userDisplay = formatUser(state.targetId);
     state.status = 'WAITING_FOR_VC';
     const waitPayload = ui.standard({
       title: 'Force Move Waiting',
-      text: `<@${state.targetId}>\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
+      text: `${userDisplay}\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
     });
     await requestMessage.edit({ components: waitPayload.components, flags: waitPayload.flags as any }).catch(() => {});
 
@@ -292,9 +295,10 @@ export async function handleFmvVoiceStateUpdate(oldState: VoiceState, newState: 
 
     await newState.member.voice.setChannel(req.destinationChannelId);
 
+    const userDisplay = formatUser(req.targetId);
     const donePayload = ui.standard({
       title: 'Force Move Completed',
-      text: `<@${req.targetId}> was moved to <#${req.destinationChannelId}>.`,
+      text: `${userDisplay} was moved to <#${req.destinationChannelId}>.`,
     });
     await req.requestMessage.edit({ components: donePayload.components, flags: donePayload.flags as any }).catch(() => {});
     scheduleMessageDeletion(req.requestMessage, 5000);
@@ -308,9 +312,10 @@ export async function handleFmvVoiceStateUpdate(oldState: VoiceState, newState: 
   } catch (error) {
     req.status = 'FAILED';
     const msg = error instanceof Error ? error.message : String(error);
+    const userDisplay = formatUser(req.targetId);
     const failPayload = ui.standard({
       title: 'Force Move Failed',
-      text: `Could not move <@${req.targetId}> to destination.`,
+      text: `Could not move ${userDisplay} to destination.`,
     });
     await req.requestMessage.edit({ components: failPayload.components, flags: failPayload.flags as any }).catch(() => {});
     scheduleMessageDeletion(req.requestMessage, 5000);

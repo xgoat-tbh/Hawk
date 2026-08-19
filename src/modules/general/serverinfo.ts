@@ -1,7 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
-import { mentionUser } from '../../core/utils/formatters.js';
 import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
@@ -39,6 +38,9 @@ export default defineCommand({
     const bannerUrl = guild.bannerURL({ size: 4096, extension: 'png' });
     const splashUrl = guild.splashURL({ size: 4096, extension: 'png' });
 
+    const ownerMember = guild.members.cache.get(guild.ownerId);
+    const ownerDisplayName = ownerMember ? ownerMember.displayName : guild.ownerId;
+
     const embed = new EmbedBuilder()
       .setColor(HawkTheme.colors.primary)
       .setAuthor({
@@ -49,7 +51,7 @@ export default defineCommand({
         {
           name: 'General Information',
           value:
-            `**Owner:** ${mentionUser(guild.ownerId)} (\`${guild.ownerId}\`)\n` +
+            `**Owner:** **${ownerDisplayName}** (\`${guild.ownerId}\`)\n` +
             `**Server ID:** \`${guild.id}\`\n` +
             `**Created:** <t:${createdUnix}:F> (<t:${createdUnix}:R>)\n` +
             `**Verification Level:** \`${guild.verificationLevel}\``,

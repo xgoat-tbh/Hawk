@@ -25,8 +25,13 @@ export function sanitize(text: string, guild?: Guild | null): string {
 
   result = result.replace(/<@!?(\d{17,20})>/g, (_match, userId) => {
     const member = guild?.members.cache.get(userId);
-    const name = member ? (member.displayName || member.user.username) : userId;
-    return `**${name}**`;
+    if (member) return `**${member.displayName}**`;
+
+    const client = guild?.client ?? (globalThis as any).hawkClient;
+    const user = client?.users?.cache.get(userId);
+    if (user) return `**${user.displayName || user.globalName || user.username}**`;
+
+    return `**${userId}**`;
   });
 
   return result;

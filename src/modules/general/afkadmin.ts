@@ -64,7 +64,7 @@ export default defineCommand({
 
     const lines = entries.map((e) => {
       const relTime = timestamp(e.startedAt, 'R');
-      return `• ${mentionUser(e.userId)} — **${e.reason}** (${relTime})`;
+      return `• ${mentionUser(e.userId, guild)} — **${e.reason}** (${relTime})`;
     });
 
     const payload = ui.standard({

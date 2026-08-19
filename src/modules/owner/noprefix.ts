@@ -34,7 +34,7 @@ export default defineCommand({
         return;
       }
 
-      const userList = userIds.map((id, index) => `${index + 1}. ${mentionUser(id)} (\`${id}\`)`).join('\n');
+      const userList = userIds.map((id, index) => `${index + 1}. ${mentionUser(id, guild)} (\`${id}\`)`).join('\n');
       await respond.send(`**⚡ No-Prefix Mode Users (${userIds.length})**\n\n${userList}`);
       return;
     }
@@ -65,9 +65,9 @@ export default defineCommand({
     }
 
     if (enabled) {
-      await respond.success(`No-prefix mode is now **enabled** for ${mentionUser(targetUser.id)} in this server.`);
+      await respond.success(`No-prefix mode is now **enabled** for ${mentionUser(targetUser, guild)} in this server.`);
     } else {
-      await respond.info(`No-prefix mode is now **disabled** for ${mentionUser(targetUser.id)} in this server.`);
+      await respond.info(`No-prefix mode is now **disabled** for ${mentionUser(targetUser, guild)} in this server.`);
     }
   },
 });

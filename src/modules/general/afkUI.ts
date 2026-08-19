@@ -1,6 +1,7 @@
 import { getEmoji } from '../../core/config/branding.js';
 import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { sanitizeAfkReason, formatDuration } from './afkSanitizer.js';
+import { formatUser } from '../../core/utils/formatters.js';
 
 export const AFK_ALLOWED_MENTIONS = {
   parse: [],
@@ -12,9 +13,10 @@ export const AFK_ALLOWED_MENTIONS = {
 export function buildAfkSetPayload(userId: string, reason?: string): ComponentV2Payload {
   const successEmoji = getEmoji('AFK_SUCCESS');
   const cleanReason = reason ? sanitizeAfkReason(reason) : '';
+  const userDisplay = formatUser(userId);
   const text = cleanReason && cleanReason !== 'AFK'
-    ? `${successEmoji} <@${userId}> · You're now AFK with status: **${cleanReason}**`
-    : `${successEmoji} <@${userId}> · You're now AFK`;
+    ? `${successEmoji} ${userDisplay} · You're now AFK with status: **${cleanReason}**`
+    : `${successEmoji} ${userDisplay} · You're now AFK`;
 
   return ui.standard({
     text,
@@ -31,8 +33,9 @@ export function buildAfkNoticePayload(
     const unixSeconds = Math.floor(user.startedAt.getTime() / 1000);
     const cleanReason = sanitizeAfkReason(user.reason);
     const prefix = index === 0 && noticeEmoji ? `${noticeEmoji} ` : '';
+    const userDisplay = formatUser(user.userId);
 
-    lines.push(`${prefix}<@${user.userId}> went AFK <t:${unixSeconds}:R>\nWith Reason: ${cleanReason}`);
+    lines.push(`${prefix}${userDisplay} went AFK <t:${unixSeconds}:R>\nWith Reason: ${cleanReason}`);
   });
 
   return ui.standard({
@@ -44,8 +47,9 @@ export function buildAfkWelcomeBackPayload(userId: string, elapsedMs: number): C
   const welcomeEmoji = getEmoji('AFK_WELCOME_BACK');
   const durationStr = formatDuration(elapsedMs);
   const prefix = welcomeEmoji ? `${welcomeEmoji} ` : '';
+  const userDisplay = formatUser(userId);
 
   return ui.standard({
-    text: `${prefix}Welcome back, <@${userId}>! You were gone for **${durationStr}**.`,
+    text: `${prefix}Welcome back, ${userDisplay}! You were gone for **${durationStr}**.`,
   });
 }

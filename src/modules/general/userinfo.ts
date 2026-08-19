@@ -3,7 +3,7 @@ import type { User, GuildMember } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
-import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
+import { mentionRole } from '../../core/utils/formatters.js';
 import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
@@ -40,6 +40,8 @@ export default defineCommand({
     const createdUnix = Math.floor(targetUser.createdTimestamp / 1000);
     const joinedUnix = targetMember?.joinedTimestamp ? Math.floor(targetMember.joinedTimestamp / 1000) : null;
 
+    const userDisplayName = targetMember?.displayName || targetUser.displayName || targetUser.username;
+
     const embed = new EmbedBuilder()
       .setColor(HawkTheme.colors.primary)
       .setAuthor({
@@ -50,7 +52,7 @@ export default defineCommand({
       .addFields({
         name: 'Identity',
         value:
-          `**User:** ${mentionUser(targetUser.id)} (\`${targetUser.tag}\`)\n` +
+          `**User:** **${userDisplayName}** (\`${targetUser.tag}\`)\n` +
           `**User ID:** \`${targetUser.id}\`\n` +
           `**Bot:** ${targetUser.bot ? 'Yes' : 'No'}\n` +
           `**Account Created:** <t:${createdUnix}:F> (<t:${createdUnix}:R>)` +

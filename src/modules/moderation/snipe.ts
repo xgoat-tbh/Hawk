@@ -2,7 +2,6 @@ import { PermissionsBitField, EmbedBuilder } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getSnipe } from './SnipeManager.js';
-import { mentionUser } from '../../core/utils/formatters.js';
 import { HawkTheme } from '../../core/ui/theme.js';
 
 export default defineCommand({
@@ -34,7 +33,7 @@ export default defineCommand({
         iconURL: snipe.authorAvatar,
       })
       .setDescription(
-        `**Author:** ${mentionUser(snipe.authorId)}\n` +
+        `**Author:** **${snipe.authorTag}** (\`${snipe.authorId}\`)\n` +
         `**Deleted:** <t:${unixTimestamp}:R> (<t:${unixTimestamp}:T>)\n\n` +
         (snipe.content ? snipe.content : '*[No text content]*')
       );

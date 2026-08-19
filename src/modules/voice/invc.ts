@@ -1,7 +1,6 @@
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
-import { mentionUser } from '../../core/utils/formatters.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
 
 export default defineCommand({
@@ -60,7 +59,7 @@ export default defineCommand({
       if (m.user.bot) tags.push('`BOT`');
 
       const tagSuffix = tags.length > 0 ? ` ${tags.join(' ')}` : '';
-      lines.push(`${idx}. ${mentionUser(m.id)}${tagSuffix}`);
+      lines.push(`${idx}. **${m.displayName}**${tagSuffix}`);
       idx++;
     }
 

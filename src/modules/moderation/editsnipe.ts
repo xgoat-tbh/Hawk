@@ -2,7 +2,6 @@ import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getEditSnipe } from './SnipeManager.js';
-import { mentionUser } from '../../core/utils/formatters.js';
 import { ui } from '../../core/ui/index.js';
 
 export default defineCommand({
@@ -28,7 +27,7 @@ export default defineCommand({
     const unixTimestamp = Math.floor(editSnipe.editedAt.getTime() / 1000);
     const sections: string[] = [];
 
-    sections.push(`**Author:** ${mentionUser(editSnipe.authorId)} (\`${editSnipe.authorTag}\`)\n**Edited:** <t:${unixTimestamp}:R> (<t:${unixTimestamp}:T>)`);
+    sections.push(`**Author:** **${editSnipe.authorTag}** (\`${editSnipe.authorId}\`)\n**Edited:** <t:${unixTimestamp}:R> (<t:${unixTimestamp}:T>)`);
     sections.push(`**Before:**\n${editSnipe.oldContent}`);
     sections.push(`**After:**\n${editSnipe.newContent}`);
 

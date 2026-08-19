@@ -4,12 +4,14 @@ import type { SuggestionRecord } from '../../types/suggestion.js';
 import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { getSuggestionByNumber, getSuggestionByMessageId } from '../../core/database/repositories/suggestionRepo.js';
 
+import { formatUser } from '../../core/utils/formatters.js';
+
 export function buildSuggestionPayload(
   suggestion: SuggestionRecord,
   authorTag?: string,
   reason?: string,
 ): ComponentV2Payload {
-  const authorDisplay = authorTag ?? `<@${suggestion.authorId}>`;
+  const authorDisplay = authorTag ? `**${authorTag}**` : formatUser(suggestion.authorId);
 
   let statusHeader = `Suggestion #${suggestion.number}`;
   if (suggestion.status === 'accepted') {

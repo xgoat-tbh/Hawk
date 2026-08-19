@@ -27,7 +27,7 @@ export function standard(options: StandardLayoutOptions): ComponentV2Payload {
   const container = createContainer({ accentColor: options.accentColor });
 
   if (options.title) {
-    container.addTextDisplayComponents(createTextDisplay(`### ${options.title}`));
+    container.addTextDisplayComponents(createTextDisplay(`### ${sanitize(options.title)}`));
   }
 
   if (options.text) {
@@ -36,7 +36,7 @@ export function standard(options: StandardLayoutOptions): ComponentV2Payload {
         container.addSeparatorComponents(createSeparator(true));
       }
     }
-    container.addTextDisplayComponents(createTextDisplay(options.text));
+    container.addTextDisplayComponents(createTextDisplay(sanitize(options.text)));
   }
 
   if (options.sections && options.sections.length > 0) {
@@ -46,7 +46,7 @@ export function standard(options: StandardLayoutOptions): ComponentV2Payload {
           container.addSeparatorComponents(createSeparator(true));
         }
       }
-      container.addTextDisplayComponents(createTextDisplay(options.sections[i]));
+      container.addTextDisplayComponents(createTextDisplay(sanitize(options.sections[i])));
     }
   }
 

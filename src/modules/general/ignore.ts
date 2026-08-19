@@ -68,7 +68,7 @@ export default defineCommand({
             ? mentionRole(e.entityId)
             : e.entityType === 'channel'
             ? mentionChannel(e.entityId)
-            : mentionUser(e.entityId);
+            : mentionUser(e.entityId, guild);
 
         const scopeStr = e.scopeType && e.scopeId ? `${e.scopeType}: **\`${e.scopeId}\`**` : 'Global (All)';
         const modeStr = (e.mode || 'bl').toUpperCase();
@@ -201,7 +201,7 @@ async function resolveTarget(
 
   const userRes = await resolveUser(input, guild);
   if (userRes.success) {
-    return { type: 'user', id: userRes.value.user.id, mention: mentionUser(userRes.value.user.id) };
+    return { type: 'user', id: userRes.value.user.id, mention: mentionUser(userRes.value.member ?? userRes.value.user, guild) };
   }
 
   return null;

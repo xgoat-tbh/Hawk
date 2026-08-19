@@ -2,7 +2,7 @@ import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
-import { mentionRole, mentionUser } from '../../core/utils/formatters.js';
+import { mentionRole } from '../../core/utils/formatters.js';
 import { ui } from '../../core/ui/index.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
@@ -70,7 +70,7 @@ export default defineCommand({
         return;
       }
 
-      const memberLines = roleMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
+      const memberLines = roleMembers.map(m => `• **${m.displayName}** (\`${m.user.tag}\`)`);
 
       await ui.paginated(ctx, {
         title: `Members with Role: ${targetRole.name}`,
@@ -92,7 +92,7 @@ export default defineCommand({
         return;
       }
 
-      const adminLines = adminMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)${m.id === guild.ownerId ? ' *(Server Owner)*' : ''}`);
+      const adminLines = adminMembers.map(m => `• **${m.displayName}** (\`${m.user.tag}\`)${m.id === guild.ownerId ? ' *(Server Owner)*' : ''}`);
 
       await ui.paginated(ctx, {
         title: 'Server Administrators',
@@ -109,7 +109,7 @@ export default defineCommand({
         return;
       }
 
-      const botLines = botMembers.map(m => `• ${mentionUser(m.id)} (\`${m.user.tag}\`)`);
+      const botLines = botMembers.map(m => `• **${m.displayName}** (\`${m.user.tag}\`)`);
 
       await ui.paginated(ctx, {
         title: 'Server Bot Accounts',

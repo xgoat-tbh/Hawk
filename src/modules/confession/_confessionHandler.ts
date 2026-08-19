@@ -150,7 +150,7 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
         const logPayload = ui.standard({
           title: `Confession Log #${record.id}`,
           sections: [
-            `• **Author:** <@${user.id}> (\`${user.tag}\`) [ID: \`${user.id}\`]\n• **Message Link:** ${postedMsg.url}`,
+            `• **Author:** **${user.displayName || user.username}** (\`${user.tag}\`) [ID: \`${user.id}\`]\n• **Message Link:** ${postedMsg.url}`,
             `**Content:**\n${content}`,
           ],
         });
