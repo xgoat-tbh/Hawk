@@ -11,7 +11,8 @@ export default defineCommand({
   description: 'Nuke current channel by cloning it (retaining permissions and position) and deleting the original.',
   usage: 'nuke',
   examples: ['nuke'],
-  permissions: [PermissionsBitField.Flags.Administrator],
+  ownerOnly: true,
+  permissions: [],
   botPermissions: [PermissionsBitField.Flags.ManageChannels],
   cooldown: 10,
 

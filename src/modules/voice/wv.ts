@@ -39,7 +39,7 @@ export default defineCommand({
 
     const voiceState = targetMember.voice;
     if (!voiceState.channel) {
-      await respond.send(`* **${targetMember.user.username}** is not in a voice channel.`);
+      await respond.send(`* **${targetMember.displayName || targetMember.user.username}** is not in a voice channel.`);
       return;
     }
 
@@ -55,6 +55,16 @@ export default defineCommand({
     const targetName = targetMember.displayName || targetMember.user.username;
     const vcInfo = `\`[ ${count}/${limit} ]\``;
 
-    await respond.send(`**${targetName}** is in **${mentionChannel(chan.id)}** ${vcInfo}`);
+    const tags: string[] = [];
+    if (voiceState.streaming) tags.push('`LIVE`');
+    if (voiceState.selfVideo) tags.push('`CAM`');
+    if (voiceState.serverDeaf) tags.push('`SERVER-DEAF`');
+    else if (voiceState.selfDeaf) tags.push('`DEAF`');
+    if (voiceState.serverMute) tags.push('`SERVER-MUTE`');
+    else if (voiceState.selfMute) tags.push('`MUTED`');
+
+    const tagSuffix = tags.length > 0 ? ` ${tags.join(' ')}` : '';
+
+    await respond.send(`**${targetName}** is in **${mentionChannel(chan.id)}** ${vcInfo}${tagSuffix}`);
   },
 });

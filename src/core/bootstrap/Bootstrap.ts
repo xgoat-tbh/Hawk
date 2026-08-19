@@ -17,10 +17,11 @@ import { isNoPrefixEnabled, loadNoPrefixCache } from '../config/NoPrefixConfig.j
 import { loadAfkCache } from '../database/repositories/afkRepo.js';
 import { startInteractionCleanup, stopInteractionCleanup } from '../interactions/InteractionState.js';
 import { startCooldownCleanup, stopCooldownCleanup } from '../cooldowns/CooldownManager.js';
-import { recordDeletedMessage } from '../../modules/moderation/SnipeManager.js';
+import { recordDeletedMessage, recordEditedMessage } from '../../modules/moderation/SnipeManager.js';
 import { loadModuleManifests } from '../modules/ModuleLoader.js';
 import { interactionRouter } from '../interactions/InteractionRouter.js';
 import { startHealthServer, stopHealthServer } from '../server/HealthServer.js';
+import { presenceManager } from '../presence/PresenceManager.js';
 import type { ModuleManifest } from '../../types/module.js';
 
 export class Bootstrap {
@@ -73,7 +74,7 @@ export class Bootstrap {
       consoleLog('info', 'startup', `Logged in as ${client.user?.tag} \u2014 ${getCommandCount()} commands loaded \u2014 ${elapsed}ms startup`);
 
       (globalThis as any).hawkClient = client;
-      updateBotActivity(client);
+      presenceManager.init(client);
       startInteractionCleanup();
       startCooldownCleanup();
       await loadNoPrefixCache();
@@ -143,6 +144,14 @@ export class Bootstrap {
         await Promise.allSettled(deleteHooks);
       } catch (error) {
         consoleLog('error', 'unhandled_exception', `Unhandled error in messageDelete: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+
+    client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+      try {
+        recordEditedMessage(oldMessage as any, newMessage as any);
+      } catch (error) {
+        consoleLog('error', 'unhandled_exception', `Unhandled error in messageUpdate: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
 
@@ -265,6 +274,7 @@ export class Bootstrap {
       stopInteractionCleanup();
       stopCooldownCleanup();
       stopHealthServer();
+      presenceManager.stopTicker();
       await stopWebhookLogger();
 
       if (this.client) {

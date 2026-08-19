@@ -8,6 +8,7 @@ import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
 import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
+import { presenceManager } from '../../core/presence/PresenceManager.js';
 
 export default defineCommand({
   name: 'shiftvc',
@@ -127,27 +128,34 @@ export default defineCommand({
       }
     }
 
+    const taskId = `shiftvc_${guild.id}_${Date.now()}`;
+    presenceManager.setBusy(taskId, `Shifting ${totalMembers} members`);
+
     let moved = 0;
     const failures: string[] = [];
 
     let processed = 0;
-    for (const m of membersList) {
-      try {
-        await m.voice.setChannel(destVc);
-        moved++;
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        consoleLog('error', 'command_failure', `shiftvc: failed to move ${m.id}`, { error: msg });
-        failures.push(mentionUser(m.id));
+    try {
+      for (const m of membersList) {
+        try {
+          await m.voice.setChannel(destVc);
+          moved++;
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          consoleLog('error', 'command_failure', `shiftvc: failed to move ${m.id}`, { error: msg });
+          failures.push(mentionUser(m.id));
+        }
+        processed++;
+        if (tracker) {
+          await tracker.update(processed, `Moved: **${moved}** | Failed: **${failures.length}**`);
+        }
       }
-      processed++;
-      if (tracker) {
-        await tracker.update(processed, `Moved: **${moved}** | Failed: **${failures.length}**`);
-      }
-    }
 
-    if (tracker) {
-      await tracker.update(totalMembers, `Moved: **${moved}** | Failed: **${failures.length}**`, true);
+      if (tracker) {
+        await tracker.update(totalMembers, `Moved: **${moved}** | Failed: **${failures.length}**`, true);
+      }
+    } finally {
+      presenceManager.clearBusy(taskId);
     }
 
     const parts: string[] = [];

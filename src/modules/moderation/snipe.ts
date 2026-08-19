@@ -1,7 +1,9 @@
-import { PermissionsBitField, EmbedBuilder } from 'discord.js';
+import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getSnipe } from './SnipeManager.js';
+import { mentionUser } from '../../core/utils/formatters.js';
+import { ui } from '../../core/ui/index.js';
 
 export default defineCommand({
   name: 'snipe',
@@ -23,19 +25,27 @@ export default defineCommand({
       return;
     }
 
-    const embed = new EmbedBuilder()
-      .setAuthor({ name: snipe.authorTag, iconURL: snipe.authorAvatar })
-      .setDescription(snipe.content || '[No Text Content]')
-      .setTimestamp(snipe.deletedAt);
+    const unixTimestamp = Math.floor(snipe.deletedAt.getTime() / 1000);
+    const sections: string[] = [];
+
+    sections.push(`**Author:** ${mentionUser(snipe.authorId)} (\`${snipe.authorTag}\`)\n**Deleted:** <t:${unixTimestamp}:R> (<t:${unixTimestamp}:T>)`);
+    sections.push(snipe.content || '*[No text content]*');
 
     if (snipe.attachments.length > 0) {
-      embed.addFields({ name: 'Attachments', value: snipe.attachments.join('\n') });
-      const firstImg = snipe.attachments.find(url => /\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url));
-      if (firstImg) {
-        embed.setImage(firstImg);
-      }
+      sections.push(
+        `**Attachments (${snipe.attachments.length}):**\n` +
+        snipe.attachments.map((url, i) => `[Attachment ${i + 1}](${url})`).join(' • ')
+      );
     }
 
-    await respond.raw({ embeds: [embed] });
+    const payload = ui.standard({
+      title: 'Deleted Message Snipe',
+      sections,
+    });
+
+    await respond.raw({
+      components: payload.components,
+      flags: payload.flags as any,
+    });
   },
 });

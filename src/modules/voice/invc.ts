@@ -7,7 +7,7 @@ import { checkVoiceAccess } from './vconfigEvaluator.js';
 export default defineCommand({
   name: 'invc',
   module: 'voice',
-  description: 'List all members in a voice channel.',
+  description: 'List all members in a voice channel with their voice states.',
   usage: 'invc [voice-channel]',
   examples: ['invc', 'invc General', 'invc 123456789012345678'],
   permitOnly: true,
@@ -19,7 +19,6 @@ export default defineCommand({
     let voiceChannel;
 
     if (parsed.args.length === 0) {
-      // Use author's current voice channel
       const authorVc = member.voice.channel;
       if (!authorVc) {
         await respond.error('You are not in a voice channel. Specify a channel or join one first.');
@@ -27,7 +26,6 @@ export default defineCommand({
       }
       voiceChannel = authorVc;
     } else {
-      // Resolve the specified voice channel
       const result = resolveVoiceChannel(parsed.args.join(' '), guild);
       if (!result.success) {
         await respond.error(result.error);
@@ -48,9 +46,27 @@ export default defineCommand({
       return;
     }
 
-    const list = members.map((m, _key, _coll) => m);
-    const lines = Array.from(list.values()).map((m, i) => `${i + 1}. ${mentionUser(m.id)}`);
+    const lines: string[] = [];
+    let idx = 1;
+    for (const m of members.values()) {
+      const tags: string[] = [];
+      const vs = m.voice;
+      if (vs.streaming) tags.push('`LIVE`');
+      if (vs.selfVideo) tags.push('`CAM`');
+      if (vs.serverDeaf) tags.push('`SERVER-DEAF`');
+      else if (vs.selfDeaf) tags.push('`DEAF`');
+      if (vs.serverMute) tags.push('`SERVER-MUTE`');
+      else if (vs.selfMute) tags.push('`MUTED`');
+      if (m.user.bot) tags.push('`BOT`');
 
-    await respond.send(`**${voiceChannel.name}** (${members.size} member${members.size === 1 ? '' : 's'})\n${lines.join('\n')}`);
+      const tagSuffix = tags.length > 0 ? ` ${tags.join(' ')}` : '';
+      lines.push(`${idx}. ${mentionUser(m.id)}${tagSuffix}`);
+      idx++;
+    }
+
+    const limit = 'userLimit' in voiceChannel && voiceChannel.userLimit && voiceChannel.userLimit > 0 ? `${voiceChannel.userLimit}` : '∞';
+    const bitrate = 'bitrate' in voiceChannel && voiceChannel.bitrate ? ` • ${Math.round(voiceChannel.bitrate / 1000)}kbps` : '';
+
+    await respond.send(`**${voiceChannel.name}** \`[ ${members.size}/${limit} ]\`${bitrate}\n${lines.join('\n')}`);
   },
 });

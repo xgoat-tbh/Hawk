@@ -15,6 +15,7 @@ import { getPrefix } from '../database/repositories/guildConfigRepo.js';
 import { getGameTestChannel } from '../database/repositories/gameRepo.js';
 import { AuthorityLevel } from '../../types/permission.js';
 import { isNoPrefixEnabled } from '../config/NoPrefixConfig.js';
+import { presenceManager } from '../presence/PresenceManager.js';
 
 function tryNoPrefixParse(content: string): ParsedCommand | null {
   const trimmed = content.trim();
@@ -151,6 +152,7 @@ export async function handleMessage(message: Message): Promise<void> {
   };
 
   try {
+    presenceManager.recordActivity();
     await command.execute(ctx);
     setCooldown(message.author.id, command.name, command.cooldown);
     logCommand({ guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name, userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed, rawContent: message.content, rawArgs: parsed.rawArgs, success: true });

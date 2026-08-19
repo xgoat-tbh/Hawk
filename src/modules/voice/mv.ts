@@ -60,12 +60,12 @@ export default defineCommand({
 
     for (const targetMember of targetMembers) {
       if (!targetMember.voice.channel) {
-        failures.push(`${mentionUser(targetMember.id)}: not in a voice channel`);
+        failures.push(targetMembers.length === 1 ? `${mentionUser(targetMember.id)} is not in a voice channel.` : `${mentionUser(targetMember.id)} (not in VC)`);
         continue;
       }
 
       if (targetMember.voice.channelId === authorVc.id) {
-        failures.push(`${mentionUser(targetMember.id)}: already in your channel`);
+        failures.push(targetMembers.length === 1 ? `${mentionUser(targetMember.id)} is already in your channel.` : `${mentionUser(targetMember.id)} (already in your channel)`);
         continue;
       }
 
@@ -75,24 +75,18 @@ export default defineCommand({
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         consoleLog('error', 'command_failure', `mv: failed to move ${targetMember.id}`, { error: msg });
-        failures.push(`${mentionUser(targetMember.id)}: could not move`);
+        failures.push(targetMembers.length === 1 ? `Could not move ${mentionUser(targetMember.id)}.` : `${mentionUser(targetMember.id)} (failed)`);
       }
     }
 
-    const parts: string[] = [];
-    if (successes.length > 0) {
-      parts.push(`Moved ${successes.join(', ')} to **${authorVc.name}**`);
-    }
-    if (failures.length > 0) {
-      parts.push(`Failed:\n${failures.join('\n')}`);
-    }
-
     if (successes.length > 0 && failures.length === 0) {
-      await respond.success(parts.join('\n'));
+      await respond.success(`Moved ${successes.join(', ')} to **${authorVc.name}**.`);
     } else if (successes.length > 0 && failures.length > 0) {
-      await respond.warning(parts.join('\n\n'));
+      await respond.send(`> Moved ${successes.join(', ')} to **${authorVc.name}**.\n> **Notice:** Could not move: ${failures.join(', ')}`);
+    } else if (failures.length === 1 && !failures[0].includes('(')) {
+      await respond.error(failures[0]);
     } else {
-      await respond.error(parts.join('\n'));
+      await respond.error(`Could not move: ${failures.join(', ')}`);
     }
   },
 });

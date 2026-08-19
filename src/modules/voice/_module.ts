@@ -6,7 +6,7 @@ import { handleFmvVoiceStateUpdate } from './FmvManager.js';
 
 export default {
   name: 'voice',
-  description: 'Voice channel movement, FMV, dragme, and vconfig controls',
+  description: 'Voice channel movement, mass moderation, FMV, dragme, and vconfig controls',
   buttonPrefixes: ['dragme_', 'vconfig_'],
   channelSelectPrefixes: ['vconfig_'],
   onButton: async (interaction: ButtonInteraction) => {

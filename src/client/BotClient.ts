@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, Options, ActivityType } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, Options } from 'discord.js';
 import { constants } from '../core/config/constants.js';
 
 export function createClient(): Client {
@@ -46,13 +46,10 @@ export function createClient(): Client {
   });
 }
 
-export function updateBotActivity(client: Client, prefix = constants.defaultPrefix): void {
-  if (!client.user) return;
-  const totalMembers = client.guilds.cache.reduce((acc, g) => acc + (g.memberCount ?? 0), 0);
+import { presenceManager } from '../core/presence/PresenceManager.js';
 
-  client.user.setActivity(`${totalMembers.toLocaleString()} Members | ${prefix}help`, {
-    type: ActivityType.Watching,
-  });
+export function updateBotActivity(_client: Client, _prefix = constants.defaultPrefix): void {
+  presenceManager.update();
 }
 
 export function runMemoryCleanup(client: Client): void {

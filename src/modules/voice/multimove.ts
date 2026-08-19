@@ -67,21 +67,21 @@ export default defineCommand({
         chunk.map(async (arg) => {
           const result = await resolveUser(arg, guild);
           if (!result.success) {
-            failures.push(`\`${arg}\`: ${result.error}`);
+            failures.push(`\`${arg}\` (not found)`);
             return;
           }
           const target = result.value;
           const targetMember = target.member;
           if (!targetMember) {
-            failures.push(`${mentionUser(target.id)}: not in this server`);
+            failures.push(`${mentionUser(target.id)} (not in server)`);
             return;
           }
           if (!targetMember.voice.channel) {
-            failures.push(`${mentionUser(target.id)}: not in a voice channel`);
+            failures.push(`${mentionUser(target.id)} (not in VC)`);
             return;
           }
           if (targetMember.voice.channelId === destVc.id) {
-            failures.push(`${mentionUser(target.id)}: already in destination`);
+            failures.push(`${mentionUser(target.id)} (already in destination)`);
             return;
           }
           try {
@@ -90,26 +90,20 @@ export default defineCommand({
           } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             consoleLog('error', 'command_failure', `multimove: failed to move ${target.id}`, { error: msg });
-            failures.push(`${mentionUser(target.id)}: could not move`);
+            failures.push(`${mentionUser(target.id)} (failed)`);
           }
         })
       );
     }
 
-    const parts: string[] = [];
-    if (successes.length > 0) {
-      parts.push(`Moved ${successes.join(', ')} to **${destVc.name}**`);
-    }
-    if (failures.length > 0) {
-      parts.push(`Failed:\n${failures.join('\n')}`);
-    }
-
     if (successes.length > 0 && failures.length === 0) {
-      await respond.success(parts.join('\n'));
+      await respond.success(`Moved ${successes.join(', ')} to **${destVc.name}**.`);
     } else if (successes.length > 0 && failures.length > 0) {
-      await respond.warning(parts.join('\n\n'));
+      await respond.send(`> Moved ${successes.join(', ')} to **${destVc.name}**.\n> **Notice:** Could not move: ${failures.join(', ')}`);
+    } else if (failures.length === 1) {
+      await respond.error(`Could not move ${failures[0]}.`);
     } else {
-      await respond.error(parts.join('\n'));
+      await respond.error(`Could not move: ${failures.join(', ')}`);
     }
   },
 });

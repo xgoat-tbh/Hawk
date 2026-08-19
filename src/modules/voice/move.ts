@@ -106,11 +106,11 @@ export default defineCommand({
       await Promise.all(
         chunk.map(async (targetMember) => {
           if (!targetMember.voice.channel) {
-            failures.push(`${mentionUser(targetMember.id)}: not in a voice channel`);
+            failures.push(targetMembers.length === 1 ? `${mentionUser(targetMember.id)} is not in a voice channel.` : `${mentionUser(targetMember.id)} (not in VC)`);
             return;
           }
           if (targetMember.voice.channelId === destVc.id) {
-            failures.push(`${mentionUser(targetMember.id)}: already in **${destVc.name}**`);
+            failures.push(targetMembers.length === 1 ? `${mentionUser(targetMember.id)} is already in **${destVc.name}**.` : `${mentionUser(targetMember.id)} (already in VC)`);
             return;
           }
           try {
@@ -119,26 +119,20 @@ export default defineCommand({
           } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             consoleLog('error', 'command_failure', `move: failed to move ${targetMember.id}`, { error: msg });
-            failures.push(`${mentionUser(targetMember.id)}: could not move`);
+            failures.push(targetMembers.length === 1 ? `Could not move ${mentionUser(targetMember.id)}.` : `${mentionUser(targetMember.id)} (failed)`);
           }
         })
       );
     }
 
-    const parts: string[] = [];
-    if (successes.length > 0) {
-      parts.push(`Moved ${successes.join(', ')} to **${destVc.name}**`);
-    }
-    if (failures.length > 0) {
-      parts.push(`Failed:\n${failures.join('\n')}`);
-    }
-
     if (successes.length > 0 && failures.length === 0) {
-      await respond.success(parts.join('\n'));
+      await respond.success(`Moved ${successes.join(', ')} to **${destVc.name}**.`);
     } else if (successes.length > 0 && failures.length > 0) {
-      await respond.warning(parts.join('\n\n'));
+      await respond.send(`> Moved ${successes.join(', ')} to **${destVc.name}**.\n> **Notice:** Could not move: ${failures.join(', ')}`);
+    } else if (failures.length === 1 && !failures[0].includes('(')) {
+      await respond.error(failures[0]);
     } else {
-      await respond.error(parts.join('\n'));
+      await respond.error(`Could not move: ${failures.join(', ')}`);
     }
   },
 });
