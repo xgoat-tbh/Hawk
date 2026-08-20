@@ -8,7 +8,7 @@ import { handleAfkMessage } from './_afkHandler.js';
 
 export default {
   name: 'general',
-  description: 'General utility commands (help, ping, info, AFK, steal, ignore, avatar, banner, userinfo, serverinfo)',
+  description: 'General utility commands (help, ping, info, AFK, steal, ignore)',
   buttonPrefixes: ['ping_refresh_', 'info_', 'steal_btn_', 'help_page_'],
   selectPrefixes: ['help_'],
   modalPrefixes: ['steal_modal_'],
