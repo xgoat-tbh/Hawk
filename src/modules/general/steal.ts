@@ -39,7 +39,7 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
   }
 
   // 2. Direct Discord Emoji CDN link
-  const discordEmojiCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/emojis\/(\d{17,20})\.(png|gif|webp|jpg|jpeg)(?:\?[^\s\)]*)?/i;
+  const discordEmojiCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/emojis\/(\d{17,20})\.(png|gif|webp|jpg|jpeg)(?:\?[^\s)]*)?/i;
   const cdnEmojiMatch = discordEmojiCdnRegex.exec(text);
   if (cdnEmojiMatch) {
     const emojiId = cdnEmojiMatch[1];
@@ -49,7 +49,7 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
   }
 
   // 3. Direct Discord Sticker CDN link
-  const discordStickerCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/stickers\/(\d{17,20})\.(png|webp|gif|json)(?:\?[^\s\)]*)?/i;
+  const discordStickerCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/stickers\/(\d{17,20})\.(png|webp|gif|json)(?:\?[^\s)]*)?/i;
   const cdnStickerMatch = discordStickerCdnRegex.exec(text);
   if (cdnStickerMatch) {
     const stickerId = cdnStickerMatch[1];
@@ -58,7 +58,7 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
   }
 
   // 4. Discord Attachment CDN link
-  const discordAttachmentRegex = /(https?:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/attachments\/\d+\/\d+\/[^\s\)]+)/i;
+  const discordAttachmentRegex = /(https?:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/attachments\/\d+\/\d+\/[^\s)]+)/i;
   const attachmentMatch = discordAttachmentRegex.exec(text);
   if (attachmentMatch) {
     const mediaUrl = attachmentMatch[1];
@@ -70,7 +70,7 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
   }
 
   // 5. Masked Markdown Link: [text](https://url)
-  const maskedLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/;
+  const maskedLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/;
   const maskedMatch = maskedLinkRegex.exec(text);
   if (maskedMatch) {
     const rawText = maskedMatch[1].trim().replace(/[^a-zA-Z0-9_]/g, '_');

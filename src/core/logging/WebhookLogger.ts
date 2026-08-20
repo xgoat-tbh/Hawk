@@ -66,7 +66,7 @@ async function flushQueue(): Promise<void> {
   lastSend = now;
 
   try {
-    await fetch(env.devWebhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: truncate(combined, 1950), username: 'Hawk Dev Logs' }) });
+    await fetch(env.devWebhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: truncate(combined, 1950), username: 'Dev Logs' }) });
   } catch (error) {
     consoleLog('error', 'api_error', `Webhook send failed: ${error instanceof Error ? error.message : String(error)}`);
   }

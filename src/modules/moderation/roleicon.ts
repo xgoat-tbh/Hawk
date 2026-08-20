@@ -75,7 +75,7 @@ export default defineCommand({
 
     // 2. Masked Markdown Link: [text](https://url)
     if (!targetIcon) {
-      const maskedLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/;
+      const maskedLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/;
       const maskedMatch = maskedLinkRegex.exec(iconInput);
       if (maskedMatch) {
         targetIcon = maskedMatch[2];

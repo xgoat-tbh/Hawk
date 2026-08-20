@@ -265,7 +265,7 @@ test('sanitize strips @ and masks mentions in bold without @ prefix', async () =
 
   assert.equal(sanitize('@everyone', mockGuild), '**everyone**');
   assert.equal(sanitize('@here', mockGuild), '**here**');
-  assert.equal(sanitize('<@&111111111111111111>', mockGuild), '**Moderator**');
+  assert.equal(sanitize('<@&111111111111111111>', mockGuild), '`Moderator`');
   assert.equal(sanitize('<@222222222222222222>', mockGuild), '**Yoshi**');
   assert.equal(sanitize('<@!222222222222222222>', mockGuild), '**Yoshi**');
 });
