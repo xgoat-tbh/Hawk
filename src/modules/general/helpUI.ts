@@ -10,10 +10,12 @@ import type { CommandDefinition } from '../../types/command.js';
 import { getModuleCommands, getAllCommands } from '../../core/commands/CommandRegistry.js';
 import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { sanitize } from '../../core/utils/validators.js';
+import { getEmoji, toReactableEmoji } from '../../core/config/branding.js';
 
 export interface HelpCategory {
   id: string;
   name: string;
+  emojiKey: string;
   description: string;
   modules: string[];
 }
@@ -22,30 +24,35 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: 'moderation',
     name: 'Moderation',
+    emojiKey: 'moderation',
     description: 'Server management, bans, mutes, locks, purges, audit logs, and roles',
     modules: ['moderation'],
   },
   {
     id: 'voice',
     name: 'Voice Controls',
+    emojiKey: 'voice',
     description: 'Voice channel movement, follow-me-vc, locks, and tracking',
     modules: ['voice'],
   },
   {
     id: 'gaming',
     name: 'Gaming',
+    emojiKey: 'gaming',
     description: 'Game LFG ping notifications and game role settings',
     modules: ['gaming'],
   },
   {
     id: 'community',
     name: 'Community',
+    emojiKey: 'suggestion',
     description: 'Suggestions, confessions, sticky messages, welcome, and media filters',
     modules: ['suggestion', 'confession', 'sticky', 'welcome', 'media'],
   },
   {
     id: 'general',
     name: 'General & Info',
+    emojiKey: 'general',
     description: 'Bot statistics, AFK status, emoji stealing, access & restrictions',
     modules: ['general', 'owner'],
   },
@@ -92,6 +99,12 @@ export function buildCategoryDropdown(
       .setValue(cat.id)
       .setDescription(isRestricted ? 'You do not have permission to use commands in this category.' : cat.description);
 
+    const emojiRaw = getEmoji(cat.emojiKey);
+    const reactableEmoji = toReactableEmoji(emojiRaw);
+    if (reactableEmoji) {
+      opt.setEmoji(reactableEmoji);
+    }
+
     if (activeCategoryId && activeCategoryId.toLowerCase() === cat.id.toLowerCase()) {
       opt.setDefault(true);
     }
@@ -118,7 +131,9 @@ export function buildMainHelpEmbed(
     const usableCount = usableSet
       ? allCmds.filter(c => usableSet.has(c.name)).length
       : allCmds.length;
-    return `• **${cat.name}** — \`${usableCount}/${allCmds.length}\` commands available`;
+    const em = getEmoji(cat.emojiKey);
+    const emPrefix = em ? `${em} ` : '';
+    return `• ${emPrefix}**${cat.name}** — \`${usableCount}/${allCmds.length}\` commands available`;
   });
 
   const headerContent =
@@ -199,8 +214,11 @@ export function buildCategoryHelpEmbed(
 
   components.push(buildCategoryDropdown(userId, cat.id, usableSet));
 
+  const em = getEmoji(cat.emojiKey);
+  const titlePrefix = em ? `${em} ` : '';
+
   return ui.standard({
-    title: `${cat.name} Commands`,
+    title: `${titlePrefix}${cat.name} Commands`,
     text: sanitize(bodyContent),
     components,
   });
