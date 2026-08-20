@@ -18,18 +18,18 @@ export function sanitize(text: string, guild?: Guild | null): string {
     .replace(/@here/g, '**here**');
 
   result = result.replace(/<@&(\d{17,20})>/g, (_match, roleId) => {
-    if (guild && roleId === guild.id) return '`@everyone`';
+    if (guild && roleId === guild.id) return '`everyone`';
     const role = guild?.roles.cache.get(roleId);
-    if (role) return `\`@${role.name}\``;
+    if (role) return `\`${role.name}\``;
 
     const client = guild?.client ?? (globalThis as any).hawkClient;
     if (client) {
       for (const g of client.guilds.cache.values()) {
         const r = g.roles.cache.get(roleId);
-        if (r) return `\`@${r.name}\``;
+        if (r) return `\`${r.name}\``;
       }
     }
-    return `\`@${roleId}\``;
+    return `\`${roleId}\``;
   });
 
   result = result.replace(/<@!?(\d{17,20})>/g, (_match, userId) => {
@@ -53,10 +53,10 @@ export async function sanitizeAsync(text: string, guild?: Guild | null): Promise
     .replace(/@here/g, '**here**');
 
   result = result.replace(/<@&(\d{17,20})>/g, (_match, roleId) => {
-    if (guild && roleId === guild.id) return '`@everyone`';
+    if (guild && roleId === guild.id) return '`everyone`';
     const role = guild?.roles.cache.get(roleId);
-    if (role) return `\`@${role.name}\``;
-    return `\`@${roleId}\``;
+    if (role) return `\`${role.name}\``;
+    return `\`${roleId}\``;
   });
 
   const userMatches = Array.from(text.matchAll(/<@!?(\d{17,20})>/g));

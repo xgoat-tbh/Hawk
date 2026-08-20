@@ -33,26 +33,26 @@ export function mentionUser(target: GuildMember | User | string, guild?: Guild |
 }
 
 export function formatRole(target: Role | string, guild?: Guild | null): string {
-  if (!target) return '`@Unknown`';
+  if (!target) return '`Unknown`';
 
   if (typeof target === 'string') {
     if (guild && (target === guild.id || target === 'everyone')) {
-      return '`@everyone`';
+      return '`everyone`';
     }
     const role = guild?.roles.cache.get(target);
-    if (role) return `\`@${role.name}\``;
+    if (role) return `\`${role.name}\``;
 
     const client = guild?.client ?? (globalThis as any).hawkClient;
     if (client) {
       for (const g of client.guilds.cache.values()) {
         const r = g.roles.cache.get(target);
-        if (r) return `\`@${r.name}\``;
+        if (r) return `\`${r.name}\``;
       }
     }
-    return `\`@${target}\``;
+    return `\`${target}\``;
   }
 
-  return `\`@${target.name}\``;
+  return `\`${target.name}\``;
 }
 
 export function mentionRole(target: Role | string, guild?: Guild | null): string {

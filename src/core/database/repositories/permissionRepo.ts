@@ -99,6 +99,18 @@ export async function removePermit(
   return result.count > 0;
 }
 
+export async function deletePermitsByIds(guildId: string, ids: number[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const db = getDb();
+  const result = await db`
+    DELETE FROM permits
+    WHERE guild_id = ${guildId}
+      AND id = ANY(${ids})
+  `;
+  invalidatePermitCache(guildId);
+  return result.count;
+}
+
 export async function getLatestRevocation(
   guildId: string,
   userId: string,
