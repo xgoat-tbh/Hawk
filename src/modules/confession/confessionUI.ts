@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
+import { getEmoji } from '../../core/config/branding.js';
 
 export function buildConfessionPanel(): ComponentV2Payload {
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -13,8 +14,11 @@ export function buildConfessionPanel(): ComponentV2Payload {
       .setStyle(ButtonStyle.Secondary),
   );
 
+  const emoji = getEmoji('confession');
+  const title = emoji ? `${emoji} Anonymous Confessions` : 'Anonymous Confessions';
+
   return ui.standard({
-    title: 'Anonymous Confessions',
+    title,
     text:
       'Share your thoughts, stories, or confessions completely anonymously.\n\n' +
       'Click **Submit Confession** below to submit. Your identity is never displayed on the public post.',
@@ -23,8 +27,11 @@ export function buildConfessionPanel(): ComponentV2Payload {
 }
 
 export function buildAnonymousConfessionPayload(content: string): ComponentV2Payload {
+  const emoji = getEmoji('confession');
+  const title = emoji ? `${emoji} Anonymous Confession` : 'Anonymous Confession';
+
   return ui.standard({
-    title: 'Anonymous Confession',
+    title,
     text: content,
   });
 }

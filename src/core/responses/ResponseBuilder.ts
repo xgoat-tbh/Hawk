@@ -2,6 +2,7 @@ import type { Message, MessageCreateOptions, GuildTextBasedChannel } from 'disco
 import { sanitize } from '../utils/validators.js';
 import { ui } from '../ui/index.js';
 import type { StandardLayoutOptions } from '../ui/layouts.js';
+import { getEmoji } from '../config/branding.js';
 
 const SAFE_ALLOWED_MENTIONS = {
   parse: [] as [],
@@ -38,7 +39,9 @@ export class ResponseBuilder {
   }
 
   async success(text: string): Promise<Message> {
-    const formatted = `> ${this.cleanSanitize(text)}`;
+    const emoji = getEmoji('success');
+    const prefix = emoji ? `${emoji} ` : '';
+    const formatted = `> ${prefix}${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -58,7 +61,9 @@ export class ResponseBuilder {
   }
 
   async error(text: string): Promise<Message> {
-    const formatted = `> **Error:** ${this.cleanSanitize(text)}`;
+    const emoji = getEmoji('error');
+    const prefix = emoji ? `${emoji} ` : '';
+    const formatted = `> ${prefix}**Error:** ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -68,7 +73,9 @@ export class ResponseBuilder {
   }
 
   async warning(text: string): Promise<Message> {
-    const formatted = `> **Notice:** ${this.cleanSanitize(text)}`;
+    const emoji = getEmoji('warning');
+    const prefix = emoji ? `${emoji} ` : '';
+    const formatted = `> ${prefix}**Notice:** ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -78,7 +85,9 @@ export class ResponseBuilder {
   }
 
   async info(text: string): Promise<Message> {
-    const formatted = `> ${this.cleanSanitize(text)}`;
+    const emoji = getEmoji('info');
+    const prefix = emoji ? `${emoji} ` : '';
+    const formatted = `> ${prefix}${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({
       content: formatted,
       allowedMentions: SAFE_ALLOWED_MENTIONS,
@@ -89,7 +98,9 @@ export class ResponseBuilder {
 
   async denied(text?: string): Promise<Message | null> {
     if (text) {
-      const formatted = `> **Access Denied:** ${this.cleanSanitize(text)}`;
+      const emoji = getEmoji('denied');
+      const prefix = emoji ? `${emoji} ` : '';
+      const formatted = `> ${prefix}**Access Denied:** ${this.cleanSanitize(text)}`;
       const sent = await this.sendableChannel.send({
         content: formatted,
         allowedMentions: SAFE_ALLOWED_MENTIONS,
