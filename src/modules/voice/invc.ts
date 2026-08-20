@@ -80,7 +80,7 @@ export default defineCommand({
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
         return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
       });
-      sections.push(`### Streaming & Video (${streamingMembers.length})\n${lines.join('\n')}`);
+      sections.push(`\`[STREAMING & VIDEO (${streamingMembers.length})]\`\n${lines.join('\n')}`);
     }
 
     if (activeMembers.length > 0) {
@@ -88,7 +88,7 @@ export default defineCommand({
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
         return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
       });
-      sections.push(`### Active Voice (${activeMembers.length})\n${lines.join('\n')}`);
+      sections.push(`\`[ACTIVE VOICE (${activeMembers.length})]\`\n${lines.join('\n')}`);
     }
 
     if (mutedMembers.length > 0) {
@@ -96,7 +96,7 @@ export default defineCommand({
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
         return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
       });
-      sections.push(`### Muted / Deafened (${mutedMembers.length})\n${lines.join('\n')}`);
+      sections.push(`\`[MUTED / DEAFENED (${mutedMembers.length})]\`\n${lines.join('\n')}`);
     }
 
     const limitNum = 'userLimit' in voiceChannel && voiceChannel.userLimit && voiceChannel.userLimit > 0 ? voiceChannel.userLimit : null;
