@@ -39,7 +39,7 @@ export default defineCommand({
 
     const voiceState = targetMember.voice;
     if (!voiceState.channel) {
-      await respond.send(`* **${targetMember.displayName || targetMember.user.username}** is not in a voice channel.`);
+      await respond.send(`> **${targetMember.displayName || targetMember.user.username}** is not in a voice channel.`);
       return;
     }
 
@@ -65,6 +65,6 @@ export default defineCommand({
 
     const tagSuffix = tags.length > 0 ? ` ${tags.join(' ')}` : '';
 
-    await respond.send(`**${targetName}** is in **${mentionChannel(chan.id)}** ${vcInfo}${tagSuffix}`);
+    await respond.send(`**${targetName}** is in ${mentionChannel(chan.id)} ${vcInfo}${tagSuffix}`);
   },
 });

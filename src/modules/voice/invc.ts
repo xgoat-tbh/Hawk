@@ -42,7 +42,7 @@ export default defineCommand({
 
     const members = voiceChannel.members;
     if (members.size === 0) {
-      await respond.info(`**${voiceChannel.name}** is empty.`);
+      await respond.info(`${voiceChannel.name} is empty.`);
       return;
     }
 
@@ -80,7 +80,7 @@ export default defineCommand({
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
         return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
       });
-      sections.push(`**[STREAMING & VIDEO (${streamingMembers.length})]**\n${lines.join('\n')}`);
+      sections.push(`### Streaming & Video (${streamingMembers.length})\n${lines.join('\n')}`);
     }
 
     if (activeMembers.length > 0) {
@@ -88,7 +88,7 @@ export default defineCommand({
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
         return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
       });
-      sections.push(`**[ACTIVE VOICE (${activeMembers.length})]**\n${lines.join('\n')}`);
+      sections.push(`### Active Voice (${activeMembers.length})\n${lines.join('\n')}`);
     }
 
     if (mutedMembers.length > 0) {
@@ -96,7 +96,7 @@ export default defineCommand({
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
         return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
       });
-      sections.push(`**[MUTED / DEAFENED (${mutedMembers.length})]**\n${lines.join('\n')}`);
+      sections.push(`### Muted / Deafened (${mutedMembers.length})\n${lines.join('\n')}`);
     }
 
     const limitNum = 'userLimit' in voiceChannel && voiceChannel.userLimit && voiceChannel.userLimit > 0 ? voiceChannel.userLimit : null;
@@ -104,7 +104,7 @@ export default defineCommand({
     const percentStr = limitNum ? ` (${Math.round((members.size / limitNum) * 100)}%)` : '';
     const bitrate = 'bitrate' in voiceChannel && voiceChannel.bitrate ? ` • ${Math.round(voiceChannel.bitrate / 1000)}kbps` : '';
 
-    const header = `**${voiceChannel.name}** \`[ ${members.size}/${limitStr}${percentStr} ]\`${bitrate}`;
+    const header = `${voiceChannel.name} \`[ ${members.size}/${limitStr}${percentStr} ]\`${bitrate}`;
     await respond.send(`${header}\n\n${sections.join('\n\n')}`);
   },
 });
