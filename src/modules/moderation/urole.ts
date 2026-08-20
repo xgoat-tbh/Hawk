@@ -7,6 +7,7 @@ import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { toggleRoleForMember } from './roleHelpers.js';
 import { mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
@@ -14,7 +15,7 @@ export default defineCommand({
   name: 'urole',
   aliases: ['ur', 'removerole', 'unrole', 'takerole'],
   module: 'moderation',
-  description: 'Toggle ONE role across MULTIPLE users.',
+  description: 'Toggle ONE role across MULTIPLE users with visual diff output.',
   usage: 'urole <role> <users...>',
   examples: ['urole @Role @User1 @User2 @User3'],
   permissions: [PermissionsBitField.Flags.ManageRoles],
@@ -100,21 +101,40 @@ export default defineCommand({
       await tracker.update(totalUsers, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
     }
 
-    const finalPayload = ui.standard({
-      title: 'URole Completed',
-      text:
-        `• **Target Role:** \`${targetRole.name}\` (${mentionRole(targetRole, guild)})\n` +
-        `• **Added:** **${addedCount}** | **Removed:** **${removedCount}**` +
-        (skippedCount > 0 ? ` | **Skipped:** **${skippedCount}**` : ''),
-    });
+    const diffLines: string[] = [];
+    if (addedCount > 0) diffLines.push(`[+] Added to **${addedCount}** member(s)`);
+    if (removedCount > 0) diffLines.push(`[-] Removed from **${removedCount}** member(s)`);
+    if (skippedCount > 0) diffLines.push(`[!] Skipped **${skippedCount}** member(s)`);
+    if (diffLines.length === 0) diffLines.push('No changes applied.');
+
+    const summaryText = `Role update for ${mentionRole(targetRole, guild)}:\n${diffLines.join('\n')}\n• *(Auto-deleting in 5s)*`;
 
     if (statusMsg) {
+      const finalPayload = ui.standard({
+        title: 'URole Completed',
+        text: summaryText,
+      });
       await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
+      setTimeout(() => {
+        statusMsg?.delete().catch(() => {});
+      }, 5000);
     } else {
-      await respond.success(
-        `Role update for ${mentionRole(targetRole, guild)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`,
-      );
+      const replyMsg = await respond.success(summaryText);
+      setTimeout(() => {
+        replyMsg.delete().catch(() => {});
+      }, 5000);
     }
+
+    logAuditAction({
+      guild,
+      action: 'Batch Role Update (URole)',
+      executor: member,
+      target: mentionRole(targetRole, guild),
+      details: [
+        `• **Role:** \`${targetRole.name}\` (${targetRole.id})`,
+        ...diffLines.map(line => `• ${line}`),
+      ],
+    });
 
     logEvent('info', 'command_execution', `URole toggle by ${member.user.tag}`, {
       executor: member.user.tag,

@@ -73,7 +73,7 @@ export async function buildInfoV2Embed(client: Client, _guild: Guild, prefix: st
   const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(refreshBtn, helpBtn);
 
   return ui.standard({
-    title: 'Amo System Telemetry',
+    title: `${botUser?.username ?? 'Bot'} System Telemetry`,
     text: content,
     components: [actionRow],
   });

@@ -5,6 +5,7 @@ import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { mentionRole, mentionChannel } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'lock',
@@ -32,12 +33,14 @@ export default defineCommand({
     }
 
     const permToEdit = { SendMessages: false };
+    let logTarget = 'everyone';
 
     // Mode 1: No argument -> @everyone: DENY
     if (parsed.args.length === 0) {
       const everyoneRole = guild.roles.everyone;
       await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permToEdit).catch(() => {});
-      await respond.success(`Locked ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole, guild)}.`);
+      logTarget = mentionRole(everyoneRole, guild);
+      await respond.transientSuccess(`Locked ${mentionChannel(targetChannel.id)} for ${logTarget}. *(Auto-deleting in 5s)*`, 5000);
     }
     // Mode 3: "all" argument -> @everyone: DENY + every existing role override: DENY
     else if (parsed.args[0].toLowerCase() === 'all') {
@@ -52,7 +55,8 @@ export default defineCommand({
           await new Promise(r => setTimeout(r, 50));
         }
       }
-      await respond.success(`Locked ${mentionChannel(targetChannel.id)} for all **${count}** role overrides.`);
+      logTarget = `All roles (${count} overrides)`;
+      await respond.transientSuccess(`Locked ${mentionChannel(targetChannel.id)} for all **${count}** role overrides. *(Auto-deleting in 5s)*`, 5000);
     }
     // Mode 2: Role argument -> ONLY specified role: DENY
     else {
@@ -63,8 +67,17 @@ export default defineCommand({
       }
       const targetRole = roleRes.value.role;
       await (targetChannel as any).permissionOverwrites.edit(targetRole.id, permToEdit);
-      await respond.success(`Locked ${mentionChannel(targetChannel.id)} for ${mentionRole(targetRole, guild)}.`);
+      logTarget = mentionRole(targetRole, guild);
+      await respond.transientSuccess(`Locked ${mentionChannel(targetChannel.id)} for ${logTarget}. *(Auto-deleting in 5s)*`, 5000);
     }
+
+    logAuditAction({
+      guild,
+      action: 'Channel Locked',
+      executor: member,
+      channelName: targetChannel.name,
+      details: `• **Scope:** ${logTarget}`,
+    });
 
     logEvent('info', 'command_execution', `Channel lock by ${member.user.tag}`, {
       executor: member.user.tag,

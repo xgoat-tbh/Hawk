@@ -19,6 +19,7 @@ export interface EnvironmentConfig {
 export interface GuildConfig {
   guildId: string;
   prefix: string;
+  logChannelId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

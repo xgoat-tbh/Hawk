@@ -3,9 +3,10 @@ import type { GuildMember } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
-import { mentionUser } from '../../core/utils/formatters.js';
+import { formatUser } from '../../core/utils/formatters.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'vckick',
@@ -56,34 +57,45 @@ export default defineCommand({
     for (const target of targetMembers) {
       const targetVc = target.voice.channel;
       if (!targetVc) {
-        failures.push(targetMembers.length === 1 ? `${mentionUser(target.id)} is not in a voice channel.` : `${mentionUser(target.id)} (not in VC)`);
+        failures.push(targetMembers.length === 1 ? `${formatUser(target, guild)} is not in a voice channel.` : `${formatUser(target, guild)} (not in VC)`);
         continue;
       }
 
       const access = await checkVoiceAccess(guild.id, member, 'vckick', targetVc.id);
       if (!access.allowed) {
-        failures.push(targetMembers.length === 1 ? `Access denied for ${mentionUser(target.id)}: ${access.reason || 'Voice restricted.'}` : `${mentionUser(target.id)} (restricted)`);
+        failures.push(targetMembers.length === 1 ? `Access denied for ${formatUser(target, guild)}: ${access.reason || 'Voice restricted.'}` : `${formatUser(target, guild)} (restricted)`);
         continue;
       }
 
       try {
         await target.voice.disconnect('Voice kick requested by moderator');
-        successes.push(mentionUser(target.id));
+        successes.push(formatUser(target, guild));
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         consoleLog('error', 'command_failure', `vckick: failed to disconnect ${target.id}`, { error: msg });
-        failures.push(targetMembers.length === 1 ? `Could not disconnect ${mentionUser(target.id)}.` : `${mentionUser(target.id)} (failed)`);
+        failures.push(targetMembers.length === 1 ? `Could not disconnect ${formatUser(target, guild)}.` : `${formatUser(target, guild)} (failed)`);
       }
     }
 
     if (successes.length > 0 && failures.length === 0) {
-      await respond.success(`Disconnected ${successes.join(', ')} from voice.`);
+      await respond.transientSuccess(`Disconnected ${successes.join(', ')} from voice. *(Auto-deleting in 5s)*`, 5000);
     } else if (successes.length > 0 && failures.length > 0) {
       await respond.send(`> Disconnected ${successes.join(', ')} from voice.\n> **Notice:** Could not disconnect: ${failures.join(', ')}`);
     } else if (failures.length === 1 && !failures[0].includes('(')) {
       await respond.error(failures[0]);
     } else {
       await respond.error(`Could not disconnect: ${failures.join(', ')}`);
+    }
+
+    if (successes.length > 0) {
+      logAuditAction({
+        guild,
+        action: 'Member Voice Kicked',
+        executor: member,
+        details: [
+          `• **Disconnected:** ${successes.join(', ')}`,
+        ],
+      });
     }
   },
 });

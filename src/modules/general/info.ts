@@ -8,7 +8,7 @@ export default defineCommand({
   name: 'info',
   aliases: ['botinfo', 'about', 'stats'],
   module: 'general',
-  description: 'Display comprehensive bot specs, system stats, and community telemetry with Components V2.',
+  description: 'Display comprehensive bot specs, system stats, and community telemetry.',
   usage: 'info',
   examples: ['info', 'botinfo', 'stats'],
   permissions: [],

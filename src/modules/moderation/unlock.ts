@@ -5,6 +5,7 @@ import type { CommandContext } from '../../types/command.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { mentionRole, mentionChannel } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'unlock',
@@ -33,12 +34,14 @@ export default defineCommand({
 
     const permInherit = { SendMessages: null };
     const permAllow = { SendMessages: true };
+    let logTarget = 'everyone';
 
     // Mode 1: No argument -> @everyone: INHERIT (null)
     if (parsed.args.length === 0) {
       const everyoneRole = guild.roles.everyone;
       await (targetChannel as any).permissionOverwrites.edit(everyoneRole.id, permInherit).catch(() => {});
-      await respond.success(`Unlocked ${mentionChannel(targetChannel.id)} for ${mentionRole(everyoneRole, guild)} (inherited).`);
+      logTarget = mentionRole(everyoneRole, guild);
+      await respond.transientSuccess(`Unlocked ${mentionChannel(targetChannel.id)} for ${logTarget} (inherited). *(Auto-deleting in 5s)*`, 5000);
     }
     // Mode 3: "all" argument -> @everyone: INHERIT (null) + every existing role override: INHERIT (null)
     else if (parsed.args[0].toLowerCase() === 'all') {
@@ -53,7 +56,8 @@ export default defineCommand({
           await new Promise(r => setTimeout(r, 50));
         }
       }
-      await respond.success(`Unlocked ${mentionChannel(targetChannel.id)} for all **${count}** role overrides (inherited).`);
+      logTarget = `All roles (${count} overrides)`;
+      await respond.transientSuccess(`Unlocked ${mentionChannel(targetChannel.id)} for all **${count}** role overrides (inherited). *(Auto-deleting in 5s)*`, 5000);
     }
     // Mode 2: Role argument -> ONLY specified role: ALLOW (true)
     else {
@@ -64,8 +68,17 @@ export default defineCommand({
       }
       const targetRole = roleRes.value.role;
       await (targetChannel as any).permissionOverwrites.edit(targetRole.id, permAllow);
-      await respond.success(`Unlocked ${mentionChannel(targetChannel.id)} for ${mentionRole(targetRole, guild)} (explicitly allowed).`);
+      logTarget = mentionRole(targetRole, guild);
+      await respond.transientSuccess(`Unlocked ${mentionChannel(targetChannel.id)} for ${logTarget} (explicitly allowed). *(Auto-deleting in 5s)*`, 5000);
     }
+
+    logAuditAction({
+      guild,
+      action: 'Channel Unlocked',
+      executor: member,
+      channelName: targetChannel.name,
+      details: `• **Scope:** ${logTarget}`,
+    });
 
     logEvent('info', 'command_execution', `Channel unlock by ${member.user.tag}`, {
       executor: member.user.tag,

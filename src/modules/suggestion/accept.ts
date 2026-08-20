@@ -90,7 +90,19 @@ export default defineCommand({
       }).catch(() => {});
     }
 
-    await respond.success(`Suggestion **#${String(updated.number).padStart(3, '0')}** has been accepted.`);
+    await respond.transientSuccess(`Suggestion **#${String(updated.number).padStart(3, '0')}** has been accepted. *(Auto-deleting in 5s)*`, 5000);
+
+    const { logAuditAction } = await import('../../core/logging/AuditLogger.js');
+    logAuditAction({
+      guild,
+      action: 'Suggestion Accepted',
+      executor: member,
+      details: [
+        `• **Suggestion:** #${updated.number} (${updated.id})`,
+        `• **Author ID:** \`${updated.authorId}\``,
+        ...(reason ? [`• **Reason:** ${reason}`] : []),
+      ],
+    });
 
     logEvent('info', 'command_execution', `Suggestion #${updated.number} accepted by staff ${member.user.tag}`, {
       staff: member.user.tag,

@@ -4,6 +4,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { setState } from '../../core/interactions/InteractionState.js';
 import { ui } from '../../core/ui/index.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 import type { StealStateData } from './_stealHandler.js';
 
 interface ExtractedMedia {
@@ -11,10 +12,22 @@ interface ExtractedMedia {
   defaultName: string;
 }
 
+function extractAllCustomEmojis(text: string): ExtractedMedia[] {
+  const customEmojiRegex = /<(a)?:([a-zA-Z0-9_]+):(\d{17,20})>/g;
+  const matches = Array.from(text.matchAll(customEmojiRegex));
+  return matches.map(match => {
+    const isAnimated = Boolean(match[1]);
+    const emojiName = match[2];
+    const emojiId = match[3];
+    const mediaUrl = `https://cdn.discordapp.com/emojis/${emojiId}.${isAnimated ? 'gif' : 'png'}?quality=lossless`;
+    return { mediaUrl, defaultName: emojiName };
+  });
+}
+
 function extractMediaFromText(text: string): ExtractedMedia | null {
   if (!text) return null;
 
-  // 1. Custom Emoji in chat: <a:name:id> or <:name:id>
+  // 1. Single Custom Emoji: <a:name:id> or <:name:id>
   const customEmojiRegex = /<(a)?:([a-zA-Z0-9_]+):(\d{17,20})>/;
   const emojiMatch = customEmojiRegex.exec(text);
   if (emojiMatch) {
@@ -25,7 +38,7 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
     return { mediaUrl, defaultName: emojiName };
   }
 
-  // 2. Direct Discord Emoji CDN link (cdn.discordapp.com/emojis/... or media.discordapp.net/emojis/...)
+  // 2. Direct Discord Emoji CDN link
   const discordEmojiCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/emojis\/(\d{17,20})\.(png|gif|webp|jpg|jpeg)(?:\?[^\s\)]*)?/i;
   const cdnEmojiMatch = discordEmojiCdnRegex.exec(text);
   if (cdnEmojiMatch) {
@@ -35,7 +48,7 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
     return { mediaUrl, defaultName: `emoji_${emojiId.slice(-6)}` };
   }
 
-  // 3. Direct Discord Sticker CDN link (cdn.discordapp.com/stickers/...)
+  // 3. Direct Discord Sticker CDN link
   const discordStickerCdnRegex = /(?:https?:\/\/)?(?:cdn|media)\.discordapp\.(?:com|net)\/stickers\/(\d{17,20})\.(png|webp|gif|json)(?:\?[^\s\)]*)?/i;
   const cdnStickerMatch = discordStickerCdnRegex.exec(text);
   if (cdnStickerMatch) {
@@ -44,7 +57,7 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
     return { mediaUrl, defaultName: `sticker_${stickerId.slice(-6)}` };
   }
 
-  // 4. Discord Attachment CDN link (cdn.discordapp.com/attachments/... or media.discordapp.net/attachments/...)
+  // 4. Discord Attachment CDN link
   const discordAttachmentRegex = /(https?:\/\/(?:cdn|media)\.discordapp\.(?:com|net)\/attachments\/\d+\/\d+\/[^\s\)]+)/i;
   const attachmentMatch = discordAttachmentRegex.exec(text);
   if (attachmentMatch) {
@@ -66,8 +79,8 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
     return { mediaUrl, defaultName };
   }
 
-  // 6. Generic Raw URL: https://...
-  const rawUrlRegex = /https?:\/\/[^\s]+/;
+  // 6. Generic Raw Image URL
+  const rawUrlRegex = /https?:\/\/[^\s]+\.(png|jpg|jpeg|gif|webp)(\?[^\s]*)?/i;
   const urlMatch = rawUrlRegex.exec(text);
   if (urlMatch) {
     const mediaUrl = urlMatch[0];
@@ -85,15 +98,54 @@ export default defineCommand({
   name: 'steal',
   aliases: ['stealemoji', 'stealsticker', 'addemoji'],
   module: 'general',
-  description: 'Steal custom emojis, stickers, images, or masked links and add them as server emojis or stickers.',
-  usage: 'steal [emoji|url|masked_link] [name] OR reply to a message with steal [name]',
-  examples: ['steal :custom_emoji:', 'steal https://example.com/image.png my_emoji', 'steal [Cool Emoji](https://cdn.discordapp.com/emojis/12345.png)'],
+  description: 'Steal custom emojis, stickers, images, or links and add them to server emojis.',
+  usage: 'steal [emoji(s)|url] [name] OR reply with steal [name]',
+  examples: ['steal :custom_emoji:', 'steal :emoji1: :emoji2: :emoji3:', 'steal https://example.com/image.png my_emoji'],
   permissions: [PermissionsBitField.Flags.ManageGuildExpressions],
   botPermissions: [PermissionsBitField.Flags.ManageGuildExpressions, PermissionsBitField.Flags.SendMessages],
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, member, respond, message, channel } = ctx;
+
+    // Check for multi-emoji direct batch addition first
+    const multiEmojis = extractAllCustomEmojis(message.content);
+    if (multiEmojis.length > 1) {
+      await message.delete().catch(() => {});
+      const uploadedNames: string[] = [];
+      const failedNames: string[] = [];
+
+      for (const item of multiEmojis) {
+        try {
+          const created = await guild.emojis.create({
+            attachment: item.mediaUrl,
+            name: item.defaultName,
+            reason: `Batch emoji steal by ${member.user.tag}`,
+          });
+          uploadedNames.push(created.name);
+        } catch {
+          failedNames.push(item.defaultName);
+        }
+      }
+
+      if (uploadedNames.length > 0) {
+        const resultText = `Added **${uploadedNames.length}** emoji(s): ${uploadedNames.map(n => `\`:${n}:\``).join(' ')}${failedNames.length > 0 ? ` (Failed: ${failedNames.join(', ')})` : ''} • *(Auto-deleting in 5s)*`;
+        await respond.transientSuccess(resultText, 5000);
+
+        logAuditAction({
+          guild,
+          action: 'Batch Emojis Steal/Added',
+          executor: member,
+          details: [
+            `• **Added Emojis:** ${uploadedNames.map(n => `:${n}:`).join(', ')}`,
+            ...(failedNames.length > 0 ? [`• **Failed:** ${failedNames.join(', ')}`] : []),
+          ],
+        });
+      } else {
+        await respond.error(`Failed to add ${failedNames.length} emojis (server slots full or invalid permissions).`);
+      }
+      return;
+    }
 
     let media: ExtractedMedia | null = null;
     let customNameOverride: string | null = null;
@@ -149,7 +201,7 @@ export default defineCommand({
     }
 
     if (!media) {
-      await respond.error('Could not find any emoji, sticker, attachment, image URL, or masked link to steal.');
+      await respond.error('Could not find any emoji, sticker, attachment, image URL, or link to steal.');
       return;
     }
 
@@ -174,7 +226,7 @@ export default defineCommand({
       guildId: guild.id,
     });
 
-    // Build Comp V2 Container UI with 2 buttons
+    // Build Container UI with 2 buttons
     const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
         .setCustomId(`steal_btn_emoji_${randomId}`)

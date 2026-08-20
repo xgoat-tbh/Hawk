@@ -13,6 +13,7 @@ import {
 import { ui } from '../../core/ui/index.js';
 import { mentionUser } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
 
@@ -112,6 +113,17 @@ export async function handleNukeInteraction(interaction: ButtonInteraction): Pro
           }, 10000);
         }
       }
+
+      logAuditAction({
+        guild,
+        action: 'Channel Nuked (Recreated)',
+        executor: interaction.member as any ?? user,
+        channelName: clonedChannel.name,
+        details: [
+          `• **Old Channel ID:** \`${targetChannel.id}\``,
+          `• **New Channel ID:** \`${clonedChannel.id}\``,
+        ],
+      });
 
       logEvent('info', 'command_execution', `Channel ${targetChannel.name} nuked by ${user.tag}`, {
         administrator: user.tag,

@@ -4,6 +4,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 
@@ -11,12 +12,12 @@ export default defineCommand({
   name: 'purge',
   aliases: ['c', 'clear', 'clean', 'prune'],
   module: 'moderation',
-  description: 'Purge recent messages matching an optional filter.',
+  description: 'Purge recent messages matching an optional filter with categorized breakdown.',
   usage: 'purge <amount> [bot|human|@user|embeds|links|images]',
   examples: ['purge 50 bot', 'purge 100 human', 'purge 50 @User', 'purge 100 embeds'],
   permissions: [PermissionsBitField.Flags.ManageMessages],
   botPermissions: [PermissionsBitField.Flags.ManageMessages, PermissionsBitField.Flags.ReadMessageHistory],
-  cooldown: 5,
+  cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, channel, message, respond, member } = ctx;
@@ -34,11 +35,13 @@ export default defineCommand({
 
     const filterArg = parsed.args[1] ? parsed.args[1].toLowerCase() : null;
     let targetUserId: string | null = null;
+    let targetUserTag: string | null = null;
 
     if (filterArg && !['bot', 'human', 'embeds', 'links', 'images'].includes(filterArg)) {
       const userRes = await resolveUser(filterArg, guild);
       if (userRes.success) {
         targetUserId = userRes.value.id;
+        targetUserTag = userRes.value.user.tag;
       }
     }
 
@@ -60,16 +63,21 @@ export default defineCommand({
       }
     }
 
-    // Fetch recent message history in batches
+    // Categorized breakdown stats
     let deletedCount = 0;
+    let botCount = 0;
+    let humanCount = 0;
+    let attachmentCount = 0;
+    let linkCount = 0;
+
     const batchLimit = 100;
+    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
 
     while (deletedCount < amount) {
       const fetchCount = Math.min(batchLimit, amount - deletedCount);
       const fetched: Collection<string, Message> = await textChannel.messages.fetch({ limit: fetchCount }).catch(() => new Map() as any);
       if (fetched.size === 0) break;
 
-      const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
       const validMessages = fetched.filter((m: Message) => {
         if (m.createdTimestamp < fourteenDaysAgo) return false;
         if (filterArg === 'bot') return m.author.bot;
@@ -82,6 +90,14 @@ export default defineCommand({
       });
 
       if (validMessages.size === 0) break;
+
+      // Count message types in this batch
+      for (const m of validMessages.values()) {
+        if (m.author.bot) botCount++;
+        else humanCount++;
+        if (m.attachments.size > 0) attachmentCount++;
+        if (/(https?:\/\/[^\s]+)/g.test(m.content)) linkCount++;
+      }
 
       const deleted = await textChannel.bulkDelete(validMessages, true).catch(() => null);
       if (!deleted || deleted.size === 0) break;
@@ -96,21 +112,35 @@ export default defineCommand({
       await tracker.update(deletedCount, `Filter: \`${filterArg ?? 'none'}\``, true);
     }
 
+    const breakdownText = `Purged **${deletedCount}** message(s) [Users: **${humanCount}** | Bots: **${botCount}** | Media: **${attachmentCount}** | Links: **${linkCount}**] • *(Auto-deleting in 5s)*`;
+
     if (statusMsg) {
       const finalPayload = ui.standard({
         title: 'Purge Completed',
-        text: `Purged **${deletedCount}** message(s).`,
+        text: breakdownText,
       });
       await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
       setTimeout(() => {
         statusMsg?.delete().catch(() => {});
       }, 5000);
     } else {
-      const replyMsg = await respond.success(`Purged **${deletedCount}** message(s).`);
+      const replyMsg = await respond.success(breakdownText);
       setTimeout(() => {
         replyMsg.delete().catch(() => {});
       }, 5000);
     }
+
+    logAuditAction({
+      guild,
+      action: 'Messages Purged',
+      executor: member,
+      channelName: textChannel.name,
+      details: [
+        `• **Amount Purged:** ${deletedCount} (Requested: ${amount})`,
+        `• **Breakdown:** Users: ${humanCount} | Bots: ${botCount} | Media: ${attachmentCount} | Links: ${linkCount}`,
+        `• **Filter:** ${filterArg ? (targetUserTag ? `User (${targetUserTag})` : filterArg) : 'None'}`,
+      ],
+    });
 
     logEvent('info', 'command_execution', `Purge by ${member.user.tag}`, {
       executor: member.user.tag,

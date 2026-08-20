@@ -1,18 +1,19 @@
 import { PermissionsBitField } from 'discord.js';
-import type { GuildMember } from 'discord.js';
+import type { GuildMember, Role } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { toggleRoleForMember } from './roleHelpers.js';
-import { mentionUser } from '../../core/utils/formatters.js';
+import { formatUser, mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'role',
   aliases: ['r', 'addrole', 'giverole'],
   module: 'moderation',
-  description: 'Toggle one or multiple roles for a target user (or replied user/self).',
+  description: 'Toggle one or multiple roles for a target user (or replied user/self) with visual diff.',
   usage: 'role [user] <roles...>',
   examples: ['role @Role', 'role @User @Role', 'role @User @Role1 @Role2'],
   permissions: [PermissionsBitField.Flags.ManageRoles],
@@ -51,8 +52,8 @@ export default defineCommand({
       return;
     }
 
-    let addedCount = 0;
-    let removedCount = 0;
+    const addedRoles: Role[] = [];
+    const removedRoles: Role[] = [];
     let skippedCount = 0;
 
     for (const roleArg of roleArgs) {
@@ -62,15 +63,40 @@ export default defineCommand({
         continue;
       }
 
-      const res = await toggleRoleForMember(guild, targetMember, roleRes.value.role, member);
-      if (res === 'added') addedCount++;
-      else if (res === 'removed') removedCount++;
+      const role = roleRes.value.role;
+      const res = await toggleRoleForMember(guild, targetMember, role, member);
+      if (res === 'added') addedRoles.push(role);
+      else if (res === 'removed') removedRoles.push(role);
       else skippedCount++;
     }
 
-    await respond.success(
-      `Role update for ${mentionUser(targetMember.id)}:\nAdded: **${addedCount}** | Removed: **${removedCount}**${skippedCount > 0 ? ` | Skipped: **${skippedCount}**` : ''}`,
-    );
+    const diffLines: string[] = [];
+    if (addedRoles.length > 0) {
+      diffLines.push(`[+] Added: ${addedRoles.map(r => mentionRole(r, guild)).join(', ')}`);
+    }
+    if (removedRoles.length > 0) {
+      diffLines.push(`[-] Removed: ${removedRoles.map(r => mentionRole(r, guild)).join(', ')}`);
+    }
+    if (skippedCount > 0) {
+      diffLines.push(`[!] Skipped: **${skippedCount}** role(s) (hierarchy/permissions)`);
+    }
+    if (diffLines.length === 0) {
+      diffLines.push('No role changes applied.');
+    }
+
+    const diffText = `Role update for ${formatUser(targetMember, guild)}:\n${diffLines.join('\n')}`;
+    await respond.transientSuccess(diffText, 5000);
+
+    logAuditAction({
+      guild,
+      action: 'Member Role Updated',
+      executor: member,
+      target: formatUser(targetMember, guild),
+      details: [
+        `• **Target:** ${targetMember.user.tag} (${targetMember.id})`,
+        ...diffLines.map(line => `• ${line}`),
+      ],
+    });
 
     logEvent('info', 'command_execution', `Role toggle by ${member.user.tag}`, {
       executor: member.user.tag,
@@ -78,8 +104,8 @@ export default defineCommand({
       guild: guild.name,
       guildId: guild.id,
       targetUser: targetMember.user.tag,
-      addedCount,
-      removedCount,
+      addedCount: addedRoles.length,
+      removedCount: removedRoles.length,
       skippedCount,
     });
   },

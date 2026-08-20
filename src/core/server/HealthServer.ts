@@ -13,7 +13,7 @@ export function startHealthServer(): void {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'ok',
-      service: 'Amo Hawk Discord Bot',
+      service: 'Discord Bot API Service',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     }));

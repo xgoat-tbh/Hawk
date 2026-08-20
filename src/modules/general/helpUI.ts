@@ -4,6 +4,7 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  PermissionsBitField,
 } from 'discord.js';
 import type { CommandDefinition } from '../../types/command.js';
 import { getModuleCommands, getAllCommands } from '../../core/commands/CommandRegistry.js';
@@ -21,7 +22,7 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: 'moderation',
     name: 'Moderation',
-    description: 'Server management, bans, mutes, locks, purges, and roles',
+    description: 'Server management, bans, mutes, locks, purges, audit logs, and roles',
     modules: ['moderation'],
   },
   {
@@ -129,7 +130,7 @@ export function buildMainHelpEmbed(
   const dropdownRow = buildCategoryDropdown(userId, undefined, usableSet);
 
   return ui.standard({
-    title: 'Amo Command Directory',
+    title: 'Command Directory',
     text: headerContent,
     components: [dropdownRow],
   });
@@ -205,18 +206,29 @@ export function buildCategoryHelpEmbed(
   });
 }
 
+function formatPermissions(perms: readonly import('discord.js').PermissionResolvable[] | undefined): string {
+  if (!perms || perms.length === 0) return 'None';
+  return perms.map(p => new PermissionsBitField(p).toArray().join(', ')).filter(Boolean).join(', ') || 'None';
+}
+
 export function buildCommandHelpEmbed(command: CommandDefinition, prefix: string): ComponentV2Payload {
   const cat = HELP_CATEGORIES.find(c => c.modules.includes(command.module.toLowerCase()));
   const catLabel = cat ? cat.name : command.module;
 
   const usageStr = command.usage ? `\`${prefix}${command.usage}\`` : `\`${prefix}${command.name}\``;
-  const aliasStr = command.aliases.length > 0 ? command.aliases.map(a => `\`${prefix}${a}\``).join(', ') : '—';
+  const aliasStr = command.aliases.length > 0 ? command.aliases.map(a => `\`${prefix}${a}\``).join(', ') : 'None';
+  const userPermsStr = formatPermissions(command.permissions);
+  const botPermsStr = formatPermissions(command.botPermissions);
+  const cooldownStr = `${command.cooldown ?? 3}s`;
 
   let bodyContent =
     `${sanitize(command.description)}\n\n` +
     `• **Category:** ${catLabel}\n` +
     `• **Usage:** ${usageStr}\n` +
-    `• **Aliases:** ${aliasStr}`;
+    `• **Aliases:** ${aliasStr}\n` +
+    `• **Cooldown:** \`${cooldownStr}\`\n` +
+    `• **User Permissions:** \`${userPermsStr}\`\n` +
+    `• **Bot Permissions:** \`${botPermsStr}\``;
 
   if (command.examples.length > 0) {
     const formattedExamples = command.examples.map(ex => `• \`${prefix}${ex}\``).join('\n');
@@ -224,7 +236,7 @@ export function buildCommandHelpEmbed(command: CommandDefinition, prefix: string
   }
 
   return ui.standard({
-    title: `Help: ${prefix}${command.name}`,
+    title: `Command: ${prefix}${command.name}`,
     text: sanitize(bodyContent),
   });
 }

@@ -4,6 +4,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { mentionChannel } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export function parseSlowmodeDuration(input: string): number | null {
   const clean = input.toLowerCase().trim();
@@ -58,10 +59,18 @@ export default defineCommand({
     await textChannel.setRateLimitPerUser(durationSeconds);
 
     if (durationSeconds === 0) {
-      await respond.success(`Slowmode turned off for ${mentionChannel(channel.id)}.`);
+      await respond.transientSuccess(`Slowmode turned off for ${mentionChannel(channel.id)}. *(Auto-deleting in 5s)*`, 5000);
     } else {
-      await respond.success(`Slowmode set to **${durationSeconds}s** for ${mentionChannel(channel.id)}.`);
+      await respond.transientSuccess(`Slowmode set to **${durationSeconds}s** for ${mentionChannel(channel.id)}. *(Auto-deleting in 5s)*`, 5000);
     }
+
+    logAuditAction({
+      guild,
+      action: 'Slowmode Updated',
+      executor: member,
+      channelName: textChannel.name,
+      details: `• **Duration:** ${durationSeconds === 0 ? 'Disabled (0s)' : `${durationSeconds}s`}`,
+    });
 
     logEvent('info', 'command_execution', `Slowmode set by ${member.user.tag}`, {
       executor: member.user.tag,

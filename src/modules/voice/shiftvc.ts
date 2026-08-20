@@ -3,23 +3,24 @@ import type { GuildTextBasedChannel, Message } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
-import { mentionUser } from '../../core/utils/formatters.js';
+import { formatUser } from '../../core/utils/formatters.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
 import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 import { presenceManager } from '../../core/presence/PresenceManager.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'shiftvc',
   aliases: ['moveall', 'svc'],
   module: 'voice',
-  description: 'Move all members from one voice channel to another.',
+  description: 'Move all members from one voice channel to another with live tracking.',
   usage: 'shiftvc <destination> OR shiftvc <source>, <destination>',
   examples: ['shiftvc General', 'shiftvc Management VC, Hangout 5'],
   permissions: [PermissionsBitField.Flags.MoveMembers],
   botPermissions: [PermissionsBitField.Flags.MoveMembers],
-  cooldown: 10,
+  cooldown: 5,
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, member, respond } = ctx;
@@ -119,12 +120,12 @@ export default defineCommand({
 
     if (totalMembers > 3) {
       const initialPayload = ui.standard({
-        title: `Shifting Voice Members (${sourceVc.name} ➔ ${destVc.name})`,
+        title: `Shifting Voice Members (${sourceVc.name} -> ${destVc.name})`,
         text: `Target: ${totalMembers} members\n**Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\nMoved: **0** | Failed: **0**`,
       });
       statusMsg = await (ctx.channel as GuildTextBasedChannel).send({ components: initialPayload.components, flags: initialPayload.flags as any }).catch(() => null);
       if (statusMsg) {
-        tracker = new LiveProgressTracker(statusMsg, `ShiftVC (${sourceVc.name} ➔ ${destVc.name})`, totalMembers);
+        tracker = new LiveProgressTracker(statusMsg, `ShiftVC (${sourceVc.name} -> ${destVc.name})`, totalMembers);
       }
     }
 
@@ -143,7 +144,7 @@ export default defineCommand({
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
           consoleLog('error', 'command_failure', `shiftvc: failed to move ${m.id}`, { error: msg });
-          failures.push(mentionUser(m.id));
+          failures.push(formatUser(m, guild));
         }
         processed++;
         if (tracker) {
@@ -158,28 +159,42 @@ export default defineCommand({
       presenceManager.clearBusy(taskId);
     }
 
-    const parts: string[] = [];
-    if (moved > 0) {
-      parts.push(`Moved **${moved}** member${moved === 1 ? '' : 's'} from **${sourceVc.name}** to **${destVc.name}**.`);
-    }
+    const parts: string[] = [
+      `• **Transferred:** **${moved}** / **${totalMembers}** members`,
+      `• **From:** \`${sourceVc.name}\` -> **To:** \`${destVc.name}\``,
+    ];
     if (failures.length > 0) {
-      parts.push(`Could not move: ${failures.join(', ')}`);
+      parts.push(`• **Failed:** ${failures.join(', ')}`);
     }
 
     if (statusMsg) {
       const finalPayload = ui.standard({
-        title: `ShiftVC Completed (${sourceVc.name} ➔ ${destVc.name})`,
-        text: parts.join('\n'),
+        title: 'Voice Transfer Completed',
+        text: parts.join('\n') + '\n\n• *(Auto-deleting in 8s)*',
       });
       await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
+      setTimeout(() => {
+        statusMsg?.delete().catch(() => {});
+      }, 8000);
     } else {
       if (moved > 0 && failures.length === 0) {
-        await respond.success(parts.join('\n'));
+        await respond.transientSuccess(`Moved **${moved}** member(s) from **${sourceVc.name}** to **${destVc.name}**. *(Auto-deleting in 5s)*`, 5000);
       } else if (moved > 0 && failures.length > 0) {
         await respond.warning(parts.join('\n'));
       } else {
         await respond.error(parts.join('\n'));
       }
     }
+
+    logAuditAction({
+      guild,
+      action: 'Voice Channel Shift Executed',
+      executor: member,
+      details: [
+        `• **Source:** \`${sourceVc.name}\` (${sourceVc.id})`,
+        `• **Destination:** \`${destVc.name}\` (${destVc.id})`,
+        `• **Moved:** ${moved} / ${totalMembers} members`,
+      ],
+    });
   },
 });

@@ -17,7 +17,7 @@ export default defineCommand({
     'rpc status dnd',
     'rpc status idle',
     'rpc activity watching Over the server',
-    'rpc activity playing Hawk Music',
+    'rpc activity playing Games',
     'rpc reset',
   ],
   ownerOnly: true,
@@ -97,7 +97,7 @@ export default defineCommand({
       presenceManager.setCustomPresence(
         targetStatus,
         existingConfig?.activityType ?? ActivityType.Watching,
-        existingConfig?.activityText ?? 'Hawk Bot'
+        existingConfig?.activityText ?? 'Bot Activity'
       );
       await respond.success(`Presence status set to **${targetStatus.toUpperCase()}** (Custom Mode).`);
       return;

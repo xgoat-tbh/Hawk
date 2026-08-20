@@ -7,7 +7,7 @@ export default defineCommand({
   name: 'ping',
   aliases: ['latency', 'pong'],
   module: 'general',
-  description: 'Display real-time WebSocket, database, and roundtrip ping telemetry with Components V2.',
+  description: 'Display real-time WebSocket, database, and roundtrip ping telemetry.',
   usage: 'ping',
   examples: ['ping', 'latency', 'pong'],
   permissions: [],

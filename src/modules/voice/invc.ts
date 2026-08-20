@@ -2,11 +2,12 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
+import type { GuildMember } from 'discord.js';
 
 export default defineCommand({
   name: 'invc',
   module: 'voice',
-  description: 'List all members in a voice channel with their voice states.',
+  description: 'List all members in a voice channel with structured status groupings.',
   usage: 'invc [voice-channel]',
   examples: ['invc', 'invc General', 'invc 123456789012345678'],
   permitOnly: true,
@@ -45,11 +46,15 @@ export default defineCommand({
       return;
     }
 
-    const lines: string[] = [];
-    let idx = 1;
+    // Categorize members into structured groups
+    const streamingMembers: { member: GuildMember; tags: string[] }[] = [];
+    const activeMembers: { member: GuildMember; tags: string[] }[] = [];
+    const mutedMembers: { member: GuildMember; tags: string[] }[] = [];
+
     for (const m of members.values()) {
       const tags: string[] = [];
       const vs = m.voice;
+
       if (vs.streaming) tags.push('`LIVE`');
       if (vs.selfVideo) tags.push('`CAM`');
       if (vs.serverDeaf) tags.push('`SERVER-DEAF`');
@@ -58,14 +63,48 @@ export default defineCommand({
       else if (vs.selfMute) tags.push('`MUTED`');
       if (m.user.bot) tags.push('`BOT`');
 
-      const tagSuffix = tags.length > 0 ? ` ${tags.join(' ')}` : '';
-      lines.push(`${idx}. **${m.displayName}**${tagSuffix}`);
-      idx++;
+      if (vs.streaming || vs.selfVideo) {
+        streamingMembers.push({ member: m, tags });
+      } else if (vs.selfMute || vs.serverMute || vs.selfDeaf || vs.serverDeaf) {
+        mutedMembers.push({ member: m, tags });
+      } else {
+        activeMembers.push({ member: m, tags });
+      }
     }
 
-    const limit = 'userLimit' in voiceChannel && voiceChannel.userLimit && voiceChannel.userLimit > 0 ? `${voiceChannel.userLimit}` : '∞';
+    const sections: string[] = [];
+    let counter = 1;
+
+    if (streamingMembers.length > 0) {
+      const lines = streamingMembers.map(item => {
+        const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
+        return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
+      });
+      sections.push(`**[STREAMING & VIDEO (${streamingMembers.length})]**\n${lines.join('\n')}`);
+    }
+
+    if (activeMembers.length > 0) {
+      const lines = activeMembers.map(item => {
+        const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
+        return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
+      });
+      sections.push(`**[ACTIVE VOICE (${activeMembers.length})]**\n${lines.join('\n')}`);
+    }
+
+    if (mutedMembers.length > 0) {
+      const lines = mutedMembers.map(item => {
+        const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
+        return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
+      });
+      sections.push(`**[MUTED / DEAFENED (${mutedMembers.length})]**\n${lines.join('\n')}`);
+    }
+
+    const limitNum = 'userLimit' in voiceChannel && voiceChannel.userLimit && voiceChannel.userLimit > 0 ? voiceChannel.userLimit : null;
+    const limitStr = limitNum ? `${limitNum}` : '∞';
+    const percentStr = limitNum ? ` (${Math.round((members.size / limitNum) * 100)}%)` : '';
     const bitrate = 'bitrate' in voiceChannel && voiceChannel.bitrate ? ` • ${Math.round(voiceChannel.bitrate / 1000)}kbps` : '';
 
-    await respond.send(`**${voiceChannel.name}** \`[ ${members.size}/${limit} ]\`${bitrate}\n${lines.join('\n')}`);
+    const header = `**${voiceChannel.name}** \`[ ${members.size}/${limitStr}${percentStr} ]\`${bitrate}`;
+    await respond.send(`${header}\n\n${sections.join('\n\n')}`);
   },
 });

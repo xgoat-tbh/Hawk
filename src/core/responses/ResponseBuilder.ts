@@ -47,6 +47,16 @@ export class ResponseBuilder {
     return sent;
   }
 
+  async transientSuccess(text: string, delayMs = 5000): Promise<Message> {
+    this.enableAutoClean(delayMs);
+    return this.success(text);
+  }
+
+  async transientInfo(text: string, delayMs = 5000): Promise<Message> {
+    this.enableAutoClean(delayMs);
+    return this.info(text);
+  }
+
   async error(text: string): Promise<Message> {
     const formatted = `> **Error:** ${this.cleanSanitize(text)}`;
     const sent = await this.sendableChannel.send({

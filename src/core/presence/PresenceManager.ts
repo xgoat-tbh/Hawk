@@ -185,7 +185,7 @@ export class PresenceManager {
           type: totalVoice > 0 ? ActivityType.Listening : ActivityType.Playing,
         },
         {
-          name: `${prefix}help | Hawk Discord Bot`,
+          name: `${prefix}help | ${this.client.user.username}`,
           type: ActivityType.Watching,
         },
         {
