@@ -42,7 +42,10 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
 
   try {
     const db = getDb();
-    const rows = await db`SELECT log_channel_id FROM guild_config WHERE guild_id = ${guildId}`;
+    const rows = await db`SELECT log_channel_id FROM guild_config WHERE guild_id = ${guildId}`.catch(async () => {
+      await db`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS log_channel_id TEXT`.catch(() => {});
+      return await db`SELECT log_channel_id FROM guild_config WHERE guild_id = ${guildId}`.catch(() => []);
+    });
     const channelId = (rows[0]?.log_channel_id as string) ?? null;
 
     if (logChannelCache.size >= 10000) {
@@ -58,12 +61,26 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
 
 export async function setLogChannel(guildId: string, channelId: string | null): Promise<void> {
   const db = getDb();
-  await db`
-    INSERT INTO guild_config (guild_id, log_channel_id)
-    VALUES (${guildId}, ${channelId})
-    ON CONFLICT (guild_id)
-    DO UPDATE SET log_channel_id = ${channelId}, updated_at = NOW()
-  `;
+  try {
+    await db`
+      INSERT INTO guild_config (guild_id, log_channel_id)
+      VALUES (${guildId}, ${channelId})
+      ON CONFLICT (guild_id)
+      DO UPDATE SET log_channel_id = ${channelId}, updated_at = NOW()
+    `;
+  } catch (err: any) {
+    if (err?.message?.includes('log_channel_id') || err?.code === '42703') {
+      await db`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS log_channel_id TEXT`.catch(() => {});
+      await db`
+        INSERT INTO guild_config (guild_id, log_channel_id)
+        VALUES (${guildId}, ${channelId})
+        ON CONFLICT (guild_id)
+        DO UPDATE SET log_channel_id = ${channelId}, updated_at = NOW()
+      `;
+    } else {
+      throw err;
+    }
+  }
   logChannelCache.set(guildId, channelId);
 }
 
