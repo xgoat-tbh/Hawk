@@ -3,7 +3,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getGamePing, getGameTestChannel } from '../../core/database/repositories/gameRepo.js';
 import { checkVcCooldown, setVcCooldown, removeVcCooldown } from './GameVcCooldownManager.js';
-import { mentionRole, mentionChannel } from '../../core/utils/formatters.js';
+import { mentionChannel } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
@@ -70,7 +70,7 @@ export default defineCommand({
     });
 
     // Construct announcement skeleton: Role Mention -> User Message -> VC Mention
-    const announcementText = `${mentionRole(pingConfig.roleId)} ${userMessageContent} ${mentionChannel(pingConfig.vcId)}`;
+    const announcementText = `<@&${pingConfig.roleId}> ${userMessageContent} ${mentionChannel(pingConfig.vcId)}`;
 
     // Send with strict allowedMentions: ONLY the configured game role can be mentioned by the bot
     await channel.send({
