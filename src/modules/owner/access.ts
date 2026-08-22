@@ -366,7 +366,7 @@ export default defineCommand({
           } else {
             const roleObj = guild.roles.cache.get(targetId);
             targetTitleName = roleObj?.name || `Role ${targetId}`;
-            targetAvatarUrl = roleObj?.iconURL() || guild.iconURL({ size: 128 }) || undefined;
+            targetAvatarUrl = roleObj?.iconURL({ size: 128 }) || undefined;
 
             details.push(`• **Target Role:** ${mentionRole(targetId, guild)} (\`${targetId}\`)`);
             if (roleObj) {
