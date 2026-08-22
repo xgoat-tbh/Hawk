@@ -2,6 +2,7 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
+import { ui } from '../../core/ui/index.js';
 import type { GuildMember } from 'discord.js';
 
 export default defineCommand({
@@ -42,7 +43,14 @@ export default defineCommand({
 
     const members = voiceChannel.members;
     if (members.size === 0) {
-      await respond.info(`${voiceChannel.name} is empty.`);
+      const emptyPayload = ui.standard({
+        title: voiceChannel.name,
+        text: '*This voice channel is currently empty.*',
+      });
+      await respond.raw({
+        components: emptyPayload.components,
+        flags: emptyPayload.flags as any,
+      });
       return;
     }
 
@@ -102,9 +110,18 @@ export default defineCommand({
     const limitNum = 'userLimit' in voiceChannel && voiceChannel.userLimit && voiceChannel.userLimit > 0 ? voiceChannel.userLimit : null;
     const limitStr = limitNum ? `${limitNum}` : '∞';
     const percentStr = limitNum ? ` (${Math.round((members.size / limitNum) * 100)}%)` : '';
-    const bitrate = 'bitrate' in voiceChannel && voiceChannel.bitrate ? ` • ${Math.round(voiceChannel.bitrate / 1000)}kbps` : '';
+    const bitrateStr = 'bitrate' in voiceChannel && voiceChannel.bitrate ? ` • \`${Math.round(voiceChannel.bitrate / 1000)} kbps\`` : '';
+    const categoryStr = voiceChannel.parent ? ` • Category: \`${voiceChannel.parent.name}\`` : '';
 
-    const header = `${voiceChannel.name} \`[ ${members.size}/${limitStr}${percentStr} ]\`${bitrate}`;
-    await respond.send(`${header}\n\n${sections.join('\n\n')}`);
+    const payload = ui.standard({
+      title: `${voiceChannel.name} [ ${members.size}/${limitStr}${percentStr} ]`,
+      text: `• **Occupancy:** \`${members.size}/${limitStr}\`${bitrateStr}${categoryStr}`,
+      sections,
+    });
+
+    await respond.raw({
+      components: payload.components,
+      flags: payload.flags as any,
+    });
   },
 });
