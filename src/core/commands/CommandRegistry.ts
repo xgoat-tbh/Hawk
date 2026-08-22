@@ -33,7 +33,18 @@ export function getModuleCommands(moduleName: string, includeHidden = false): Co
     .filter((c): c is CommandDefinition => c !== undefined && (includeHidden || !c.hidden));
 }
 
-export function getModules(): string[] { return Array.from(modules.keys()); }
-export function getAllCommands(): CommandDefinition[] { return Array.from(commands.values()); }
-export function getCommandCount(): number { return commands.size; }
+export function getModules(includeOwner = false): string[] {
+  if (includeOwner) return Array.from(modules.keys());
+  return Array.from(modules.keys()).filter(m => m !== 'owner');
+}
+
+export function getAllCommands(includeOwner = false): CommandDefinition[] {
+  if (includeOwner) return Array.from(commands.values());
+  return Array.from(commands.values()).filter(c => c.module !== 'owner' && !c.hidden && !c.ownerOnly);
+}
+
+export function getCommandCount(includeOwner = false): number {
+  return getAllCommands(includeOwner).length;
+}
+
 export function isRegistered(nameOrAlias: string): boolean { return resolveCommand(nameOrAlias) !== null; }

@@ -107,18 +107,19 @@ export type CommandOptions = Partial<Omit<CommandDefinition, 'name' | 'module' |
 
 /** Create a command definition with sensible defaults */
 export function defineCommand(options: CommandOptions): CommandDefinition {
+  const isOwnerModule = options.module === 'owner';
   return {
     aliases: [],
     description: 'No description provided.',
     usage: '',
     examples: [],
-    ownerOnly: false,
+    ownerOnly: isOwnerModule,
     botAdminOnly: false,
     permissions: [],
     botPermissions: [],
     cooldown: 0,
     dmAllowed: false,
-    hidden: false,
+    hidden: isOwnerModule,
     enabled: true,
     permitOnly: false,
     ...options,

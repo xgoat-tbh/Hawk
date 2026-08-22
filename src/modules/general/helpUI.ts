@@ -46,8 +46,8 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: 'general',
     name: 'General & Info',
-    description: 'Bot statistics, AFK status, emoji stealing, access & restrictions',
-    modules: ['general', 'owner'],
+    description: 'Bot statistics, AFK status, and emoji stealing',
+    modules: ['general'],
   },
 ];
 
@@ -64,7 +64,7 @@ export function getCategoryCommands(categoryId: string): CommandDefinition[] {
     const modCmds = getModuleCommands(mod);
     cmds.push(...modCmds);
   }
-  return cmds.filter(c => c.name !== 'help');
+  return cmds.filter(c => c.name !== 'help' && !c.hidden && !c.ownerOnly && c.module !== 'owner');
 }
 
 export function buildCategoryDropdown(

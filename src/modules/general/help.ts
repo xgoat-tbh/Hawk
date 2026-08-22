@@ -33,10 +33,14 @@ export default defineCommand({
     }
 
     const target = parsed.args[0].toLowerCase();
+    const { getAuthorityLevel } = await import('../../core/permissions/PermissionChecker.js');
+    const { AuthorityLevel } = await import('../../types/permission.js');
+    const authority = getAuthorityLevel(member.id, guild.ownerId);
+    const isOwner = authority === AuthorityLevel.Owner;
 
     // Case B: Direct Command Lookup
     const matchedCmd = resolveCommand(target);
-    if (matchedCmd) {
+    if (matchedCmd && (isOwner || (!matchedCmd.hidden && !matchedCmd.ownerOnly && matchedCmd.module !== 'owner'))) {
       const payload = buildCommandHelpEmbed(matchedCmd, prefix);
       await respond.raw(payload);
       return;

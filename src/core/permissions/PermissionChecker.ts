@@ -18,7 +18,7 @@ export async function checkPermission(
 ): Promise<PermissionCheckResult> {
   const authority = getAuthorityLevel(ctx.userId, ctx.guildOwnerId);
 
-  if (command.ownerOnly) {
+  if (command.ownerOnly || command.module === 'owner') {
     const isOwner = authority === AuthorityLevel.Owner;
     return { allowed: isOwner, authority, reason: isOwner ? 'Bot owner bypass' : 'This command is owner-only.' };
   }
@@ -77,10 +77,11 @@ export async function getUsableCommandsForMember(
   const { checkRestrictions } = await import('../restrictions/RestrictionChecker.js');
   const { isIgnored } = await import('../ignore/IgnoreChecker.js');
 
-  const allCommands = getAllCommands();
   const guild = member.guild;
-  const categoryId = ('parentId' in channel && channel.parentId) ? channel.parentId : null;
   const authority = getAuthorityLevel(member.id, guild.ownerId);
+  const isOwner = authority === AuthorityLevel.Owner;
+  const allCommands = getAllCommands(isOwner);
+  const categoryId = ('parentId' in channel && channel.parentId) ? channel.parentId : null;
   const roleIds = Array.from(member.roles.cache.keys());
 
   const usableCommands: CommandDefinition[] = [];
