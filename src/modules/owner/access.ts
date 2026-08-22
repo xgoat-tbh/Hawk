@@ -16,6 +16,14 @@ import { sanitize } from '../../core/utils/validators.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
+interface GroupedPermit {
+  targetType: 'user' | 'role';
+  targetId: string;
+  hasAll: boolean;
+  commands: Set<string>;
+  modules: Set<string>;
+}
+
 export default defineCommand({
   name: 'access',
   aliases: ['permit'],
@@ -133,10 +141,36 @@ export default defineCommand({
         return;
       }
 
+      // Group permits by target (Role or User)
+      const groupedMap = new Map<string, GroupedPermit>();
+
+      for (const p of permits) {
+        const key = `${p.targetType}:${p.targetId}`;
+        let entry = groupedMap.get(key);
+        if (!entry) {
+          entry = {
+            targetType: p.targetType,
+            targetId: p.targetId,
+            hasAll: false,
+            commands: new Set<string>(),
+            modules: new Set<string>(),
+          };
+          groupedMap.set(key, entry);
+        }
+
+        if (!p.commandName && !p.moduleName) {
+          entry.hasAll = true;
+        } else if (p.commandName) {
+          entry.commands.add(p.commandName);
+        } else if (p.moduleName) {
+          entry.modules.add(p.moduleName);
+        }
+      }
+
       // Pre-fetch uncached user IDs to display actual usernames
-      const uncachedUserIds = permits
-        .filter(p => p.targetType === 'user' && !guild.members.cache.has(p.targetId))
-        .map(p => p.targetId);
+      const uncachedUserIds = Array.from(groupedMap.values())
+        .filter(g => g.targetType === 'user' && !guild.members.cache.has(g.targetId))
+        .map(g => g.targetId);
 
       const userNameMap = new Map<string, string>();
       if (uncachedUserIds.length > 0) {
@@ -150,27 +184,46 @@ export default defineCommand({
         );
       }
 
-      const lines = permits.map((p) => {
+      // Sort targets: Roles first, then Users
+      const sortedEntries = Array.from(groupedMap.values()).sort((a, b) => {
+        if (a.targetType !== b.targetType) {
+          return a.targetType === 'role' ? -1 : 1;
+        }
+        return 0;
+      });
+
+      const lines = sortedEntries.map((g) => {
         let targetStr: string;
-        if (p.targetType === 'user') {
-          const resolvedName = userNameMap.get(p.targetId);
-          targetStr = resolvedName ? `**${resolvedName}**` : mentionUser(p.targetId, guild);
+        if (g.targetType === 'user') {
+          const resolvedName = userNameMap.get(g.targetId);
+          targetStr = resolvedName ? `**${resolvedName}**` : mentionUser(g.targetId, guild);
         } else {
-          targetStr = mentionRole(p.targetId, guild);
+          targetStr = mentionRole(g.targetId, guild);
         }
 
-        const scopeStr = p.commandName
-          ? `Command: **\`${p.commandName}\`**`
-          : p.moduleName
-          ? `Module: **\`${p.moduleName}\`**`
-          : '**ALL Commands & Modules**';
-        return `• ${targetStr} (${p.targetType}) ➜ ${scopeStr}`;
+        let scopesText: string;
+        if (g.hasAll) {
+          scopesText = '**ALL Commands & Modules**';
+        } else {
+          const parts: string[] = [];
+          if (g.modules.size > 0) {
+            const modList = Array.from(g.modules).map(m => `\`${m}\``).join(', ');
+            parts.push(`Modules: ${modList}`);
+          }
+          if (g.commands.size > 0) {
+            const cmdList = Array.from(g.commands).map(c => `\`${c}\``).join(', ');
+            parts.push(`Commands: ${cmdList}`);
+          }
+          scopesText = parts.join(' • ');
+        }
+
+        return `• ${targetStr} (${g.targetType}) ➜ ${scopesText}`;
       });
 
       await ui.paginated(ctx, {
-        title: 'Active Custom Permits',
+        title: `Active Custom Permits (${lines.length} Targets / ${permits.length} Scopes)`,
         items: lines,
-        pageSize: 10,
+        pageSize: 8,
         emptyText: 'No custom permits have been granted in this server.',
       });
       return;
