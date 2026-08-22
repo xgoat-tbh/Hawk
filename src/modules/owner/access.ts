@@ -1,4 +1,11 @@
-import { PermissionsBitField } from 'discord.js';
+import {
+  PermissionsBitField,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+} from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
@@ -9,8 +16,9 @@ import {
   removePermit,
   getPermitsForGuild,
   deletePermitsByIds,
+  removeAllPermitsForTarget,
 } from '../../core/database/repositories/permissionRepo.js';
-import { ui } from '../../core/ui/index.js';
+import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
 import { sanitize } from '../../core/utils/validators.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
@@ -22,6 +30,7 @@ interface GroupedPermit {
   hasAll: boolean;
   commands: Set<string>;
   modules: Set<string>;
+  earliestCreatedAt: Date;
 }
 
 export default defineCommand({
@@ -135,96 +144,370 @@ export default defineCommand({
 
     // ── Subcommand: list ──────────────────────────────────────
     if (firstArg === 'list' || firstArg === 'show') {
-      const permits = await getPermitsForGuild(guild.id);
+      let permits = await getPermitsForGuild(guild.id);
       if (permits.length === 0) {
         await respond.info('No custom permits have been granted in this server.');
         return;
       }
 
       // Group permits by target (Role or User)
-      const groupedMap = new Map<string, GroupedPermit>();
+      const buildGrouped = () => {
+        const map = new Map<string, GroupedPermit>();
+        for (const p of permits) {
+          const key = `${p.targetType}:${p.targetId}`;
+          let entry = map.get(key);
+          if (!entry) {
+            entry = {
+              targetType: p.targetType,
+              targetId: p.targetId,
+              hasAll: false,
+              commands: new Set<string>(),
+              modules: new Set<string>(),
+              earliestCreatedAt: p.createdAt ?? new Date(),
+            };
+            map.set(key, entry);
+          }
 
-      for (const p of permits) {
-        const key = `${p.targetType}:${p.targetId}`;
-        let entry = groupedMap.get(key);
-        if (!entry) {
-          entry = {
-            targetType: p.targetType,
-            targetId: p.targetId,
-            hasAll: false,
-            commands: new Set<string>(),
-            modules: new Set<string>(),
-          };
-          groupedMap.set(key, entry);
+          if (p.createdAt && p.createdAt < entry.earliestCreatedAt) {
+            entry.earliestCreatedAt = p.createdAt;
+          }
+
+          if (!p.commandName && !p.moduleName) {
+            entry.hasAll = true;
+          } else if (p.commandName) {
+            entry.commands.add(p.commandName);
+          } else if (p.moduleName) {
+            entry.modules.add(p.moduleName);
+          }
         }
 
-        if (!p.commandName && !p.moduleName) {
-          entry.hasAll = true;
-        } else if (p.commandName) {
-          entry.commands.add(p.commandName);
-        } else if (p.moduleName) {
-          entry.modules.add(p.moduleName);
-        }
-      }
+        return Array.from(map.values()).sort((a, b) => {
+          if (a.targetType !== b.targetType) {
+            return a.targetType === 'role' ? -1 : 1;
+          }
+          return 0;
+        });
+      };
+
+      let sortedEntries = buildGrouped();
 
       // Pre-fetch uncached user IDs to display actual usernames
-      const uncachedUserIds = Array.from(groupedMap.values())
-        .filter(g => g.targetType === 'user' && !guild.members.cache.has(g.targetId))
-        .map(g => g.targetId);
-
       const userNameMap = new Map<string, string>();
-      if (uncachedUserIds.length > 0) {
-        await Promise.all(
-          Array.from(new Set(uncachedUserIds)).map(async (uid) => {
-            const user = guild.client.users.cache.get(uid) ?? (await guild.client.users.fetch(uid).catch(() => null));
-            if (user) {
-              userNameMap.set(uid, user.displayName || user.globalName || user.username);
+      const fetchUserNames = async () => {
+        const uncachedUserIds = sortedEntries
+          .filter(g => g.targetType === 'user' && !guild.members.cache.has(g.targetId))
+          .map(g => g.targetId);
+
+        if (uncachedUserIds.length > 0) {
+          await Promise.all(
+            Array.from(new Set(uncachedUserIds)).map(async (uid) => {
+              const user = guild.client.users.cache.get(uid) ?? (await guild.client.users.fetch(uid).catch(() => null));
+              if (user) {
+                userNameMap.set(uid, user.displayName || user.globalName || user.username);
+              }
+            })
+          );
+        }
+      };
+
+      await fetchUserNames();
+
+      const PAGE_SIZE = 6;
+      let currentPage = 0;
+
+      const buildListPagePayload = (page: number): { payload: ComponentV2Payload; components: any[] } => {
+        const totalPages = Math.max(1, Math.ceil(sortedEntries.length / PAGE_SIZE));
+        const start = page * PAGE_SIZE;
+        const pageItems = sortedEntries.slice(start, start + PAGE_SIZE);
+
+        const lines = pageItems.map((g) => {
+          let targetStr: string;
+          if (g.targetType === 'user') {
+            const resolvedName = userNameMap.get(g.targetId);
+            targetStr = resolvedName ? `**${resolvedName}**` : mentionUser(g.targetId, guild);
+          } else {
+            targetStr = mentionRole(g.targetId, guild);
+          }
+
+          let scopesText: string;
+          if (g.hasAll) {
+            scopesText = '**ALL Commands & Modules**';
+          } else {
+            const parts: string[] = [];
+            if (g.modules.size > 0) {
+              const modList = Array.from(g.modules).map(m => `\`${m}\``).join(', ');
+              parts.push(`Modules: ${modList}`);
             }
-          })
+            if (g.commands.size > 0) {
+              const cmdList = Array.from(g.commands).map(c => `\`${c}\``).join(', ');
+              parts.push(`Commands: ${cmdList}`);
+            }
+            scopesText = parts.join(' • ');
+          }
+
+          return `• ${targetStr} (${g.targetType}) ➜ ${scopesText}`;
+        });
+
+        const listContent = lines.length > 0 ? lines.join('\n') : 'No active permits.';
+        const footerText = `Page ${page + 1}/${totalPages} (Total Targets: ${sortedEntries.length} | Scopes: ${permits.length})`;
+
+        const basePayload = ui.standard({
+          title: `Active Custom Permits (${sortedEntries.length} Targets)`,
+          text: `${listContent}\n\n*${footerText}*`,
+        });
+
+        // 1. Selector menu for detailed inspection (top 25 targets)
+        const selectOptions: StringSelectMenuOptionBuilder[] = sortedEntries.slice(0, 25).map((g) => {
+          let nameLabel = g.targetId;
+          if (g.targetType === 'user') {
+            const memberObj = guild.members.cache.get(g.targetId);
+            nameLabel = memberObj ? memberObj.displayName : (userNameMap.get(g.targetId) || `User ${g.targetId}`);
+          } else {
+            const roleObj = guild.roles.cache.get(g.targetId);
+            nameLabel = roleObj ? roleObj.name : `Role ${g.targetId}`;
+          }
+
+          let desc = '';
+          if (g.hasAll) {
+            desc = 'ALL Commands & Modules';
+          } else {
+            const modStr = g.modules.size > 0 ? `Modules: ${Array.from(g.modules).join(', ')}` : '';
+            const cmdStr = g.commands.size > 0 ? `Commands: ${Array.from(g.commands).join(', ')}` : '';
+            desc = [modStr, cmdStr].filter(Boolean).join(' | ');
+          }
+
+          return new StringSelectMenuOptionBuilder()
+            .setLabel(`${nameLabel.slice(0, 50)} (${g.targetType})`)
+            .setValue(`inspect:${g.targetType}:${g.targetId}`)
+            .setDescription(desc.slice(0, 100) || 'Active Permits');
+        });
+
+        const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId('access_select_inspect')
+            .setPlaceholder('🔍 Select a role or user to inspect details...')
+            .addOptions(selectOptions)
         );
-      }
 
-      // Sort targets: Roles first, then Users
-      const sortedEntries = Array.from(groupedMap.values()).sort((a, b) => {
-        if (a.targetType !== b.targetType) {
-          return a.targetType === 'role' ? -1 : 1;
+        // 2. Pagination buttons (if multiple pages)
+        const components: any[] = [selectRow];
+
+        if (totalPages > 1) {
+          const prevBtn = new ButtonBuilder()
+            .setCustomId('access_page_prev')
+            .setLabel('◀ Prev')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page <= 0);
+
+          const countBtn = new ButtonBuilder()
+            .setCustomId('access_page_count')
+            .setLabel(`${page + 1} / ${totalPages}`)
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true);
+
+          const nextBtn = new ButtonBuilder()
+            .setCustomId('access_page_next')
+            .setLabel('Next ▶')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page >= totalPages - 1);
+
+          const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(prevBtn, countBtn, nextBtn);
+          components.push(buttonRow);
         }
-        return 0;
+
+        return {
+          payload: basePayload,
+          components: [...basePayload.components, ...components],
+        };
+      };
+
+      const initial = buildListPagePayload(currentPage);
+      const sentMsg = await respond.raw({
+        components: initial.components,
+        flags: initial.payload.flags as any,
       });
 
-      const lines = sortedEntries.map((g) => {
-        let targetStr: string;
-        if (g.targetType === 'user') {
-          const resolvedName = userNameMap.get(g.targetId);
-          targetStr = resolvedName ? `**${resolvedName}**` : mentionUser(g.targetId, guild);
-        } else {
-          targetStr = mentionRole(g.targetId, guild);
-        }
-
-        let scopesText: string;
-        if (g.hasAll) {
-          scopesText = '**ALL Commands & Modules**';
-        } else {
-          const parts: string[] = [];
-          if (g.modules.size > 0) {
-            const modList = Array.from(g.modules).map(m => `\`${m}\``).join(', ');
-            parts.push(`Modules: ${modList}`);
-          }
-          if (g.commands.size > 0) {
-            const cmdList = Array.from(g.commands).map(c => `\`${c}\``).join(', ');
-            parts.push(`Commands: ${cmdList}`);
-          }
-          scopesText = parts.join(' • ');
-        }
-
-        return `• ${targetStr} (${g.targetType}) ➜ ${scopesText}`;
+      const collector = sentMsg.createMessageComponentCollector({
+        filter: (i) => i.user.id === member.id,
+        time: 120_000,
       });
 
-      await ui.paginated(ctx, {
-        title: `Active Custom Permits (${lines.length} Targets / ${permits.length} Scopes)`,
-        items: lines,
-        pageSize: 8,
-        emptyText: 'No custom permits have been granted in this server.',
+      collector.on('collect', async (interaction) => {
+        // Pagination buttons
+        if (interaction.isButton()) {
+          if (interaction.customId === 'access_page_prev') {
+            if (currentPage > 0) currentPage--;
+            const updated = buildListPagePayload(currentPage);
+            await interaction.update({
+              components: updated.components,
+              flags: updated.payload.flags as any,
+            });
+            return;
+          }
+
+          if (interaction.customId === 'access_page_next') {
+            const totalPages = Math.ceil(sortedEntries.length / PAGE_SIZE);
+            if (currentPage < totalPages - 1) currentPage++;
+            const updated = buildListPagePayload(currentPage);
+            await interaction.update({
+              components: updated.components,
+              flags: updated.payload.flags as any,
+            });
+            return;
+          }
+
+          if (interaction.customId === 'access_back_list') {
+            const updated = buildListPagePayload(currentPage);
+            await interaction.update({
+              components: updated.components,
+              flags: updated.payload.flags as any,
+            });
+            return;
+          }
+
+          if (interaction.customId.startsWith('access_revoke_target:')) {
+            const parts = interaction.customId.split(':');
+            const targetType = parts[1] as 'user' | 'role';
+            const targetId = parts[2];
+
+            const removedCount = await removeAllPermitsForTarget(
+              guild.id,
+              targetType,
+              targetId,
+              member.id,
+              sanitize(member.displayName || member.user.tag)
+            );
+
+            logAuditAction({
+              guild,
+              action: 'Access Target Revoked',
+              executor: member,
+              details: [
+                `• **Target Type:** ${targetType.toUpperCase()}`,
+                `• **Target ID:** \`${targetId}\``,
+                `• **Permits Revoked:** ${removedCount}`,
+              ],
+            });
+
+            // Re-fetch permits
+            permits = await getPermitsForGuild(guild.id);
+            sortedEntries = buildGrouped();
+            if (currentPage >= Math.ceil(sortedEntries.length / PAGE_SIZE)) {
+              currentPage = Math.max(0, Math.ceil(sortedEntries.length / PAGE_SIZE) - 1);
+            }
+
+            const backBtn = new ButtonBuilder()
+              .setCustomId('access_back_list')
+              .setLabel('◀ Back to Access List')
+              .setStyle(ButtonStyle.Secondary);
+            const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(backBtn);
+
+            const revokeConfirmPayload = ui.standard({
+              title: 'Access Revocation Successful',
+              text: `✅ Successfully revoked all **${removedCount}** permit(s) for <@${targetType === 'role' ? '&' : ''}${targetId}> (\`${targetId}\`).`,
+              components: [buttonRow],
+            });
+
+            await interaction.update({
+              components: revokeConfirmPayload.components,
+              flags: revokeConfirmPayload.flags as any,
+            });
+            return;
+          }
+        }
+
+        // Select menu for inspection
+        if (interaction.isStringSelectMenu() && interaction.customId === 'access_select_inspect') {
+          const selectedVal = interaction.values[0];
+          const [, targetType, targetId] = selectedVal.split(':');
+
+          const targetEntry = sortedEntries.find(g => g.targetType === targetType && g.targetId === targetId);
+          if (!targetEntry) {
+            await interaction.reply({ content: 'Selected target is no longer active in permits.', flags: 64 });
+            return;
+          }
+
+          const details: string[] = [];
+          let targetTitleName = targetId;
+
+          if (targetType === 'user') {
+            const cachedMember = guild.members.cache.get(targetId);
+            const fetchedUser = cachedMember?.user ?? guild.client.users.cache.get(targetId) ?? (await guild.client.users.fetch(targetId).catch(() => null));
+
+            const displayName = cachedMember?.displayName || fetchedUser?.displayName || fetchedUser?.username || 'Unknown User';
+            const username = fetchedUser ? `${fetchedUser.username}${fetchedUser.discriminator !== '0' ? `#${fetchedUser.discriminator}` : ''}` : 'Unknown';
+            targetTitleName = displayName;
+
+            details.push(`• **Target User:** <@${targetId}> (\`${targetId}\`)`);
+            details.push(`• **Username / Tag:** \`${username}\``);
+            if (fetchedUser) {
+              const createdTs = Math.floor(fetchedUser.createdTimestamp / 1000);
+              details.push(`• **Account Created:** <t:${createdTs}:R> (<t:${createdTs}:d>)`);
+            }
+            if (cachedMember?.joinedTimestamp) {
+              const joinedTs = Math.floor(cachedMember.joinedTimestamp / 1000);
+              details.push(`• **Joined Server:** <t:${joinedTs}:R> (<t:${joinedTs}:d>)`);
+            } else {
+              details.push(`• **Server Status:** *Not currently in server (or uncached)*`);
+            }
+          } else {
+            const roleObj = guild.roles.cache.get(targetId);
+            targetTitleName = roleObj?.name || `Role ${targetId}`;
+
+            details.push(`• **Target Role:** ${mentionRole(targetId, guild)} (\`${targetId}\`)`);
+            if (roleObj) {
+              details.push(`• **Role Members:** **${roleObj.members.size}** members`);
+              details.push(`• **Role Color:** \`${roleObj.hexColor}\``);
+              details.push(`• **Hierarchy Position:** #${roleObj.position}`);
+            } else {
+              details.push(`• **Role Status:** *Role was deleted from server*`);
+            }
+          }
+
+          // Format permissions
+          details.push('');
+          details.push('**Granted Scopes:**');
+          if (targetEntry.hasAll) {
+            details.push('• **ALL Commands & Modules** (Global Access)');
+          } else {
+            if (targetEntry.modules.size > 0) {
+              details.push(`• **Modules:** ${Array.from(targetEntry.modules).map(m => `\`${m}\``).join(', ')}`);
+            }
+            if (targetEntry.commands.size > 0) {
+              details.push(`• **Commands:** ${Array.from(targetEntry.commands).map(c => `\`${c}\``).join(', ')}`);
+            }
+          }
+
+          const unixGranted = Math.floor(targetEntry.earliestCreatedAt.getTime() / 1000);
+          details.push(`• **Earliest Granted:** <t:${unixGranted}:f> (<t:${unixGranted}:R>)`);
+
+          const backBtn = new ButtonBuilder()
+            .setCustomId('access_back_list')
+            .setLabel('◀ Back to List')
+            .setStyle(ButtonStyle.Secondary);
+
+          const revokeBtn = new ButtonBuilder()
+            .setCustomId(`access_revoke_target:${targetType}:${targetId}`)
+            .setLabel('Revoke All Access')
+            .setStyle(ButtonStyle.Secondary);
+
+          const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(backBtn, revokeBtn);
+
+          const inspectPayload = ui.standard({
+            title: `Access Profile: ${targetTitleName}`,
+            text: details.join('\n'),
+            components: [actionRow],
+          });
+
+          await interaction.update({
+            components: inspectPayload.components,
+            flags: inspectPayload.flags as any,
+          });
+        }
+      });
+
+      collector.on('end', () => {
+        sentMsg.edit({ components: [] }).catch(() => {});
       });
       return;
     }

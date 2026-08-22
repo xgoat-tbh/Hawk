@@ -111,6 +111,30 @@ export async function deletePermitsByIds(guildId: string, ids: number[]): Promis
   return result.count;
 }
 
+export async function removeAllPermitsForTarget(
+  guildId: string,
+  targetType: 'user' | 'role',
+  targetId: string,
+  revokedById?: string,
+  revokedByName?: string,
+): Promise<number> {
+  const db = getDb();
+  const result = await db`
+    DELETE FROM permits
+    WHERE guild_id = ${guildId}
+      AND target_type = ${targetType}
+      AND target_id = ${targetId}
+  `;
+  if (result.count > 0 && revokedById && revokedByName) {
+    await db`
+      INSERT INTO permit_revocations (guild_id, target_type, target_id, command_name, module_name, revoked_by_id, revoked_by_name)
+      VALUES (${guildId}, ${targetType}, ${targetId}, 'ALL', 'ALL', ${revokedById}, ${revokedByName})
+    `.catch(() => {});
+  }
+  invalidatePermitCache(guildId);
+  return result.count;
+}
+
 export async function getLatestRevocation(
   guildId: string,
   userId: string,
