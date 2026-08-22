@@ -75,6 +75,7 @@ export async function buildInfoV2Embed(client: Client, _guild: Guild, prefix: st
   return ui.standard({
     title: `${botUser?.username ?? 'Bot'} System Telemetry`,
     text: content,
+    thumbnailUrl: botUser?.displayAvatarURL({ size: 128 }) || undefined,
     components: [actionRow],
   });
 }

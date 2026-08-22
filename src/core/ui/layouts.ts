@@ -7,7 +7,8 @@ import {
 import type { Message, GuildTextBasedChannel, ContainerBuilder } from 'discord.js';
 import type { CommandContext } from '../../types/command.js';
 import { sanitize, sanitizeAsync } from '../utils/validators.js';
-import { createContainer, createTextDisplay, createSeparator } from './components.js';
+import type { SectionOptions } from './components.js';
+import { createContainer, createTextDisplay, createSeparator, createSection } from './components.js';
 
 export interface ComponentV2Payload {
   components: ContainerBuilder[];
@@ -17,10 +18,11 @@ export interface ComponentV2Payload {
 export interface StandardLayoutOptions {
   title?: string;
   text?: string;
-  sections?: string[];
+  sections?: (string | SectionOptions)[];
   components?: ActionRowBuilder<any>[];
   accentColor?: number;
   divider?: boolean;
+  thumbnailUrl?: string;
 }
 
 export function standard(options: StandardLayoutOptions): ComponentV2Payload {
@@ -36,7 +38,15 @@ export function standard(options: StandardLayoutOptions): ComponentV2Payload {
         container.addSeparatorComponents(createSeparator(true));
       }
     }
-    container.addTextDisplayComponents(createTextDisplay(sanitize(options.text)));
+    if (options.thumbnailUrl) {
+      const section = createSection({
+        text: sanitize(options.text),
+        thumbnailUrl: options.thumbnailUrl,
+      });
+      container.addSectionComponents(section);
+    } else {
+      container.addTextDisplayComponents(createTextDisplay(sanitize(options.text)));
+    }
   }
 
   if (options.sections && options.sections.length > 0) {
@@ -46,7 +56,16 @@ export function standard(options: StandardLayoutOptions): ComponentV2Payload {
           container.addSeparatorComponents(createSeparator(true));
         }
       }
-      container.addTextDisplayComponents(createTextDisplay(sanitize(options.sections[i])));
+      const secItem = options.sections[i];
+      if (typeof secItem === 'string') {
+        container.addTextDisplayComponents(createTextDisplay(sanitize(secItem)));
+      } else {
+        container.addSectionComponents(createSection({
+          text: sanitize(secItem.text),
+          button: secItem.button,
+          thumbnailUrl: secItem.thumbnailUrl,
+        }));
+      }
     }
   }
 

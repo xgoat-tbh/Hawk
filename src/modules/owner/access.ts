@@ -340,6 +340,8 @@ export default defineCommand({
           const details: string[] = [];
           let targetTitleName = targetId;
 
+          let targetAvatarUrl: string | undefined;
+
           if (targetType === 'user') {
             const cachedMember = guild.members.cache.get(targetId);
             const fetchedUser = cachedMember?.user ?? guild.client.users.cache.get(targetId) ?? (await guild.client.users.fetch(targetId).catch(() => null));
@@ -347,6 +349,7 @@ export default defineCommand({
             const displayName = cachedMember?.displayName || fetchedUser?.displayName || fetchedUser?.username || 'Unknown User';
             const username = fetchedUser ? `${fetchedUser.username}${fetchedUser.discriminator !== '0' ? `#${fetchedUser.discriminator}` : ''}` : 'Unknown';
             targetTitleName = displayName;
+            targetAvatarUrl = fetchedUser?.displayAvatarURL({ size: 128 }) || cachedMember?.displayAvatarURL({ size: 128 }) || undefined;
 
             details.push(`• **Target User:** <@${targetId}> (\`${targetId}\`)`);
             details.push(`• **Username / Tag:** \`${username}\``);
@@ -363,6 +366,7 @@ export default defineCommand({
           } else {
             const roleObj = guild.roles.cache.get(targetId);
             targetTitleName = roleObj?.name || `Role ${targetId}`;
+            targetAvatarUrl = roleObj?.iconURL() || guild.iconURL({ size: 128 }) || undefined;
 
             details.push(`• **Target Role:** ${mentionRole(targetId, guild)} (\`${targetId}\`)`);
             if (roleObj) {
@@ -406,6 +410,7 @@ export default defineCommand({
           return ui.standard({
             title: `Access Profile: ${targetTitleName}`,
             text: details.join('\n'),
+            thumbnailUrl: targetAvatarUrl,
             components: [actionRow],
           });
         };

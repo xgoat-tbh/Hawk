@@ -7,6 +7,8 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
+  SectionBuilder,
+  ThumbnailBuilder,
 } from 'discord.js';
 import { HawkTheme } from './theme.js';
 
@@ -25,6 +27,28 @@ export function createTextDisplay(content: string): TextDisplayBuilder {
 
 export function createSeparator(divider = true, spacing = SeparatorSpacingSize.Small): SeparatorBuilder {
   return new SeparatorBuilder().setDivider(divider).setSpacing(spacing);
+}
+
+export function createThumbnail(url: string, description?: string): ThumbnailBuilder {
+  const thumb = new ThumbnailBuilder().setURL(url);
+  if (description) thumb.setDescription(description);
+  return thumb;
+}
+
+export interface SectionOptions {
+  text: string;
+  button?: ButtonBuilder;
+  thumbnailUrl?: string;
+}
+
+export function createSection(options: SectionOptions): SectionBuilder {
+  const section = new SectionBuilder().addTextDisplayComponents(createTextDisplay(options.text));
+  if (options.button) {
+    section.setButtonAccessory(options.button);
+  } else if (options.thumbnailUrl) {
+    section.setThumbnailAccessory(createThumbnail(options.thumbnailUrl));
+  }
+  return section;
 }
 
 export interface ButtonOptions {

@@ -6,6 +6,8 @@ import {
   createSeparator,
   createButton,
   createSelectMenu,
+  createSection,
+  createThumbnail,
 } from './components.js';
 import { status } from './status.js';
 import { standard, dashboard, paginated } from './layouts.js';
@@ -26,6 +28,8 @@ export const ui = {
   separator: createSeparator,
   button: createButton,
   select: createSelectMenu,
+  section: createSection,
+  thumbnail: createThumbnail,
 
   // Status Responses
   success: status.success,
