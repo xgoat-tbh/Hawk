@@ -86,7 +86,7 @@ export default defineCommand({
     if (streamingMembers.length > 0) {
       const lines = streamingMembers.map(item => {
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
-        return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
+        return `${counter++}. <@${item.member.id}>${tagSuffix}`;
       });
       sections.push(`\`[STREAMING & VIDEO (${streamingMembers.length})]\`\n${lines.join('\n')}`);
     }
@@ -94,7 +94,7 @@ export default defineCommand({
     if (activeMembers.length > 0) {
       const lines = activeMembers.map(item => {
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
-        return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
+        return `${counter++}. <@${item.member.id}>${tagSuffix}`;
       });
       sections.push(`\`[ACTIVE VOICE (${activeMembers.length})]\`\n${lines.join('\n')}`);
     }
@@ -102,7 +102,7 @@ export default defineCommand({
     if (mutedMembers.length > 0) {
       const lines = mutedMembers.map(item => {
         const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
-        return `${counter++}. **${item.member.displayName}**${tagSuffix}`;
+        return `${counter++}. <@${item.member.id}>${tagSuffix}`;
       });
       sections.push(`\`[MUTED / DEAFENED (${mutedMembers.length})]\`\n${lines.join('\n')}`);
     }
