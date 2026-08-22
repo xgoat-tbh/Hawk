@@ -14,8 +14,18 @@ const SAFE_ALLOWED_MENTIONS = {
 export class ResponseBuilder {
   private autoCleanEnabled = false;
   private autoCleanDelayMs = 7000;
+  private lastOutcome: 'success' | 'warning' | 'error' | 'info' | null = null;
+  private lastSnippet: string | null = null;
 
   constructor(private readonly message: Message) {}
+
+  getLastOutcome(): 'success' | 'warning' | 'error' | 'info' | null {
+    return this.lastOutcome;
+  }
+
+  getLastSnippet(): string | null {
+    return this.lastSnippet;
+  }
 
   enableAutoClean(delayMs = 7000): this {
     this.autoCleanEnabled = true;
@@ -39,6 +49,8 @@ export class ResponseBuilder {
   }
 
   async success(text: string): Promise<Message> {
+    this.lastOutcome = 'success';
+    this.lastSnippet = text;
     const emoji = getEmoji('success');
     const prefix = emoji ? `${emoji} ` : '';
     const formatted = `> ${prefix}${this.cleanSanitize(text)}`;
@@ -66,6 +78,8 @@ export class ResponseBuilder {
   }
 
   async error(text: string): Promise<Message> {
+    this.lastOutcome = 'error';
+    this.lastSnippet = text;
     const emoji = getEmoji('error');
     const prefix = emoji ? `${emoji} ` : '';
     const formatted = `> ${prefix}**Error:** ${this.cleanSanitize(text)}`;
@@ -78,6 +92,8 @@ export class ResponseBuilder {
   }
 
   async warning(text: string): Promise<Message> {
+    this.lastOutcome = 'warning';
+    this.lastSnippet = text;
     const emoji = getEmoji('warning');
     const prefix = emoji ? `${emoji} ` : '';
     const formatted = `> ${prefix}**Notice:** ${this.cleanSanitize(text)}`;
@@ -90,6 +106,8 @@ export class ResponseBuilder {
   }
 
   async info(text: string): Promise<Message> {
+    this.lastOutcome = 'info';
+    this.lastSnippet = text;
     const emoji = getEmoji('info');
     const prefix = emoji ? `${emoji} ` : '';
     const formatted = `> ${prefix}${this.cleanSanitize(text)}`;

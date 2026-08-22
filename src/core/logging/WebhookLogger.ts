@@ -32,17 +32,27 @@ export function logEvent(severity: LogSeverity, category: LogCategory, message: 
 }
 
 export function logCommand(event: CommandLogEvent): void {
-  if (isDev()) consoleLog('info', 'command_execution', `${event.userTag} used ${event.commandName}`, { guild: event.guildName, channel: event.channelName, args: event.rawArgs });
+  const outcomeKey = event.outcome || (event.success ? 'success' : 'fail');
+  if (isDev()) consoleLog('info', 'command_execution', `${event.userTag} used ${event.commandName} [${outcomeKey}]`, { guild: event.guildName, channel: event.channelName, args: event.rawArgs });
 
-  const status = event.success ? '\u2705' : '\u274c';
+  let statusEmoji = '\u2705'; // green check
+  if (outcomeKey === 'fail') statusEmoji = '\u274c'; // red cross
+  else if (outcomeKey === 'warning') statusEmoji = '\u26a0\ufe0f'; // warning
+  else if (outcomeKey === 'info') statusEmoji = '\u2139\ufe0f'; // info
+  else if (outcomeKey === 'denied') statusEmoji = '\ud83d\udeab'; // no entry
+  else if (outcomeKey === 'cooldown') statusEmoji = '\u23f3'; // hourglass
+  else if (outcomeKey === 'maintenance') statusEmoji = '\ud83d\udee0\ufe0f'; // wrench
+  else if (outcomeKey === 'ignored') statusEmoji = '\ud83d\udd07'; // mute/ignored
+
   const content = [
-    `${status} **Command Executed**`,
-    `**Who:** ${event.userTag} (\`${event.userId}\`)`,
-    `**Where:** ${event.guildName} \u2192 #${event.channelName}`,
-    `**Command:** \`${event.commandName}\`${event.aliasUsed !== event.commandName ? ` (alias: \`${event.aliasUsed}\`)` : ''}`,
-    `**Full:** \`${truncate(event.rawContent, 500)}\``,
-    event.resolvedTargets?.length ? `**Targets:** ${event.resolvedTargets.join(', ')}` : '',
-    event.error ? `**Error:** ${event.error}` : '',
+    `${statusEmoji} **Command Triggered** \`[${outcomeKey.toUpperCase()}]\``,
+    `• **Who:** ${event.userTag} (\`${event.userId}\`)`,
+    `• **Where:** ${event.guildName} \u2192 #${event.channelName}`,
+    `• **Command:** \`${event.commandName}\`${event.aliasUsed !== event.commandName ? ` (alias: \`${event.aliasUsed}\`)` : ''}`,
+    `• **Full:** \`${truncate(event.rawContent, 400)}\``,
+    event.responseSnippet ? `• **Reply:** \`${truncate(event.responseSnippet, 250)}\`` : '',
+    event.resolvedTargets?.length ? `• **Targets:** ${event.resolvedTargets.join(', ')}` : '',
+    event.error ? `• **Reason / Error:** ${event.error}` : '',
   ].filter(Boolean).join('\n');
   enqueue(truncate(content, 1900));
 }

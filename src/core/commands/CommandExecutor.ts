@@ -83,6 +83,12 @@ export async function handleMessage(message: Message): Promise<void> {
   if (authority < AuthorityLevel.Owner) {
     const maintenance = await getMaintenanceState();
     if (maintenance.enabled) {
+      logCommand({
+        guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+        userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+        rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'maintenance',
+        error: `Blocked by maintenance mode: ${maintenance.reason}`,
+      });
       await respond.transientWarning(
         `🛠️ **Maintenance in Progress**\n` +
         `The bot is currently undergoing scheduled maintenance.\n\n` +
@@ -96,16 +102,36 @@ export async function handleMessage(message: Message): Promise<void> {
 
   if (authority < AuthorityLevel.ServerAdmin) {
     const ignored = await isIgnored(message.guild.id, message.author.id, permCtx.memberRoleIds, guildChannel.id, categoryId, command.name, command.module, message.member.roles.cache);
-    if (ignored) return;
+    if (ignored) {
+      logCommand({
+        guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+        userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+        rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'ignored',
+        error: 'Blocked by server ignore whitelist/blacklist rule',
+      });
+      return;
+    }
   }
 
   const permResult = await checkPermission(command, permCtx, message.member);
   if (!permResult.allowed) {
+    logCommand({
+      guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+      userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+      rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'denied',
+      error: permResult.reason || 'Missing permissions or custom permit',
+    });
     return;
   }
 
   const restrictResult = await checkRestrictions(permCtx, permResult.authority);
   if (!restrictResult.allowed) {
+    logCommand({
+      guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+      userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+      rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'denied',
+      error: restrictResult.reason || 'Command restricted in this channel or for this role',
+    });
     return;
   }
 
@@ -113,7 +139,16 @@ export async function handleMessage(message: Message): Promise<void> {
     const botMember = message.guild.members.me;
     if (botMember) {
       const botPerms = checkBotPermissions(botMember, command.botPermissions);
-      if (!botPerms.hasAll) { await respond.error(`I'm missing the following permissions: ${botPerms.missing.join(', ')}`); return; }
+      if (!botPerms.hasAll) {
+        logCommand({
+          guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+          userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+          rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'fail',
+          error: `Bot missing permissions: ${botPerms.missing.join(', ')}`,
+        });
+        await respond.error(`I'm missing the following permissions: ${botPerms.missing.join(', ')}`);
+        return;
+      }
     }
   }
 
@@ -130,7 +165,16 @@ export async function handleMessage(message: Message): Promise<void> {
 
   if (!isGameTestChannel) {
     const remaining = checkCooldown(message.author.id, command.name, command.cooldown, permResult.authority);
-    if (remaining > 0) { await respond.warning(`Please wait **${remaining}s** before using this command again.`); return; }
+    if (remaining > 0) {
+      logCommand({
+        guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+        userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+        rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'cooldown',
+        error: `Triggered on cooldown (${remaining}s remaining)`,
+      });
+      await respond.warning(`Please wait **${remaining}s** before using this command again.`);
+      return;
+    }
   }
 
   let replyTarget: GuildMember | null = null;
@@ -171,12 +215,29 @@ export async function handleMessage(message: Message): Promise<void> {
     presenceManager.recordActivity();
     await command.execute(ctx);
     setCooldown(message.author.id, command.name, command.cooldown);
-    logCommand({ guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name, userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed, rawContent: message.content, rawArgs: parsed.rawArgs, success: true });
+
+    const replyType = respond.getLastOutcome();
+    const responseSnippet = respond.getLastSnippet() || undefined;
+    let outcome: 'success' | 'warning' | 'info' | 'fail' = 'success';
+    if (replyType === 'warning') outcome = 'warning';
+    else if (replyType === 'info') outcome = 'info';
+    else if (replyType === 'error') outcome = 'fail';
+
+    logCommand({
+      guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+      userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+      rawContent: message.content, rawArgs: parsed.rawArgs, success: outcome !== 'fail', outcome,
+      replyType: replyType || undefined, responseSnippet,
+    });
   } catch (error) {
     const userMsg = getUserMessage(error);
     const internalMsg = getInternalMessage(error);
     if (error instanceof BotError) { await respond.error(userMsg).catch(() => {}); } else { await respond.error('An unexpected error occurred.').catch(() => {}); }
-    logCommand({ guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name, userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed, rawContent: message.content, rawArgs: parsed.rawArgs, success: false, error: internalMsg });
+    logCommand({
+      guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
+      userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
+      rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'fail', error: internalMsg,
+    });
     logEvent('error', 'command_failure', `Command ${command.name} failed`, { error: internalMsg, user: message.author.id, guild: message.guild.id });
   }
 }

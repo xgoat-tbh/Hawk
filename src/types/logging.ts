@@ -27,6 +27,8 @@ export interface LogEvent {
 
 // ── Command Log ─────────────────────────────────────────────
 
+export type CommandOutcome = 'success' | 'fail' | 'warning' | 'info' | 'denied' | 'cooldown' | 'maintenance' | 'ignored';
+
 export interface CommandLogEvent {
   guildId: string;
   guildName: string;
@@ -41,5 +43,8 @@ export interface CommandLogEvent {
   /** Resolved targets (e.g. mentioned users, roles) for audit purposes */
   resolvedTargets?: string[];
   success: boolean;
+  outcome?: CommandOutcome;
+  replyType?: 'success' | 'warning' | 'error' | 'info';
+  responseSnippet?: string;
   error?: string;
 }
