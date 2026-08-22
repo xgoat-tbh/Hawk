@@ -101,7 +101,7 @@ export default defineCommand({
 
     // ── Subcommand: run ──
     if (sub === 'run' || sub === 'analyze') {
-      await respond.info('Analyzing server telemetry, role dynamics, and command patterns with AI...');
+      const waitMsg = await respond.info('Analyzing server telemetry, role dynamics, and command patterns with AI...');
 
       const report = await generateAiServerInsights(guild);
       const payload = buildAiReportComponentsV2(report);
@@ -122,8 +122,13 @@ export default defineCommand({
         allowedMentions: { parse: [], roles: [], users: [] },
       });
 
+      // Auto-delete the temporary progress message
+      if (waitMsg && typeof waitMsg.delete === 'function') {
+        waitMsg.delete().catch(() => {});
+      }
+
       if (destinationChannel.id !== channel.id) {
-        await respond.success(`AI Server Intelligence report generated and posted in <#${destinationChannel.id}>.`);
+        await respond.transientSuccess(`AI Server Intelligence report generated and posted in <#${destinationChannel.id}>.`, 5000);
       }
 
       logEvent('info', 'command_execution', `On-demand AI Server Intelligence run triggered by ${member.user.tag}`, {
