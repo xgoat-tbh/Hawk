@@ -23,13 +23,16 @@ export interface StandardLayoutOptions {
   accentColor?: number;
   divider?: boolean;
   thumbnailUrl?: string;
+  sanitize?: boolean;
 }
 
 export function standard(options: StandardLayoutOptions): ComponentV2Payload {
   const container = createContainer({ accentColor: options.accentColor });
+  const shouldSanitize = options.sanitize !== false;
+  const clean = (str: string): string => shouldSanitize ? sanitize(str) : str;
 
   if (options.title) {
-    container.addTextDisplayComponents(createTextDisplay(`### ${sanitize(options.title)}`));
+    container.addTextDisplayComponents(createTextDisplay(`### ${clean(options.title)}`));
   }
 
   if (options.text) {
@@ -40,12 +43,12 @@ export function standard(options: StandardLayoutOptions): ComponentV2Payload {
     }
     if (options.thumbnailUrl) {
       const section = createSection({
-        text: sanitize(options.text),
+        text: clean(options.text),
         thumbnailUrl: options.thumbnailUrl,
       });
       container.addSectionComponents(section);
     } else {
-      container.addTextDisplayComponents(createTextDisplay(sanitize(options.text)));
+      container.addTextDisplayComponents(createTextDisplay(clean(options.text)));
     }
   }
 
@@ -58,10 +61,10 @@ export function standard(options: StandardLayoutOptions): ComponentV2Payload {
       }
       const secItem = options.sections[i];
       if (typeof secItem === 'string') {
-        container.addTextDisplayComponents(createTextDisplay(sanitize(secItem)));
+        container.addTextDisplayComponents(createTextDisplay(clean(secItem)));
       } else {
         container.addSectionComponents(createSection({
-          text: sanitize(secItem.text),
+          text: clean(secItem.text),
           button: secItem.button,
           thumbnailUrl: secItem.thumbnailUrl,
         }));

@@ -113,15 +113,24 @@ export default defineCommand({
     const bitrateStr = 'bitrate' in voiceChannel && voiceChannel.bitrate ? ` • \`${Math.round(voiceChannel.bitrate / 1000)} kbps\`` : '';
     const categoryStr = voiceChannel.parent ? ` • Category: \`${voiceChannel.parent.name}\`` : '';
 
+    const memberIds = Array.from(members.keys());
+
     const payload = ui.standard({
       title: `${voiceChannel.name} [ ${members.size}/${limitStr}${percentStr} ]`,
       text: `• **Occupancy:** \`${members.size}/${limitStr}\`${bitrateStr}${categoryStr}`,
       sections,
+      sanitize: false,
     });
 
     await respond.raw({
       components: payload.components,
       flags: payload.flags as any,
+      allowedMentions: {
+        parse: ['users'],
+        users: memberIds,
+        roles: [],
+        repliedUser: false,
+      },
     });
   },
 });
