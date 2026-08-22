@@ -55,6 +55,11 @@ export class ResponseBuilder {
     return this.success(text);
   }
 
+  async transientWarning(text: string, delayMs = 5000): Promise<Message> {
+    this.enableAutoClean(delayMs);
+    return this.warning(text);
+  }
+
   async transientInfo(text: string, delayMs = 5000): Promise<Message> {
     this.enableAutoClean(delayMs);
     return this.info(text);

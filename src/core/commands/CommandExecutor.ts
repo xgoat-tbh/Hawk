@@ -16,6 +16,7 @@ import { getGameTestChannel } from '../database/repositories/gameRepo.js';
 import { AuthorityLevel } from '../../types/permission.js';
 import { isNoPrefixEnabled } from '../config/NoPrefixConfig.js';
 import { presenceManager } from '../presence/PresenceManager.js';
+import { getMaintenanceState } from '../database/repositories/systemRepo.js';
 
 function tryNoPrefixParse(content: string): ParsedCommand | null {
   const trimmed = content.trim();
@@ -77,6 +78,21 @@ export async function handleMessage(message: Message): Promise<void> {
   }
 
   const authority = getAuthorityLevel(message.author.id, message.guild.ownerId);
+
+  // Global Maintenance Mode check: Non-owners are blocked with a maintenance notice
+  if (authority < AuthorityLevel.Owner) {
+    const maintenance = await getMaintenanceState();
+    if (maintenance.enabled) {
+      await respond.transientWarning(
+        `🛠️ **Maintenance in Progress**\n` +
+        `The bot is currently undergoing scheduled maintenance.\n\n` +
+        `• **Reason:** ${maintenance.reason}\n` +
+        `• *Commands are temporarily reserved for developers. Please check back shortly!*`,
+        8000
+      );
+      return;
+    }
+  }
 
   if (authority < AuthorityLevel.ServerAdmin) {
     const ignored = await isIgnored(message.guild.id, message.author.id, permCtx.memberRoleIds, guildChannel.id, categoryId, command.name, command.module, message.member.roles.cache);
