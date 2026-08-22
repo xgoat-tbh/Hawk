@@ -333,99 +333,10 @@ export default defineCommand({
       });
 
       collector.on('collect', async (interaction) => {
-        // Pagination buttons
-        if (interaction.isButton()) {
-          if (interaction.customId === 'access_page_prev') {
-            if (currentPage > 0) currentPage--;
-            const updated = buildListPagePayload(currentPage);
-            await interaction.update({
-              components: updated.components,
-              flags: updated.payload.flags as any,
-            });
-            return;
-          }
-
-          if (interaction.customId === 'access_page_next') {
-            const totalPages = Math.ceil(sortedEntries.length / PAGE_SIZE);
-            if (currentPage < totalPages - 1) currentPage++;
-            const updated = buildListPagePayload(currentPage);
-            await interaction.update({
-              components: updated.components,
-              flags: updated.payload.flags as any,
-            });
-            return;
-          }
-
-          if (interaction.customId === 'access_back_list') {
-            const updated = buildListPagePayload(currentPage);
-            await interaction.update({
-              components: updated.components,
-              flags: updated.payload.flags as any,
-            });
-            return;
-          }
-
-          if (interaction.customId.startsWith('access_revoke_target:')) {
-            const parts = interaction.customId.split(':');
-            const targetType = parts[1] as 'user' | 'role';
-            const targetId = parts[2];
-
-            const removedCount = await removeAllPermitsForTarget(
-              guild.id,
-              targetType,
-              targetId,
-              member.id,
-              sanitize(member.displayName || member.user.tag)
-            );
-
-            logAuditAction({
-              guild,
-              action: 'Access Target Revoked',
-              executor: member,
-              details: [
-                `• **Target Type:** ${targetType.toUpperCase()}`,
-                `• **Target ID:** \`${targetId}\``,
-                `• **Permits Revoked:** ${removedCount}`,
-              ],
-            });
-
-            // Re-fetch permits
-            permits = await getPermitsForGuild(guild.id);
-            sortedEntries = buildGrouped();
-            if (currentPage >= Math.ceil(sortedEntries.length / PAGE_SIZE)) {
-              currentPage = Math.max(0, Math.ceil(sortedEntries.length / PAGE_SIZE) - 1);
-            }
-
-            const backBtn = new ButtonBuilder()
-              .setCustomId('access_back_list')
-              .setLabel('◀ Back to Access List')
-              .setStyle(ButtonStyle.Secondary);
-            const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(backBtn);
-
-            const revokeConfirmPayload = ui.standard({
-              title: 'Access Revocation Successful',
-              text: `✅ Successfully revoked all **${removedCount}** permit(s) for <@${targetType === 'role' ? '&' : ''}${targetId}> (\`${targetId}\`).`,
-              components: [buttonRow],
-            });
-
-            await interaction.update({
-              components: revokeConfirmPayload.components,
-              flags: revokeConfirmPayload.flags as any,
-            });
-            return;
-          }
-        }
-
-        // Select menu for inspection
-        if (interaction.isStringSelectMenu() && interaction.customId === 'access_select_inspect') {
-          const selectedVal = interaction.values[0];
-          const [, targetType, targetId] = selectedVal.split(':');
-
+        // Helper to render target inspection payload
+        const renderTargetInspection = async (targetType: 'user' | 'role', targetId: string): Promise<ComponentV2Payload | null> => {
           const targetEntry = sortedEntries.find(g => g.targetType === targetType && g.targetId === targetId);
-          if (!targetEntry) {
-            await interaction.reply({ content: 'Selected target is no longer active in permits.', flags: 64 });
-            return;
-          }
+          if (!targetEntry) return null;
 
           const details: string[] = [];
           let targetTitleName = targetId;
@@ -487,17 +398,179 @@ export default defineCommand({
             .setStyle(ButtonStyle.Secondary);
 
           const revokeBtn = new ButtonBuilder()
-            .setCustomId(`access_revoke_target:${targetType}:${targetId}`)
+            .setCustomId(`access_ask_revoke:${targetType}:${targetId}`)
             .setLabel('Revoke All Access')
-            .setStyle(ButtonStyle.Secondary);
+            .setStyle(ButtonStyle.Danger);
 
           const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(backBtn, revokeBtn);
 
-          const inspectPayload = ui.standard({
+          return ui.standard({
             title: `Access Profile: ${targetTitleName}`,
             text: details.join('\n'),
             components: [actionRow],
           });
+        };
+
+        // Pagination & Action buttons
+        if (interaction.isButton()) {
+          if (interaction.customId === 'access_page_prev') {
+            if (currentPage > 0) currentPage--;
+            const updated = buildListPagePayload(currentPage);
+            await interaction.update({
+              components: updated.components,
+              flags: updated.payload.flags as any,
+            });
+            return;
+          }
+
+          if (interaction.customId === 'access_page_next') {
+            const totalPages = Math.ceil(sortedEntries.length / PAGE_SIZE);
+            if (currentPage < totalPages - 1) currentPage++;
+            const updated = buildListPagePayload(currentPage);
+            await interaction.update({
+              components: updated.components,
+              flags: updated.payload.flags as any,
+            });
+            return;
+          }
+
+          if (interaction.customId === 'access_back_list') {
+            const updated = buildListPagePayload(currentPage);
+            await interaction.update({
+              components: updated.components,
+              flags: updated.payload.flags as any,
+            });
+            return;
+          }
+
+          // Revoke button clicked -> Show confirmation dialog
+          if (interaction.customId.startsWith('access_ask_revoke:')) {
+            const parts = interaction.customId.split(':');
+            const targetType = parts[1] as 'user' | 'role';
+            const targetId = parts[2];
+
+            let targetName = targetId;
+            if (targetType === 'user') {
+              const mem = guild.members.cache.get(targetId);
+              targetName = mem?.displayName || userNameMap.get(targetId) || `User ${targetId}`;
+            } else {
+              const roleObj = guild.roles.cache.get(targetId);
+              targetName = roleObj?.name || `Role ${targetId}`;
+            }
+
+            const targetDisplay = targetType === 'role' ? mentionRole(targetId, guild) : `<@${targetId}>`;
+
+            const confirmBtn = new ButtonBuilder()
+              .setCustomId(`access_confirm_revoke:${targetType}:${targetId}`)
+              .setLabel('Yes, Revoke All Access')
+              .setStyle(ButtonStyle.Danger);
+
+            const cancelBtn = new ButtonBuilder()
+              .setCustomId(`access_cancel_revoke:${targetType}:${targetId}`)
+              .setLabel('Cancel')
+              .setStyle(ButtonStyle.Secondary);
+
+            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirmBtn, cancelBtn);
+
+            const confirmPayload = ui.standard({
+              title: 'Confirm Access Revocation',
+              text:
+                `⚠️ Are you sure you want to revoke **ALL** custom permits for **${targetName}** (${targetDisplay})?\n\n` +
+                `This will immediately remove all permitted commands and modules for this ${targetType}.`,
+              components: [row],
+            });
+
+            await interaction.update({
+              components: confirmPayload.components,
+              flags: confirmPayload.flags as any,
+            });
+            return;
+          }
+
+          // Cancel revocation -> Return to target inspection card
+          if (interaction.customId.startsWith('access_cancel_revoke:')) {
+            const parts = interaction.customId.split(':');
+            const targetType = parts[1] as 'user' | 'role';
+            const targetId = parts[2];
+
+            const inspectPayload = await renderTargetInspection(targetType, targetId);
+            if (inspectPayload) {
+              await interaction.update({
+                components: inspectPayload.components,
+                flags: inspectPayload.flags as any,
+              });
+            } else {
+              const updated = buildListPagePayload(currentPage);
+              await interaction.update({
+                components: updated.components,
+                flags: updated.payload.flags as any,
+              });
+            }
+            return;
+          }
+
+          // Confirmed revocation -> Execute revocation and show success
+          if (interaction.customId.startsWith('access_confirm_revoke:')) {
+            const parts = interaction.customId.split(':');
+            const targetType = parts[1] as 'user' | 'role';
+            const targetId = parts[2];
+
+            const removedCount = await removeAllPermitsForTarget(
+              guild.id,
+              targetType,
+              targetId,
+              member.id,
+              sanitize(member.displayName || member.user.tag)
+            );
+
+            logAuditAction({
+              guild,
+              action: 'Access Target Revoked',
+              executor: member,
+              details: [
+                `• **Target Type:** ${targetType.toUpperCase()}`,
+                `• **Target ID:** \`${targetId}\``,
+                `• **Permits Revoked:** ${removedCount}`,
+              ],
+            });
+
+            // Re-fetch permits
+            permits = await getPermitsForGuild(guild.id);
+            sortedEntries = buildGrouped();
+            if (currentPage >= Math.ceil(sortedEntries.length / PAGE_SIZE)) {
+              currentPage = Math.max(0, Math.ceil(sortedEntries.length / PAGE_SIZE) - 1);
+            }
+
+            const backBtn = new ButtonBuilder()
+              .setCustomId('access_back_list')
+              .setLabel('◀ Back to Access List')
+              .setStyle(ButtonStyle.Secondary);
+            const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(backBtn);
+
+            const revokeConfirmPayload = ui.standard({
+              title: 'Access Revocation Successful',
+              text: `✅ Successfully revoked all **${removedCount}** permit(s) for <@${targetType === 'role' ? '&' : ''}${targetId}> (\`${targetId}\`).`,
+              components: [buttonRow],
+            });
+
+            await interaction.update({
+              components: revokeConfirmPayload.components,
+              flags: revokeConfirmPayload.flags as any,
+            });
+            return;
+          }
+        }
+
+        // Select menu for inspection
+        if (interaction.isStringSelectMenu() && interaction.customId === 'access_select_inspect') {
+          const selectedVal = interaction.values[0];
+          const [, targetType, targetId] = selectedVal.split(':') as ['inspect', 'user' | 'role', string];
+
+          const inspectPayload = await renderTargetInspection(targetType, targetId);
+          if (!inspectPayload) {
+            await interaction.reply({ content: 'Selected target is no longer active in permits.', flags: 64 });
+            return;
+          }
 
           await interaction.update({
             components: inspectPayload.components,
