@@ -22,6 +22,7 @@ import { loadModuleManifests } from '../modules/ModuleLoader.js';
 import { interactionRouter } from '../interactions/InteractionRouter.js';
 import { startHealthServer, stopHealthServer } from '../server/HealthServer.js';
 import { presenceManager } from '../presence/PresenceManager.js';
+import { startAiScheduler, stopAiScheduler } from '../ai/AiScheduler.js';
 import type { ModuleManifest } from '../../types/module.js';
 
 export class Bootstrap {
@@ -77,6 +78,7 @@ export class Bootstrap {
       presenceManager.init(client);
       startInteractionCleanup();
       startCooldownCleanup();
+      startAiScheduler(client);
       await loadNoPrefixCache();
       await loadAfkCache();
 
@@ -273,6 +275,7 @@ export class Bootstrap {
 
       stopInteractionCleanup();
       stopCooldownCleanup();
+      stopAiScheduler();
       stopHealthServer();
       presenceManager.stopTicker();
       await stopWebhookLogger();

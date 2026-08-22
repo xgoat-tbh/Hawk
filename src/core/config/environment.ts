@@ -25,6 +25,7 @@ export const env: EnvironmentConfig = {
   botAdminIds: optional('BOT_ADMIN_IDS', '').split(',').map(id => id.trim()).filter(Boolean),
   nodeEnv: (optional('NODE_ENV', 'development') as 'development' | 'production'),
   enabledModules: process.env.ENABLED_MODULES ? process.env.ENABLED_MODULES.split(',').map(m => m.trim()).filter(Boolean) : undefined,
+  geminiApiKey: optional('GEMINI_API_KEY', ''),
 };
 
 export function isDev(): boolean {
