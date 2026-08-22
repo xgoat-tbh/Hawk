@@ -55,20 +55,48 @@ export default defineCommand({
         return;
       }
 
-      const lines = rules.map((r) => {
-        const chans =
-          r.channelIds.includes('all') || r.channelIds.includes('*')
+      interface GroupedVConfig {
+        roleId: string;
+        mode: 'wl' | 'bl';
+        commands: Set<string>;
+        channels: Set<string>;
+      }
+
+      const groupedMap = new Map<string, GroupedVConfig>();
+      for (const r of rules) {
+        const key = `${r.roleId}:${r.mode}`;
+        let entry = groupedMap.get(key);
+        if (!entry) {
+          entry = {
+            roleId: r.roleId,
+            mode: r.mode,
+            commands: new Set<string>(),
+            channels: new Set<string>(),
+          };
+          groupedMap.set(key, entry);
+        }
+        entry.commands.add(r.commandName);
+        for (const cid of r.channelIds) {
+          entry.channels.add(cid);
+        }
+      }
+
+      const lines = Array.from(groupedMap.values()).map((g) => {
+        const roleStr = mentionRole(g.roleId, guild);
+        const modeBadge = g.mode === 'wl' ? '**[WHITELIST]**' : '**[BLACKLIST]**';
+        const cmdList = Array.from(g.commands).map(c => `\`${c}\``).join(', ');
+        const chanList =
+          g.channels.has('all') || g.channels.has('*')
             ? 'All Channels'
-            : r.channelIds.length > 0
-            ? r.channelIds.map((id) => `<#${id}>`).join(', ')
-            : 'None';
-        return `• **\`${r.commandName}\`** | Mode: **${r.mode.toUpperCase()}** | Role: ${mentionRole(r.roleId, guild)} | Channels: ${chans}`;
+            : Array.from(g.channels).map(id => `<#${id}>`).join(', ');
+
+        return `• ${modeBadge} ${roleStr} ➜ Commands: ${cmdList} | Channels: ${chanList}`;
       });
 
       await ui.paginated(ctx, {
-        title: 'Voice Command Access Configurations',
+        title: `Voice Command Access Configurations (${lines.length} Targets / ${rules.length} Rules)`,
         items: lines,
-        pageSize: 10,
+        pageSize: 8,
         emptyText: 'No voice command access configurations exist for this server.',
       });
       return;

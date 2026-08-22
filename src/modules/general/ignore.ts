@@ -60,26 +60,76 @@ export default defineCommand({
         return;
       }
 
-      const lines = entries.map((e) => {
+      interface GroupedIgnore {
+        entityType: 'user' | 'role' | 'channel';
+        entityId: string;
+        mode: 'wl' | 'bl';
+        hasGlobal: boolean;
+        commands: Set<string>;
+        modules: Set<string>;
+      }
+
+      const groupedMap = new Map<string, GroupedIgnore>();
+
+      for (const e of entries) {
+        const key = `${e.entityType}:${e.entityId}:${e.mode || 'bl'}`;
+        let entry = groupedMap.get(key);
+        if (!entry) {
+          entry = {
+            entityType: e.entityType as 'user' | 'role' | 'channel',
+            entityId: e.entityId,
+            mode: (e.mode || 'bl') as 'wl' | 'bl',
+            hasGlobal: false,
+            commands: new Set<string>(),
+            modules: new Set<string>(),
+          };
+          groupedMap.set(key, entry);
+        }
+
+        if (!e.scopeType || !e.scopeId) {
+          entry.hasGlobal = true;
+        } else if (e.scopeType === 'command') {
+          entry.commands.add(e.scopeId);
+        } else if (e.scopeType === 'module') {
+          entry.modules.add(e.scopeId);
+        }
+      }
+
+      const lines = Array.from(groupedMap.values()).map((g) => {
         const targetStr =
-          e.entityId === 'all' || e.entityId === '*'
-            ? 'All Targets'
-            : e.entityType === 'role'
-            ? mentionRole(e.entityId)
-            : e.entityType === 'channel'
-            ? mentionChannel(e.entityId)
-            : mentionUser(e.entityId, guild);
+          g.entityId === 'all' || g.entityId === '*'
+            ? '**All Targets**'
+            : g.entityType === 'role'
+            ? mentionRole(g.entityId, guild)
+            : g.entityType === 'channel'
+            ? mentionChannel(g.entityId)
+            : mentionUser(g.entityId, guild);
 
-        const scopeStr = e.scopeType && e.scopeId ? `${e.scopeType}: **\`${e.scopeId}\`**` : 'Global (All)';
-        const modeStr = (e.mode || 'bl').toUpperCase();
+        const modeBadge = g.mode === 'wl' ? '**[WHITELIST]**' : '**[BLACKLIST]**';
 
-        return `• **${modeStr}** | ${scopeStr} | Target: ${targetStr} (${e.entityType})`;
+        let scopesText: string;
+        if (g.hasGlobal) {
+          scopesText = '**ALL Commands & Modules**';
+        } else {
+          const parts: string[] = [];
+          if (g.modules.size > 0) {
+            const modList = Array.from(g.modules).map(m => `\`${m}\``).join(', ');
+            parts.push(`Modules: ${modList}`);
+          }
+          if (g.commands.size > 0) {
+            const cmdList = Array.from(g.commands).map(c => `\`${c}\``).join(', ');
+            parts.push(`Commands: ${cmdList}`);
+          }
+          scopesText = parts.join(' • ');
+        }
+
+        return `• ${modeBadge} ${targetStr} (${g.entityType}) ➜ ${scopesText}`;
       });
 
       await ui.paginated(ctx, {
-        title: 'Command & Module Access Rules',
+        title: `Command & Module Access Rules (${lines.length} Targets / ${entries.length} Rules)`,
         items: lines,
-        pageSize: 10,
+        pageSize: 8,
         emptyText: 'No command or module ignore/whitelist rules exist for this server.',
       });
       return;

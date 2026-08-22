@@ -1,5 +1,4 @@
 import { PermissionsBitField } from 'discord.js';
-import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import {
@@ -24,7 +23,7 @@ export default defineCommand({
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { parsed, guild, member, channel, respond } = ctx;
+    const { parsed, guild, member, respond } = ctx;
 
     const aliasUsed = parsed.aliasUsed.toLowerCase();
     let sub = parsed.args[0]?.toLowerCase() ?? 'list';
@@ -67,11 +66,11 @@ export default defineCommand({
       return `• ${mentionUser(e.userId, guild)} — **${e.reason}** (${relTime})`;
     });
 
-    const payload = ui.standard({
+    await ui.paginated(ctx, {
       title: `Active AFK Members (${entries.length})`,
-      text: lines.join('\n'),
+      items: lines,
+      pageSize: 8,
+      emptyText: 'There are currently no members marked as AFK in this server.',
     });
-
-    await (channel as GuildTextBasedChannel).send(payload);
   },
 });

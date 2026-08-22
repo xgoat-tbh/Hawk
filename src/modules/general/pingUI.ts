@@ -53,7 +53,7 @@ export function buildPingV2Embed(data: PingData, userId: string): ComponentV2Pay
   const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(refreshBtn);
 
   return ui.standard({
-    title: 'Amo System Latency',
+    title: 'System Latency',
     text: content,
     components: [actionRow],
   });
