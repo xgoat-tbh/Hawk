@@ -90,7 +90,7 @@ export async function handleMessage(message: Message): Promise<void> {
         error: `Blocked by maintenance mode: ${maintenance.reason}`,
       });
       await respond.transientWarning(
-        `🛠️ **Maintenance in Progress**\n` +
+        `**Maintenance in Progress**\n` +
         `The bot is currently undergoing scheduled maintenance.\n\n` +
         `• **Reason:** ${maintenance.reason}\n` +
         `• *Commands are temporarily reserved for developers. Please check back shortly!*`,

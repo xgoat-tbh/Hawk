@@ -19,7 +19,7 @@ import { logAuditAction } from '../../core/logging/AuditLogger.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 function buildMaintenanceCard(state: MaintenanceState, userIsOwner: boolean): { payload: ComponentV2Payload; row?: ActionRowBuilder<ButtonBuilder> } {
-  const statusBadge = state.enabled ? '🔴 **ACTIVE (Locked to Developers)**' : '🟢 **INACTIVE (Live for Everyone)**';
+  const statusBadge = state.enabled ? '**ACTIVE (Locked to Developers)**' : '**INACTIVE (Live for Everyone)**';
   const timeStr = state.enabledAt
     ? `<t:${Math.floor(state.enabledAt.getTime() / 1000)}:f> (<t:${Math.floor(state.enabledAt.getTime() / 1000)}:R>)`
     : '*N/A*';
@@ -32,8 +32,8 @@ function buildMaintenanceCard(state: MaintenanceState, userIsOwner: boolean): { 
     `• **Enabled By:** ${enabledByStr}`,
     '',
     state.enabled
-      ? '⚠️ *All commands across all servers are blocked for non-owner users.*'
-      : '✅ *All commands and features are operating normally.*',
+      ? '*All commands across all servers are blocked for non-owner users.*'
+      : '*All commands and features are operating normally.*',
   ].join('\n');
 
   let row: ActionRowBuilder<ButtonBuilder> | undefined;

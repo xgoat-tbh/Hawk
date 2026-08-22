@@ -256,7 +256,7 @@ export default defineCommand({
         if (totalPages > 1) {
           const prevBtn = new ButtonBuilder()
             .setCustomId('access_page_prev')
-            .setLabel('◀ Prev')
+            .setLabel('Prev')
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(page <= 0);
 
@@ -268,7 +268,7 @@ export default defineCommand({
 
           const nextBtn = new ButtonBuilder()
             .setCustomId('access_page_next')
-            .setLabel('Next ▶')
+            .setLabel('Next')
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(page >= totalPages - 1);
 
@@ -310,7 +310,7 @@ export default defineCommand({
         const selectRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
           new StringSelectMenuBuilder()
             .setCustomId('access_select_inspect')
-            .setPlaceholder('🔍 Select a role or user to inspect details...')
+            .setPlaceholder('Select a role or user to inspect details...')
             .addOptions(selectOptions)
         );
 
@@ -397,7 +397,7 @@ export default defineCommand({
 
           const backBtn = new ButtonBuilder()
             .setCustomId('access_back_list')
-            .setLabel('◀ Back to List')
+            .setLabel('Back to List')
             .setStyle(ButtonStyle.Secondary);
 
           const revokeBtn = new ButtonBuilder()
@@ -479,7 +479,7 @@ export default defineCommand({
             const confirmPayload = ui.standard({
               title: 'Confirm Access Revocation',
               text:
-                `⚠️ Are you sure you want to revoke **ALL** custom permits for **${targetName}** (${targetDisplay})?\n\n` +
+                `Are you sure you want to revoke **ALL** custom permits for **${targetName}** (${targetDisplay})?\n\n` +
                 `This will immediately remove all permitted commands and modules for this ${targetType}.`,
               components: [row],
             });
@@ -547,13 +547,13 @@ export default defineCommand({
 
             const backBtn = new ButtonBuilder()
               .setCustomId('access_back_list')
-              .setLabel('◀ Back to Access List')
+              .setLabel('Back to Access List')
               .setStyle(ButtonStyle.Secondary);
             const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(backBtn);
 
             const revokeConfirmPayload = ui.standard({
               title: 'Access Revocation Successful',
-              text: `✅ Successfully revoked all **${removedCount}** permit(s) for <@${targetType === 'role' ? '&' : ''}${targetId}> (\`${targetId}\`).`,
+              text: `Successfully revoked all **${removedCount}** permit(s) for <@${targetType === 'role' ? '&' : ''}${targetId}> (\`${targetId}\`).`,
               components: [buttonRow],
             });
 
