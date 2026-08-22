@@ -12,7 +12,6 @@ export interface EnvironmentConfig {
   botAdminIds: string[];
   nodeEnv: 'development' | 'production';
   enabledModules?: string[];
-  geminiApiKey?: string;
 }
 
 // ── Guild Configuration (persisted in DB) ───────────────────

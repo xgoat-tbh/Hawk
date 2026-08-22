@@ -3,7 +3,6 @@ import { constants } from '../config/constants.js';
 import { consoleLog } from './ConsoleLogger.js';
 import type { LogSeverity, LogCategory, CommandLogEvent } from '../../types/logging.js';
 import { truncate } from '../utils/validators.js';
-import { recordTelemetry } from '../database/repositories/telemetryRepo.js';
 
 interface QueuedLog { content: string; timestamp: number; }
 
@@ -34,16 +33,6 @@ export function logEvent(severity: LogSeverity, category: LogCategory, message: 
 
 export function logCommand(event: CommandLogEvent): void {
   const outcomeKey = event.outcome || (event.success ? 'success' : 'fail');
-
-  // Record telemetry asynchronously for AI Server Intelligence & Feature Advisor
-  recordTelemetry({
-    guildId: event.guildId,
-    userId: event.userId,
-    commandName: event.commandName,
-    aliasUsed: event.aliasUsed,
-    rawContent: event.rawContent,
-    outcome: outcomeKey,
-  }).catch(() => {});
   if (isDev()) consoleLog('info', 'command_execution', `${event.userTag} used ${event.commandName} [${outcomeKey}]`, { guild: event.guildName, channel: event.channelName, args: event.rawArgs });
 
   let statusEmoji = '\u2705'; // green check
