@@ -101,7 +101,7 @@ export default defineCommand({
 
     // ── Subcommand: run ──
     if (sub === 'run' || sub === 'analyze') {
-      await respond.info('🧠 **Analyzing server telemetry, role dynamics, and command patterns with AI...**');
+      await respond.info('Analyzing server telemetry, role dynamics, and command patterns with AI...');
 
       const report = await generateAiServerInsights(guild);
       const payload = buildAiReportComponentsV2(report);
@@ -175,7 +175,7 @@ export default defineCommand({
     collector.on('collect', async (interaction) => {
       if (interaction.customId === 'ai_trigger_now') {
         await interaction.reply({
-          content: '🧠 Generating AI analysis report...',
+          content: 'Generating AI analysis report...',
           flags: 64 as any,
         }).catch(() => {});
 

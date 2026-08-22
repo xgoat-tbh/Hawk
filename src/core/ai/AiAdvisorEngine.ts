@@ -175,13 +175,6 @@ Return ONLY valid JSON matching this exact structure:
 }
 
 export function buildAiReportComponentsV2(report: AiAnalysisReport): ComponentV2Payload {
-  const categoryIcons: Record<string, string> = {
-    NEW_ALIAS: '⚡',
-    NEW_FEATURE: '✨',
-    OPTIMIZATION: '🛠️',
-    DEPRECATION: '📦',
-  };
-
   const sections: string[] = [
     `• **Server:** **${report.guildName}**\n` +
     `• **Generated:** <t:${Math.floor(report.timestamp.getTime() / 1000)}:f> (<t:${Math.floor(report.timestamp.getTime() / 1000)}:R>)\n` +
@@ -190,9 +183,8 @@ export function buildAiReportComponentsV2(report: AiAnalysisReport): ComponentV2
 
   for (let i = 0; i < report.suggestions.length; i++) {
     const s = report.suggestions[i];
-    const icon = categoryIcons[s.category] || '💡';
     const block = [
-      `### ${icon} [${s.category}] ${s.title} *(${s.impact} Impact)*`,
+      `### [${s.category}] ${s.title} *(${s.impact} Impact)*`,
       `• **Rationale:** ${s.rationale}`,
       `• **Proposed Action:** ${s.actionableProposal}`,
     ].join('\n');
@@ -200,7 +192,7 @@ export function buildAiReportComponentsV2(report: AiAnalysisReport): ComponentV2
   }
 
   return ui.standard({
-    title: '🧠 AI Server Intelligence & Feature Advisor',
+    title: 'AI Server Intelligence & Feature Advisor',
     sections,
   });
 }
