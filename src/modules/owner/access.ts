@@ -251,12 +251,37 @@ export default defineCommand({
         const listContent = lines.length > 0 ? lines.join('\n') : 'No active permits.';
         const footerText = `Page ${page + 1}/${totalPages} (Total Targets: ${sortedEntries.length} | Scopes: ${permits.length})`;
 
+        // 1. Pagination buttons (placed INSIDE the container)
+        let buttonRow: ActionRowBuilder<ButtonBuilder> | undefined;
+        if (totalPages > 1) {
+          const prevBtn = new ButtonBuilder()
+            .setCustomId('access_page_prev')
+            .setLabel('◀ Prev')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page <= 0);
+
+          const countBtn = new ButtonBuilder()
+            .setCustomId('access_page_count')
+            .setLabel(`${page + 1} / ${totalPages}`)
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true);
+
+          const nextBtn = new ButtonBuilder()
+            .setCustomId('access_page_next')
+            .setLabel('Next ▶')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(page >= totalPages - 1);
+
+          buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(prevBtn, countBtn, nextBtn);
+        }
+
         const basePayload = ui.standard({
           title: `Active Custom Permits (${sortedEntries.length} Targets)`,
           text: `${listContent}\n\n*${footerText}*`,
+          components: buttonRow ? [buttonRow] : undefined,
         });
 
-        // 1. Selector menu for detailed inspection (top 25 targets)
+        // 2. Selector menu for detailed inspection (placed OUTSIDE the container)
         const selectOptions: StringSelectMenuOptionBuilder[] = sortedEntries.slice(0, 25).map((g) => {
           let nameLabel = g.targetId;
           if (g.targetType === 'user') {
@@ -289,35 +314,9 @@ export default defineCommand({
             .addOptions(selectOptions)
         );
 
-        // 2. Pagination buttons (if multiple pages)
-        const components: any[] = [selectRow];
-
-        if (totalPages > 1) {
-          const prevBtn = new ButtonBuilder()
-            .setCustomId('access_page_prev')
-            .setLabel('◀ Prev')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page <= 0);
-
-          const countBtn = new ButtonBuilder()
-            .setCustomId('access_page_count')
-            .setLabel(`${page + 1} / ${totalPages}`)
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(true);
-
-          const nextBtn = new ButtonBuilder()
-            .setCustomId('access_page_next')
-            .setLabel('Next ▶')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(page >= totalPages - 1);
-
-          const buttonRow = new ActionRowBuilder<ButtonBuilder>().addComponents(prevBtn, countBtn, nextBtn);
-          components.push(buttonRow);
-        }
-
         return {
           payload: basePayload,
-          components: [...basePayload.components, ...components],
+          components: [...basePayload.components, selectRow],
         };
       };
 
