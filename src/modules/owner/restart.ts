@@ -16,6 +16,7 @@ export default defineCommand({
   description: 'Gracefully restart the bot instance (Bot Owner only).',
   usage: 'restart',
   examples: ['restart', 'reboot'],
+  ownerOnly: true,
   permissions: [],
   botPermissions: [PermissionsBitField.Flags.SendMessages],
   cooldown: 5,

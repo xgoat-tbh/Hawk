@@ -23,6 +23,8 @@ import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
 import { sanitize } from '../../core/utils/validators.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { logAuditAction } from '../../core/logging/AuditLogger.js';
+import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
+import { AuthorityLevel } from '../../types/permission.js';
 
 interface GroupedPermit {
   targetType: 'user' | 'role';
@@ -48,12 +50,18 @@ export default defineCommand({
     'access add @User all',
     'access remove @User wv',
   ],
-  permissions: [PermissionsBitField.Flags.ManageGuild],
+  ownerOnly: true,
+  permissions: [],
   botPermissions: [PermissionsBitField.Flags.SendMessages],
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, member, respond } = ctx;
+    const authority = getAuthorityLevel(member.id, guild.ownerId);
+    if (authority !== AuthorityLevel.Owner) {
+      await respond.error('Only **Bot Owners** can manage command access and permits.');
+      return;
+    }
 
     if (parsed.args.length === 0) {
       await respond.error('Usage: `access list` | `access fix` | `access add <@user|@role|?all> <scope>` | `access remove <@user|@role|?all> <scope>`');
@@ -641,7 +649,11 @@ export default defineCommand({
       commandName = null;
       moduleName = null;
     } else if (scopeArg.startsWith('module:')) {
-      const modName = scopeArg.slice(7).trim();
+      const modName = scopeArg.slice(7).trim().toLowerCase();
+      if (modName === 'owner' && !isRemoveMode) {
+        await respond.error('The **owner** module cannot be permitted or distributed to any user or role.');
+        return;
+      }
       const allModules = getModules();
       if (!allModules.includes(modName)) {
         await respond.error(`Unknown module \`${modName}\`. Available modules: ${allModules.join(', ')}`);
@@ -651,11 +663,19 @@ export default defineCommand({
     } else {
       const cmd = resolveCommand(scopeArg);
       if (cmd) {
+        if ((cmd.module === 'owner' || cmd.ownerOnly) && !isRemoveMode) {
+          await respond.error(`Owner command \`${cmd.name}\` cannot be permitted or distributed to any user or role.`);
+          return;
+        }
         commandName = cmd.name;
         moduleName = cmd.module;
       } else {
         const allModules = getModules();
         if (allModules.includes(scopeArg)) {
+          if (scopeArg === 'owner' && !isRemoveMode) {
+            await respond.error('The **owner** module cannot be permitted or distributed to any user or role.');
+            return;
+          }
           moduleName = scopeArg;
         } else {
           await respond.error(`Unknown command or module \`${scopeArg}\`.`);

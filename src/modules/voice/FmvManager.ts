@@ -109,12 +109,17 @@ export async function createFmvRequest(options: {
     state.status = 'COUNTDOWN';
     const countdownTimestamp = Math.floor((now + 5000) / 1000);
 
-    const userDisplay = formatUser(state.targetId);
+    const userMention = `<@${state.targetId}>`;
     const payload = ui.standard({
       title: 'Force Move Scheduled',
-      text: `${userDisplay}\nYou will be moved to <#${destinationChannelId}> in <t:${countdownTimestamp}:R>.`,
+      text: `${userMention}\nYou will be moved to <#${destinationChannelId}> in <t:${countdownTimestamp}:R>.`,
     });
-    await requestMessage.edit({ components: payload.components, flags: payload.flags as any }).catch(() => {});
+    await requestMessage.edit({
+      content: userMention,
+      components: payload.components,
+      flags: payload.flags as any,
+      allowedMentions: { users: [state.targetId] },
+    }).catch(() => {});
 
     logEvent('info', 'command_execution', `FMV countdown started for ${targetMember.user.tag}`, {
       guild: guildId,
@@ -137,17 +142,27 @@ export async function createFmvRequest(options: {
           await refreshedMember.voice.setChannel(destinationChannelId);
           const donePayload = ui.standard({
             title: 'Force Move Completed',
-            text: `${userDisplay} was moved to <#${destinationChannelId}>.`,
+            text: `${userMention} was moved to <#${destinationChannelId}>.`,
           });
-          await state.requestMessage.edit({ components: donePayload.components, flags: donePayload.flags as any });
+          await state.requestMessage.edit({
+            content: userMention,
+            components: donePayload.components,
+            flags: donePayload.flags as any,
+            allowedMentions: { users: [state.targetId] },
+          });
           scheduleMessageDeletion(state.requestMessage, 5000);
         } catch {
           state.status = 'FAILED';
           const failPayload = ui.standard({
             title: 'Force Move Failed',
-            text: `Failed to move ${userDisplay} to <#${destinationChannelId}>.`,
+            text: `Failed to move ${userMention} to <#${destinationChannelId}>.`,
           });
-          await state.requestMessage.edit({ components: failPayload.components, flags: failPayload.flags as any }).catch(() => {});
+          await state.requestMessage.edit({
+            content: userMention,
+            components: failPayload.components,
+            flags: failPayload.flags as any,
+            allowedMentions: { users: [state.targetId] },
+          }).catch(() => {});
           scheduleMessageDeletion(state.requestMessage, 5000);
         }
 
@@ -162,20 +177,30 @@ export async function createFmvRequest(options: {
         state.status = 'WAITING_FOR_VC';
         const waitPayload = ui.standard({
           title: 'Force Move Waiting',
-          text: `${userDisplay}\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
+          text: `${userMention}\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
         });
-        await state.requestMessage.edit({ components: waitPayload.components, flags: waitPayload.flags as any }).catch(() => {});
+        await state.requestMessage.edit({
+          content: userMention,
+          components: waitPayload.components,
+          flags: waitPayload.flags as any,
+          allowedMentions: { users: [state.targetId] },
+        }).catch(() => {});
       }
     }, 5000);
   } else {
     // CASE B — Target is NOT in a VC
-    const userDisplay = formatUser(state.targetId);
+    const userMention = `<@${state.targetId}>`;
     state.status = 'WAITING_FOR_VC';
     const waitPayload = ui.standard({
       title: 'Force Move Waiting',
-      text: `${userDisplay}\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
+      text: `${userMention}\nJoin any voice channel to be moved to <#${destinationChannelId}>.`,
     });
-    await requestMessage.edit({ components: waitPayload.components, flags: waitPayload.flags as any }).catch(() => {});
+    await requestMessage.edit({
+      content: userMention,
+      components: waitPayload.components,
+      flags: waitPayload.flags as any,
+      allowedMentions: { users: [state.targetId] },
+    }).catch(() => {});
 
     logEvent('info', 'command_execution', `FMV waiting for target ${targetMember.user.tag} to join VC`, {
       guild: guildId,
@@ -295,12 +320,17 @@ export async function handleFmvVoiceStateUpdate(oldState: VoiceState, newState: 
 
     await newState.member.voice.setChannel(req.destinationChannelId);
 
-    const userDisplay = formatUser(req.targetId);
+    const userMention = `<@${req.targetId}>`;
     const donePayload = ui.standard({
       title: 'Force Move Completed',
-      text: `${userDisplay} was moved to <#${req.destinationChannelId}>.`,
+      text: `${userMention} was moved to <#${req.destinationChannelId}>.`,
     });
-    await req.requestMessage.edit({ components: donePayload.components, flags: donePayload.flags as any }).catch(() => {});
+    await req.requestMessage.edit({
+      content: userMention,
+      components: donePayload.components,
+      flags: donePayload.flags as any,
+      allowedMentions: { users: [req.targetId] },
+    }).catch(() => {});
     scheduleMessageDeletion(req.requestMessage, 5000);
 
     logEvent('info', 'command_execution', `FMV executed on voiceStateUpdate for ${newState.member.user.tag}`, {

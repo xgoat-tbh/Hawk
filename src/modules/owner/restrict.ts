@@ -1,4 +1,3 @@
-import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
@@ -7,16 +6,25 @@ import { resolveCommand, getModules } from '../../core/commands/CommandRegistry.
 import { removePermit } from '../../core/database/repositories/permissionRepo.js';
 import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
 
+import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
+import { AuthorityLevel } from '../../types/permission.js';
+
 export default defineCommand({
   name: 'restrict',
   module: 'owner',
   description: 'Revoke custom command/module permit from a user or role.',
   usage: 'restrict <target> <command|module:name>',
   examples: ['restrict @User wv', 'restrict @Role voice', 'restrict @User module:voice'],
-  permissions: [PermissionsBitField.Flags.ManageGuild],
+  ownerOnly: true,
+  permissions: [],
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { parsed, guild, respond } = ctx;
+    const { parsed, guild, member, respond } = ctx;
+    const authority = getAuthorityLevel(member.id, guild.ownerId);
+    if (authority !== AuthorityLevel.Owner) {
+      await respond.error('Only **Bot Owners** can use `restrict`.');
+      return;
+    }
 
     if (parsed.args.length < 2) {
       await respond.error('Usage: `restrict <@user|@role|?all> <command|module:name>`');

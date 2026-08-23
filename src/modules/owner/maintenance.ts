@@ -67,6 +67,7 @@ export default defineCommand({
     'maintenance off',
     'maintenance status',
   ],
+  ownerOnly: true,
   permissions: [],
   botPermissions: [PermissionsBitField.Flags.SendMessages],
   cooldown: 2,

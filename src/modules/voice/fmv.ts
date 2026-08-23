@@ -109,15 +109,17 @@ export default defineCommand({
       return;
     }
 
-    // Send initial FMV Notice Payload
+    // Send initial FMV Notice Payload with explicit user ping
     const initialPayload = ui.standard({
       title: 'Force Move',
-      text: `${mentionUser(targetMember.id)}\nCreating force-move request to <#${destVc.id}>...`,
+      text: `<@${targetMember.id}>\nCreating force-move request to <#${destVc.id}>...`,
     });
 
     const noticeMessage = await (channel as GuildTextBasedChannel).send({
+      content: `<@${targetMember.id}>`,
       components: initialPayload.components,
       flags: initialPayload.flags as any,
+      allowedMentions: { users: [targetMember.id] },
     });
     message.delete().catch(() => {});
 
