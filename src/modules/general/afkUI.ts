@@ -53,3 +53,17 @@ export function buildAfkWelcomeBackPayload(userId: string, elapsedMs: number): C
     text: `${prefix}Welcome back, ${userDisplay}! You were gone for **${durationStr}**.`,
   });
 }
+
+export function buildAfkPastTensePayload(userId: string, reason?: string): ComponentV2Payload {
+  const successEmoji = getEmoji('AFK_SUCCESS');
+  const cleanReason = reason ? sanitizeAfkReason(reason) : '';
+  const userDisplay = formatUser(userId);
+  const text = cleanReason && cleanReason !== 'AFK'
+    ? `${successEmoji} ${userDisplay} · Was AFK: **${cleanReason}**`
+    : `${successEmoji} ${userDisplay} · Was AFK`;
+
+  return ui.standard({
+    text,
+  });
+}
+

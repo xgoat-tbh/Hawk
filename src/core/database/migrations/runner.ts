@@ -34,8 +34,9 @@ export async function runMigrations(): Promise<number> {
     )
   `;
 
-  // Explicit safety guarantee for guild_config.log_channel_id
+  // Explicit safety guarantee for guild_config.log_channel_id and afk_users
   await db`ALTER TABLE guild_config ADD COLUMN IF NOT EXISTS log_channel_id TEXT`.catch(() => {});
+  await db`ALTER TABLE afk_users ADD COLUMN IF NOT EXISTS channel_id TEXT, ADD COLUMN IF NOT EXISTS message_id TEXT`.catch(() => {});
 
   const applied = await db`SELECT filename FROM _migrations ORDER BY filename`;
   const appliedSet = new Set(applied.map(r => r.filename));

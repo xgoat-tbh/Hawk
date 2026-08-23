@@ -60,20 +60,21 @@ export default defineCommand({
     const rawReason = parsed.rawArgs.trim();
     const reason = rawReason || 'AFK';
 
-    await setAfk(guild.id, member.id, reason);
-
-    // Apply [AFK] nickname prefix
-    await applyAfkNickname(member);
-
     // 1. Delete the user's command message (!afk ...)
     message.delete().catch(() => {});
 
     // 2. Send AFK confirmation message (keep in channel)
     const payload = buildAfkSetPayload(member.id, rawReason);
-    await (channel as GuildTextBasedChannel).send({
+    const sentMsg = await (channel as GuildTextBasedChannel).send({
       ...payload,
       allowedMentions: AFK_ALLOWED_MENTIONS,
     }).catch(() => null);
+
+    // 3. Save AFK record with message and channel tracking
+    await setAfk(guild.id, member.id, reason, channel.id, sentMsg?.id);
+
+    // 4. Apply [AFK] nickname prefix
+    await applyAfkNickname(member);
 
     logEvent('info', 'command_execution', `AFK status set by ${member.user.tag}`, {
       user: member.user.tag,

@@ -3,6 +3,7 @@ import { removeAfk, getAfk } from '../../core/database/repositories/afkRepo.js';
 import {
   buildAfkNoticePayload,
   buildAfkWelcomeBackPayload,
+  buildAfkPastTensePayload,
   AFK_ALLOWED_MENTIONS,
 } from './afkUI.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
@@ -41,11 +42,32 @@ export async function handleAfkMessage(message: Message): Promise<void> {
             allowedMentions: AFK_ALLOWED_MENTIONS,
           }).catch(() => null);
 
-          if (welcomeMsg) {
-            setTimeout(() => {
-              welcomeMsg.delete().catch(() => {});
-            }, 6000);
-          }
+          // After 6s, delete the welcome message and edit the original AFK set message into past tense
+          setTimeout(async () => {
+            if (welcomeMsg) {
+              await welcomeMsg.delete().catch(() => {});
+            }
+
+            if (removed.channelId && removed.messageId) {
+              try {
+                const targetChannel = (message.guild?.channels.cache.get(removed.channelId) ??
+                  await message.guild?.channels.fetch(removed.channelId).catch(() => null)) as GuildTextBasedChannel | null;
+
+                if (targetChannel && 'messages' in targetChannel) {
+                  const originalAfkMsg = await targetChannel.messages.fetch(removed.messageId).catch(() => null);
+                  if (originalAfkMsg) {
+                    const pastTensePayload = buildAfkPastTensePayload(authorId, removed.reason);
+                    await originalAfkMsg.edit({
+                      ...pastTensePayload,
+                      allowedMentions: AFK_ALLOWED_MENTIONS,
+                    }).catch(() => {});
+                  }
+                }
+              } catch (editErr) {
+                consoleLog('warning', 'afk_handler', `Failed to edit original AFK message: ${editErr}`);
+              }
+            }
+          }, 6000);
         }
       }
     }
