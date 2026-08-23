@@ -12,9 +12,9 @@ export default defineCommand({
   name: 'purge',
   aliases: ['c', 'clear', 'clean', 'prune'],
   module: 'moderation',
-  description: 'Purge recent messages matching an optional filter with categorized breakdown.',
-  usage: 'purge <amount> [bot|human|@user|embeds|links|images]',
-  examples: ['purge 50 bot', 'purge 100 human', 'purge 50 @User', 'purge 100 embeds'],
+  description: 'Purge recent messages matching an optional user or filter with categorized breakdown.',
+  usage: 'purge [@user] <amount> OR purge <amount> [bot|human|@user|embeds|links|images]',
+  examples: ['purge @User 50', 'purge 50', 'purge 50 bot', 'purge 100 human', 'purge 50 @User', 'purge 100 embeds'],
   permissions: [PermissionsBitField.Flags.ManageMessages],
   botPermissions: [PermissionsBitField.Flags.ManageMessages, PermissionsBitField.Flags.ReadMessageHistory],
   cooldown: 3,
@@ -23,17 +23,41 @@ export default defineCommand({
     const { parsed, guild, channel, message, respond, member } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error(`Usage: \`${parsed.prefix}purge <amount> [bot|human|@user|embeds|links|images]\``);
+      await respond.error(
+        `Usage: \`${parsed.prefix}purge [@user] <amount>\` or \`${parsed.prefix}purge <amount> [bot|human|@user|embeds|links|images]\``,
+      );
       return;
     }
 
-    const amount = parseInt(parsed.args[0], 10);
-    if (isNaN(amount) || amount <= 0 || amount > 500) {
+    let amount: number;
+    let filterArg: string | null = null;
+
+    const firstArg = parsed.args[0];
+    const secondArg = parsed.args[1];
+
+    const firstAsNum = parseInt(firstArg, 10);
+    const secondAsNum = secondArg ? parseInt(secondArg, 10) : NaN;
+
+    if (!isNaN(firstAsNum) && firstAsNum > 0) {
+      // Syntax: purge <amount> [filter/@user]
+      amount = firstAsNum;
+      filterArg = secondArg ? secondArg.toLowerCase() : null;
+    } else if (!isNaN(secondAsNum) && secondAsNum > 0) {
+      // Syntax: purge <filter/@user> <amount>
+      amount = secondAsNum;
+      filterArg = firstArg.toLowerCase();
+    } else {
+      await respond.error(
+        `Usage: \`${parsed.prefix}purge [@user] <amount>\` or \`${parsed.prefix}purge <amount> [bot|human|@user|embeds|links|images]\``,
+      );
+      return;
+    }
+
+    if (amount <= 0 || amount > 500) {
       await respond.error('Please specify a valid purge amount between 1 and 500.');
       return;
     }
 
-    const filterArg = parsed.args[1] ? parsed.args[1].toLowerCase() : null;
     let targetUserId: string | null = null;
     let targetUserTag: string | null = null;
 
@@ -42,6 +66,9 @@ export default defineCommand({
       if (userRes.success) {
         targetUserId = userRes.value.id;
         targetUserTag = userRes.value.user.tag;
+      } else {
+        await respond.error(userRes.error ?? `Could not resolve user or filter: \`${filterArg}\``);
+        return;
       }
     }
 
@@ -49,13 +76,15 @@ export default defineCommand({
     // Delete command invocation message first
     await message.delete().catch(() => {});
 
+    const displayFilter = targetUserTag ? `@${targetUserTag}` : (filterArg ?? 'none');
+
     let statusMsg: Message | null = null;
     let tracker: LiveProgressTracker | null = null;
 
     if (amount > 50) {
       const initialPayload = ui.standard({
         title: 'Purging Messages',
-        sections: [`**Progress:** ${renderProgressBar(0, amount)} (0/${amount})\nFilter: \`${filterArg ?? 'none'}\``],
+        sections: [`**Progress:** ${renderProgressBar(0, amount)} (0/${amount})\nFilter: \`${displayFilter}\``],
       });
       statusMsg = await textChannel.send({ components: initialPayload.components, flags: initialPayload.flags as any }).catch(() => null);
       if (statusMsg) {
@@ -72,27 +101,49 @@ export default defineCommand({
 
     const batchLimit = 100;
     const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    let lastMessageId: string | undefined = undefined;
 
     while (deletedCount < amount) {
-      const fetchCount = Math.min(batchLimit, amount - deletedCount);
-      const fetched: Collection<string, Message> = await textChannel.messages.fetch({ limit: fetchCount }).catch(() => new Map() as any);
+      const fetchLimit = filterArg ? batchLimit : Math.min(batchLimit, amount - deletedCount);
+      const fetchOptions: { limit: number; before?: string } = { limit: fetchLimit };
+      if (lastMessageId) {
+        fetchOptions.before = lastMessageId;
+      }
+
+      const fetched: Collection<string, Message> = await textChannel.messages.fetch(fetchOptions).catch(() => new Map() as any);
       if (fetched.size === 0) break;
 
-      const validMessages = fetched.filter((m: Message) => {
-        if (m.createdTimestamp < fourteenDaysAgo) return false;
-        if (filterArg === 'bot') return m.author.bot;
-        if (filterArg === 'human') return !m.author.bot;
-        if (filterArg === 'embeds') return m.embeds.length > 0;
-        if (filterArg === 'links') return /(https?:\/\/[^\s]+)/g.test(m.content);
-        if (filterArg === 'images') return m.attachments.size > 0;
-        if (targetUserId) return m.author.id === targetUserId;
-        return true;
-      });
+      lastMessageId = fetched.last()?.id;
 
-      if (validMessages.size === 0) break;
+      const validMessages: Message[] = [];
+      for (const m of fetched.values()) {
+        if (m.createdTimestamp < fourteenDaysAgo) continue;
+        if (filterArg === 'bot' && !m.author.bot) continue;
+        if (filterArg === 'human' && m.author.bot) continue;
+        if (filterArg === 'embeds' && m.embeds.length === 0) continue;
+        if (filterArg === 'links' && !/(https?:\/\/[^\s]+)/g.test(m.content)) continue;
+        if (filterArg === 'images' && m.attachments.size === 0) continue;
+        if (targetUserId && m.author.id !== targetUserId) continue;
+
+        validMessages.push(m);
+        if (deletedCount + validMessages.length >= amount) {
+          break;
+        }
+      }
+
+      if (validMessages.length === 0) {
+        // If all fetched messages were older than 14 days, stop scanning further
+        if (fetched.some(m => m.createdTimestamp < fourteenDaysAgo)) {
+          break;
+        }
+        if (fetched.size < fetchLimit) {
+          break;
+        }
+        continue;
+      }
 
       // Count message types in this batch
-      for (const m of validMessages.values()) {
+      for (const m of validMessages) {
         if (m.author.bot) botCount++;
         else humanCount++;
         if (m.attachments.size > 0) attachmentCount++;
@@ -104,12 +155,16 @@ export default defineCommand({
 
       deletedCount += deleted.size;
       if (tracker) {
-        await tracker.update(deletedCount, `Filter: \`${filterArg ?? 'none'}\``);
+        await tracker.update(deletedCount, `Filter: \`${displayFilter}\``);
+      }
+
+      if (deletedCount >= amount || fetched.size < fetchLimit) {
+        break;
       }
     }
 
     if (tracker) {
-      await tracker.update(deletedCount, `Filter: \`${filterArg ?? 'none'}\``, true);
+      await tracker.update(deletedCount, `Filter: \`${displayFilter}\``, true);
     }
 
     const breakdownText = `Purged **${deletedCount}** message(s) [Users: **${humanCount}** | Bots: **${botCount}** | Media: **${attachmentCount}** | Links: **${linkCount}**] • *(Auto-deleting in 5s)*`;
@@ -138,7 +193,7 @@ export default defineCommand({
       details: [
         `• **Amount Purged:** ${deletedCount} (Requested: ${amount})`,
         `• **Breakdown:** Users: ${humanCount} | Bots: ${botCount} | Media: ${attachmentCount} | Links: ${linkCount}`,
-        `• **Filter:** ${filterArg ? (targetUserTag ? `User (${targetUserTag})` : filterArg) : 'None'}`,
+        `• **Filter:** ${displayFilter}`,
       ],
     });
 
@@ -150,7 +205,7 @@ export default defineCommand({
       channel: channel.name,
       requestedAmount: amount,
       deletedAmount: deletedCount,
-      filter: filterArg ?? 'none',
+      filter: displayFilter,
     });
   },
 });
