@@ -44,6 +44,16 @@ export async function updateStickyMessageId(guildId: string, channelId: string, 
   `;
 }
 
+export async function getStickiesForGuild(guildId: string): Promise<StickyRecord[]> {
+  const db = getDb();
+  const rows = await db`
+    SELECT * FROM sticky_messages
+    WHERE guild_id = ${guildId}
+    ORDER BY created_at ASC
+  `;
+  return rows.map(mapStickyRow);
+}
+
 export async function deleteSticky(guildId: string, channelId: string): Promise<boolean> {
   const db = getDb();
   const result = await db`

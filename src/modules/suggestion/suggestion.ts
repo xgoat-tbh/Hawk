@@ -12,28 +12,31 @@ import {
   removeBlacklist,
   listBlacklist,
   resetSuggestionDataForGuild,
+  updateSuggestionStatus,
+  updateSuggestionMessageId,
 } from '../../core/database/repositories/suggestionRepo.js';
-import { buildSuggestionPanelPayload } from './suggestionUI.js';
+import { buildSuggestionPanelPayload, buildSuggestionPayload, resolveSuggestionTarget } from './suggestionUI.js';
 import { registerSuggestionPanelChannel } from './_suggestionHandler.js';
 import { mentionChannel, mentionUser, bold } from '../../core/utils/formatters.js';
 import { ui } from '../../core/ui/index.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
-
-import acceptCmd from './accept.js';
-import considerCmd from './consider.js';
-import denyCmd from './deny.js';
+import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'suggestion',
+  aliases: ['suggest', 'accept', 'deny', 'consider'],
   module: 'suggestion',
-  description: 'Manage Suggestion module channel, panel, blacklist, status, or reset.',
-  usage: 'suggestion <channel|panel|blacklist|accept|consider|deny|reset> [args...]',
+  description: 'Manage Suggestion channel, panel, blacklist, status (accept/deny/consider), or reset.',
+  usage: 'suggestion <channel|panel|blacklist|accept|consider|deny|reset> [args...] OR accept/deny/consider <number> [reason]',
   examples: [
     'suggestion channel #suggestions',
     'suggestion panel',
     'suggestion accept 42 Approved',
     'suggestion consider 42 Looking into it',
     'suggestion deny 42 Not feasible',
+    'accept 42 Approved',
+    'deny 42 Not feasible',
+    'consider 42 Looking into it',
     'suggestion blacklist add @User',
     'suggestion reset confirm',
   ],
@@ -43,16 +46,32 @@ export default defineCommand({
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, respond } = ctx;
+    const aliasUsed = parsed.aliasUsed.toLowerCase();
+
+    // ── Direct Action Aliases ──
+    if (aliasUsed === 'accept') {
+      await handleStatusUpdate(ctx, 'accepted', 'Suggestion Accepted');
+      return;
+    }
+    if (aliasUsed === 'consider') {
+      await handleStatusUpdate(ctx, 'considered', 'Suggestion Considered');
+      return;
+    }
+    if (aliasUsed === 'deny') {
+      await handleStatusUpdate(ctx, 'denied', 'Suggestion Denied');
+      return;
+    }
 
     if (parsed.args.length === 0) {
-      await respond.error('Specify a subcommand: `channel`, `panel`, `blacklist`, `accept`, `consider`, `deny`, or `reset`.');
+      await respond.error(
+        'Specify a subcommand: `channel`, `panel`, `blacklist`, `accept`, `consider`, `deny`, or `reset`.',
+      );
       return;
     }
 
     const subcommand = parsed.args[0].toLowerCase();
     const subArgs = parsed.args.slice(1);
 
-    // Create a sub-context where parsed.args is shifted by 1
     const subCtx: CommandContext = {
       ...ctx,
       parsed: {
@@ -76,15 +95,15 @@ export default defineCommand({
         break;
 
       case 'accept':
-        await acceptCmd.execute(subCtx);
+        await handleStatusUpdate(subCtx, 'accepted', 'Suggestion Accepted');
         break;
 
       case 'consider':
-        await considerCmd.execute(subCtx);
+        await handleStatusUpdate(subCtx, 'considered', 'Suggestion Considered');
         break;
 
       case 'deny':
-        await denyCmd.execute(subCtx);
+        await handleStatusUpdate(subCtx, 'denied', 'Suggestion Denied');
         break;
 
       case 'reset':
@@ -93,11 +112,116 @@ export default defineCommand({
         break;
 
       default:
-        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`panel\`, \`blacklist\`, \`accept\`, \`consider\`, \`deny\`, \`reset\`.`);
+        await respond.error(
+          `Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`panel\`, \`blacklist\`, \`accept\`, \`consider\`, \`deny\`, \`reset\`.`,
+        );
         break;
     }
   },
 });
+
+async function handleStatusUpdate(
+  ctx: CommandContext,
+  newStatus: 'accepted' | 'considered' | 'denied',
+  title: string,
+): Promise<void> {
+  const { parsed, guild, member, respond, message } = ctx;
+  const prefix = parsed.prefix;
+
+  const suggestion = await resolveSuggestionTarget(parsed.args[0] ?? '', guild.id, message);
+  if (!suggestion) {
+    await respond.error(`Usage: \`${prefix}${parsed.aliasUsed} <number|messageId|url> [reason...]\` or reply to a suggestion message.`);
+    return;
+  }
+
+  let reason = '';
+  const firstArg = parsed.args[0];
+  const isFirstArgTarget = firstArg && (
+    (!message.reference && /^\d+$/.test(firstArg)) ||
+    firstArg.startsWith('#') ||
+    firstArg.includes('discord.com/channels')
+  );
+
+  if (isFirstArgTarget) {
+    reason = parsed.args.slice(1).join(' ').trim();
+  } else {
+    reason = parsed.args.join(' ').trim();
+  }
+
+  const updated = await updateSuggestionStatus(suggestion.id, newStatus, member.id);
+  if (!updated) {
+    await respond.error('Failed to update suggestion status.');
+    return;
+  }
+
+  const v2Payload = buildSuggestionPayload(updated, undefined, reason);
+
+  // Update existing Discord message in suggestion channel
+  const channel = (await guild.channels.fetch(updated.channelId).catch(() => null)) as GuildTextBasedChannel | null;
+  if (channel) {
+    let msg = await channel.messages.fetch(updated.messageId).catch(() => null);
+    if (!msg) {
+      const recentMsgs = await channel.messages.fetch({ limit: 50 }).catch(() => null);
+      if (recentMsgs) {
+        const match = recentMsgs.find(m =>
+          m.author.id === guild.client.user?.id &&
+          (m.content.includes(`Suggestion #${updated.number}`) || JSON.stringify(m.components).includes(`Suggestion #${updated.number}`))
+        );
+        if (match) {
+          msg = match;
+          await updateSuggestionMessageId(updated.id, match.id).catch(() => {});
+        }
+      }
+    }
+
+    if (msg) {
+      await msg.edit({ components: v2Payload.components }).catch(() => {});
+    }
+  }
+
+  // Direct Message notification to suggestion author
+  const authorUser = await guild.client.users.fetch(updated.authorId).catch(() => null);
+  if (authorUser) {
+    const dmPayload = ui.standard({
+      title,
+      sections: [
+        `Your suggestion **#${updated.number}** in **${guild.name}** has been **${newStatus.toUpperCase()}**.`,
+        `**Suggestion Content:**\n${updated.content}`,
+        ...(reason ? [`**Comment/Reason:**\n${reason}`] : []),
+      ],
+    });
+    await authorUser.send({
+      components: dmPayload.components,
+      flags: dmPayload.flags as any,
+      allowedMentions: { parse: [], roles: [], users: [] },
+    }).catch(() => {});
+  }
+
+  const actionPast = newStatus === 'accepted' ? 'accepted' : newStatus === 'considered' ? 'considered' : 'denied';
+  await respond.transientSuccess(`Suggestion **#${String(updated.number).padStart(3, '0')}** has been ${actionPast}. *(Auto-deleting in 5s)*`, 5000);
+
+  logAuditAction({
+    guild,
+    action: title,
+    executor: member,
+    details: [
+      `• **Suggestion:** #${updated.number} (${updated.id})`,
+      `• **Author ID:** \`${updated.authorId}\``,
+      ...(reason ? [`• **Reason:** ${reason}`] : []),
+    ],
+  });
+
+  logEvent('info', 'command_execution', `Suggestion #${updated.number} ${actionPast} by staff ${member.user.tag}`, {
+    staff: member.user.tag,
+    staffId: member.id,
+    guild: guild.name,
+    guildId: guild.id,
+    suggestionId: updated.id,
+    number: updated.number,
+    status: newStatus,
+    reason,
+  });
+}
 
 async function handleChannelConfig(ctx: CommandContext, args: string[]): Promise<void> {
   const { guild, respond, member } = ctx;

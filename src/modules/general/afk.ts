@@ -2,23 +2,60 @@ import { PermissionsBitField } from 'discord.js';
 import type { GuildTextBasedChannel } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
-import { setAfk } from '../../core/database/repositories/afkRepo.js';
+import {
+  setAfk,
+  getAfkEntriesForGuild,
+  clearAllAfkRecords,
+} from '../../core/database/repositories/afkRepo.js';
 import { buildAfkSetPayload, AFK_ALLOWED_MENTIONS } from './afkUI.js';
+import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
+import { AuthorityLevel } from '../../types/permission.js';
+import { ui } from '../../core/ui/index.js';
+import { mentionUser, timestamp } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'afk',
+  aliases: ['afklist', 'afkreset', 'afkadmin'],
   module: 'general',
-  description: 'Set your AFK status with an optional reason.',
-  usage: 'afk [reason]',
-  examples: ['afk', 'afk studying for exams', 'afk eating lunch'],
+  description: 'Set your AFK status, view active server AFK members, or reset AFK records (Admin/Owner).',
+  usage: 'afk [reason] | afk list | afk reset',
+  examples: ['afk studying for exams', 'afk eating lunch', 'afk list', 'afk reset', 'afklist', 'afkreset'],
   permissions: [],
   botPermissions: [PermissionsBitField.Flags.SendMessages],
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
     const { guild, member, channel, parsed, message } = ctx;
+    const aliasUsed = parsed.aliasUsed.toLowerCase();
 
+    // ── Direct Reset Shortcut ──
+    if (aliasUsed === 'afkreset') {
+      await handleAfkReset(ctx);
+      return;
+    }
+
+    // ── Direct List Shortcut ──
+    if (aliasUsed === 'afklist') {
+      await handleAfkList(ctx);
+      return;
+    }
+
+    const firstWord = parsed.args[0]?.toLowerCase();
+
+    // ── Subcommand: list ──
+    if (firstWord === 'list' || firstWord === 'show') {
+      await handleAfkList(ctx);
+      return;
+    }
+
+    // ── Subcommand: reset / clear ──
+    if (firstWord === 'reset' || firstWord === 'clear') {
+      await handleAfkReset(ctx);
+      return;
+    }
+
+    // ── Default Action: Set AFK ──
     const rawReason = parsed.rawArgs.trim();
     const reason = rawReason || 'AFK';
 
@@ -43,3 +80,43 @@ export default defineCommand({
     });
   },
 });
+
+async function handleAfkList(ctx: CommandContext): Promise<void> {
+  const { guild, respond } = ctx;
+  const entries = getAfkEntriesForGuild(guild.id);
+  if (entries.length === 0) {
+    await respond.info('There are currently no members marked as AFK in this server.');
+    return;
+  }
+
+  const lines = entries.map((e) => {
+    const relTime = timestamp(e.startedAt, 'R');
+    return `• ${mentionUser(e.userId, guild)} — **${e.reason}** (${relTime})`;
+  });
+
+  await ui.paginated(ctx, {
+    title: `Active AFK Members (${entries.length})`,
+    items: lines,
+    pageSize: 8,
+    emptyText: 'There are currently no members marked as AFK in this server.',
+  });
+}
+
+async function handleAfkReset(ctx: CommandContext): Promise<void> {
+  const { guild, member, respond } = ctx;
+  const authority = getAuthorityLevel(member.id, guild.ownerId);
+  if (authority !== AuthorityLevel.Owner) {
+    await respond.error('Only the **Bot Owner** can reset all server AFK records.');
+    return;
+  }
+
+  await clearAllAfkRecords(guild.id);
+  await respond.success('Successfully cleared all AFK records and reset AFK cache for this server.');
+
+  logEvent('info', 'command_execution', `Server AFK cache reset by ${member.user.tag}`, {
+    executor: member.user.tag,
+    executorId: member.id,
+    guild: guild.name,
+    guildId: guild.id,
+  });
+}

@@ -10,6 +10,7 @@ import { checkVoiceAccess } from './vconfigEvaluator.js';
 
 export default defineCommand({
   name: 'move',
+  aliases: ['multimove', 'mmv'],
   module: 'voice',
   description: 'Move a user or multiple users to a voice channel or to another user\'s voice channel.',
   usage: 'move <users...> <destination> OR reply with move [users...] <destination>',
