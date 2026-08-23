@@ -8,6 +8,7 @@ import {
   clearAllAfkRecords,
 } from '../../core/database/repositories/afkRepo.js';
 import { buildAfkSetPayload, AFK_ALLOWED_MENTIONS } from './afkUI.js';
+import { applyAfkNickname } from './afkSanitizer.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
 import { ui } from '../../core/ui/index.js';
@@ -60,6 +61,9 @@ export default defineCommand({
     const reason = rawReason || 'AFK';
 
     await setAfk(guild.id, member.id, reason);
+
+    // Apply [AFK] nickname prefix
+    await applyAfkNickname(member);
 
     // 1. Delete the user's command message (!afk ...)
     message.delete().catch(() => {});

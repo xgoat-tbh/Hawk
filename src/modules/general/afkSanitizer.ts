@@ -53,3 +53,59 @@ export function formatDuration(ms: number): string {
 
   return parts.join(', ');
 }
+
+import { PermissionsBitField } from 'discord.js';
+import type { GuildMember } from 'discord.js';
+
+export async function applyAfkNickname(member: GuildMember): Promise<void> {
+  try {
+    const guild = member.guild;
+    const botMember = guild.members.me;
+    if (!botMember || !botMember.permissions.has(PermissionsBitField.Flags.ManageNicknames)) {
+      return;
+    }
+    if (member.id === guild.ownerId) {
+      return;
+    }
+    if (botMember.roles.highest.position <= member.roles.highest.position) {
+      return;
+    }
+
+    const currentName = member.displayName;
+    if (currentName.startsWith('[AFK] ')) {
+      return;
+    }
+
+    const newName = `[AFK] ${currentName}`.slice(0, 32);
+    await member.setNickname(newName).catch(() => {});
+  } catch {
+    // Fail silently if nickname change is restricted
+  }
+}
+
+export async function removeAfkNickname(member: GuildMember): Promise<void> {
+  try {
+    const guild = member.guild;
+    const botMember = guild.members.me;
+    if (!botMember || !botMember.permissions.has(PermissionsBitField.Flags.ManageNicknames)) {
+      return;
+    }
+    if (member.id === guild.ownerId) {
+      return;
+    }
+    if (botMember.roles.highest.position <= member.roles.highest.position) {
+      return;
+    }
+
+    const currentName = member.displayName;
+    if (!currentName.startsWith('[AFK] ')) {
+      return;
+    }
+
+    const restoredName = currentName.replace(/^\[AFK\]\s*/i, '');
+    await member.setNickname(restoredName).catch(() => {});
+  } catch {
+    // Fail silently if nickname change is restricted
+  }
+}
+

@@ -7,6 +7,8 @@ import {
 } from './afkUI.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
+import { removeAfkNickname } from './afkSanitizer.js';
+
 export async function handleAfkMessage(message: Message): Promise<void> {
   if (!message.guild || message.author.bot || message.webhookId || message.system) {
     return;
@@ -27,6 +29,10 @@ export async function handleAfkMessage(message: Message): Promise<void> {
       if (elapsedMs >= 5000) {
         const removed = await removeAfk(guildId, authorId);
         if (removed) {
+          if (message.member) {
+            await removeAfkNickname(message.member);
+          }
+
           const totalDurationMs = Date.now() - removed.startedAt.getTime();
           const welcomePayload = buildAfkWelcomeBackPayload(authorId, totalDurationMs);
 
