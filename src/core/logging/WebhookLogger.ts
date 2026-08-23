@@ -41,13 +41,12 @@ export function logEvent(
   if (isDev()) consoleLog(severity, category, message, details);
   if (severity === 'debug') return;
 
-  const emoji = severityEmoji(severity);
   const detailLines = details
     ? Object.entries(details)
         .map(([k, v]) => `• **${k}:** ${String(v)}`)
         .join('\n')
     : '';
-  const content = [`${emoji} **[${severity.toUpperCase()}]** \`${category}\``, message, detailLines]
+  const content = [`**[${severity.toUpperCase()}]** \`${category}\``, message, detailLines]
     .filter(Boolean)
     .join('\n');
   enqueue(truncate(content, 1900));
@@ -63,18 +62,8 @@ export function logCommand(event: CommandLogEvent): void {
     });
   }
 
-  let statusEmoji = '✅';
-  if (outcomeKey === 'fail') statusEmoji = '❌';
-  else if (outcomeKey === 'warning') statusEmoji = '⚠️';
-  else if (outcomeKey === 'info') statusEmoji = 'ℹ️';
-  else if (outcomeKey === 'denied') statusEmoji = '🚫';
-  else if (outcomeKey === 'cooldown') statusEmoji = '⏳';
-  else if (outcomeKey === 'maintenance') statusEmoji = '🛠️';
-  else if (outcomeKey === 'ignored') statusEmoji = '🔇';
-  else if (outcomeKey === 'unknown') statusEmoji = '❓';
-
   const content = [
-    `${statusEmoji} **Command Triggered** \`[${outcomeKey.toUpperCase()}]\``,
+    `**Command Triggered** \`[${outcomeKey.toUpperCase()}]\``,
     `• **Who:** ${event.userTag} (\`${event.userId}\`)`,
     `• **Where:** ${event.guildName} → #${event.channelName}`,
     `• **Command:** \`${event.commandName}\`${event.aliasUsed !== event.commandName ? ` (alias: \`${event.aliasUsed}\`)` : ''}`,
@@ -102,7 +91,7 @@ export function logInteraction(data: {
   }
 
   const content = [
-    `🔘 **Interaction Triggered** \`[${data.type.toUpperCase()}]\``,
+    `**Interaction Triggered** \`[${data.type.toUpperCase()}]\``,
     `• **Who:** ${data.userTag} (\`${data.userId}\`)`,
     `• **Where:** ${data.guildName ?? 'DM'} → #${data.channelName ?? 'unknown'}`,
     `• **Custom ID:** \`${data.customId}\``,
@@ -154,20 +143,5 @@ async function flushQueue(): Promise<void> {
       'api_error',
       `Webhook send failed: ${error instanceof Error ? error.message : String(error)}`,
     );
-  }
-}
-
-function severityEmoji(severity: LogSeverity): string {
-  switch (severity) {
-    case 'debug':
-      return '🔍';
-    case 'info':
-      return 'ℹ️';
-    case 'warning':
-      return '⚠️';
-    case 'error':
-      return '❌';
-    case 'critical':
-      return '🚨';
   }
 }
