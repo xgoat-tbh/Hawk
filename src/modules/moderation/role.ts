@@ -4,13 +4,20 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { resolveRole } from '../../core/resolver/RoleResolver.js';
-import { toggleRoleForMember, isRoleManageable } from './roleHelpers.js';
+import {
+  toggleRoleForMember,
+  addRoleToMember,
+  removeRoleFromMember,
+  isRoleManageable,
+} from './roleHelpers.js';
 import { formatUser, mentionRole } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { logAuditAction } from '../../core/logging/AuditLogger.js';
 import { ui } from '../../core/ui/index.js';
 import { LiveProgressTracker, renderProgressBar } from '../../core/utils/ProgressBar.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
+
+type ActionMode = 'add' | 'remove' | 'toggle';
 
 export default defineCommand({
   name: 'role',
@@ -29,17 +36,17 @@ export default defineCommand({
     'removeroleicon',
   ],
   module: 'moderation',
-  description: 'Manage roles: toggle roles for a user, batch-toggle a role across multiple users, or set role icons.',
-  usage: 'role [user] <roles...> | role <role> <users...> | role icon <role> [emoji|url|none]',
+  description: 'Manage roles: add, remove, or toggle role(s) on a user, batch-manage a role across users/role members, or set role icons.',
+  usage: 'role <user|role> <role(s)...> [?add|?rem] | role icon <role> [emoji|url|none]',
   examples: [
-    'role @Role',
     'role @User @Role',
-    'role @User @Role1 @Role2',
-    'role @Role @User1 @User2 @User3',
+    'role @User @Role1 @Role2 ?add',
+    'role @User @Role1 @Role2 ?rem',
+    'role @RoleA @RoleB ?add',
+    'role @RoleA @RoleB ?rem',
+    'role @RoleA @RoleB',
     'role icon @VIP 👑',
     'role icon @VIP none',
-    'urole @Role @User1 @User2',
-    'roleicon @VIP 🔥',
   ],
   permissions: [PermissionsBitField.Flags.ManageRoles],
   botPermissions: [PermissionsBitField.Flags.ManageRoles],
@@ -55,226 +62,317 @@ export default defineCommand({
       return;
     }
 
-    // ── Direct URole Aliases ──
-    if (['urole', 'ur', 'unrole', 'removerole', 'takerole'].includes(aliasUsed)) {
-      await handleURole(ctx, parsed.args);
-      return;
-    }
-
-    if (parsed.args.length === 0) {
+    if (parsed.args.length === 0 && !ctx.replyTarget) {
       await respond.error(
-        `Usage: \`${parsed.prefix}role [user] <roles...>\` or \`${parsed.prefix}role <role> <users...>\` or \`${parsed.prefix}role icon <role> [emoji|url|none]\``,
+        `Usage:\n` +
+        `• \`${parsed.prefix}role <user|role> <role(s)...> [?add|?rem]\`\n` +
+        `• \`${parsed.prefix}role icon <role> [emoji|url|none]\``,
       );
       return;
     }
 
     // ── Subcommand: icon ──
-    if (parsed.args[0].toLowerCase() === 'icon') {
+    if (parsed.args[0]?.toLowerCase() === 'icon') {
       await handleRoleIcon(ctx, parsed.args.slice(1));
       return;
     }
 
-    // ── Check if first arg is a Role (URole syntax: role <role> <users...>) ──
-    const firstRoleRes = resolveRole(parsed.args[0], ctx.guild);
-    if (firstRoleRes.success && parsed.args.length >= 2) {
-      const secondUserRes = await resolveUser(parsed.args[1], ctx.guild);
-      if (secondUserRes.success) {
-        await handleURole(ctx, parsed.args);
-        return;
-      }
-    }
-
-    // ── Standard User Role Toggle: role [user] <roles...> ──
-    await handleStandardRole(ctx);
+    await handleRoleManagement(ctx);
   },
 });
 
-async function handleStandardRole(ctx: CommandContext): Promise<void> {
-  const { parsed, guild, respond, member, replyTarget } = ctx;
+async function handleRoleManagement(ctx: CommandContext): Promise<void> {
+  const { parsed, guild, member, replyTarget, respond, channel } = ctx;
+  const aliasUsed = parsed.aliasUsed.toLowerCase();
 
-  let targetMember: GuildMember | null = null;
-  let roleArgs: string[] = [];
+  let args = [...parsed.args];
+  let actionMode: ActionMode = 'toggle';
 
-  const userRes = await resolveUser(parsed.args[0], guild);
-  if (userRes.success && userRes.value.member) {
-    targetMember = userRes.value.member;
-    roleArgs = parsed.args.slice(1);
-  } else {
-    targetMember = replyTarget ?? member;
-    roleArgs = parsed.args;
+  // Check if alias implies add or remove
+  if (['addrole', 'giverole'].includes(aliasUsed)) {
+    actionMode = 'add';
+  } else if (['unrole', 'removerole', 'takerole'].includes(aliasUsed)) {
+    actionMode = 'remove';
   }
 
-  if (!targetMember) {
-    await respond.error('Could not resolve target member.');
+  // Check if last argument is an explicit mode flag
+  if (args.length > 0) {
+    const lastArg = args[args.length - 1].toLowerCase();
+    if (['?add', 'add', '+', 'give'].includes(lastArg)) {
+      actionMode = 'add';
+      args.pop();
+    } else if (['?rem', '?remove', 'rem', 'remove', 'del', 'delete', '-', 'take'].includes(lastArg)) {
+      actionMode = 'remove';
+      args.pop();
+    }
+  }
+
+  if (args.length === 0 && !replyTarget) {
+    await respond.error(`Usage: \`${parsed.prefix}role <user|role> <role(s)...> [?add|?rem]\``);
+    return;
+  }
+
+  let targetMembers: GuildMember[] = [];
+  let targetDisplayName = '';
+  let roleArgs: string[] = [];
+
+  // Case 1: First argument is a User / Member
+  const firstUserRes = args.length > 0 ? await resolveUser(args[0], guild) : null;
+  if (firstUserRes && firstUserRes.success && firstUserRes.value.member) {
+    targetMembers = [firstUserRes.value.member];
+    targetDisplayName = formatUser(firstUserRes.value.member, guild);
+    roleArgs = args.slice(1);
+  }
+  // Case 2: Replying to a message, and first argument is NOT a user
+  else if (replyTarget) {
+    targetMembers = [replyTarget];
+    targetDisplayName = formatUser(replyTarget, guild);
+    roleArgs = args;
+  }
+  // Case 3: First argument is a Role
+  else if (args.length > 0) {
+    const firstRoleRes = resolveRole(args[0], guild);
+    if (firstRoleRes.success) {
+      const sourceRole = firstRoleRes.value.role;
+      const remainingArgs = args.slice(1);
+
+      if (remainingArgs.length === 0) {
+        // Fallback: apply first role to executor
+        targetMembers = [member];
+        targetDisplayName = formatUser(member, guild);
+        roleArgs = [args[0]];
+      } else {
+        // Check if subsequent arguments are individual users (legacy URole syntax: role <role> <user1> <user2>...)
+        const secondUserCheck = await resolveUser(remainingArgs[0], guild);
+        if (secondUserCheck.success && secondUserCheck.value.member) {
+          const resolvedUsers: GuildMember[] = [];
+          for (const uArg of remainingArgs) {
+            const uRes = await resolveUser(uArg, guild);
+            if (uRes.success && uRes.value.member) {
+              resolvedUsers.push(uRes.value.member);
+            }
+          }
+          targetMembers = resolvedUsers;
+          targetDisplayName = `${resolvedUsers.length} specified user(s)`;
+          roleArgs = [args[0]]; // Role is the first argument
+        } else {
+          // Role-to-Role syntax: First role provides target members, remaining args are target roles
+          const allGuildMembers = await guild.members.fetch().catch(() => guild.members.cache);
+          targetMembers = Array.from(allGuildMembers.filter(m => m.roles.cache.has(sourceRole.id)).values());
+          targetDisplayName = `All members with ${mentionRole(sourceRole, guild)} (${targetMembers.length} members)`;
+          roleArgs = remainingArgs;
+        }
+      }
+    } else {
+      await respond.error(`Could not resolve user or role: \`${args[0]}\``);
+      return;
+    }
+  }
+
+  if (targetMembers.length === 0) {
+    await respond.error('No target members found to apply role changes.');
     return;
   }
 
   if (roleArgs.length === 0) {
-    await respond.error(`Specify at least one role to toggle. Usage: \`${parsed.prefix}role [user] <roles...>\`.`);
+    await respond.error(`Please specify at least one role. Usage: \`${parsed.prefix}role <user|role> <role(s)...> [?add|?rem]\``);
     return;
   }
 
+  // Resolve all target roles
+  const targetRoles: Role[] = [];
+  for (const rArg of roleArgs) {
+    const rRes = resolveRole(rArg, guild);
+    if (rRes.success) {
+      targetRoles.push(rRes.value.role);
+    }
+  }
+
+  if (targetRoles.length === 0) {
+    await respond.error(`Could not resolve any valid roles from: \`${roleArgs.join(' ')}\``);
+    return;
+  }
+
+  const totalMembers = targetMembers.length;
+  const rolesDisplay = targetRoles.map(r => mentionRole(r, guild)).join(', ');
+  const modeText = actionMode === 'add' ? 'Add' : actionMode === 'remove' ? 'Remove' : 'Toggle';
+
+  // ── Multi-member execution with Progress Tracker ──
+  if (totalMembers > 3) {
+    const initialPayload = ui.standard({
+      title: `Role Operation [${modeText.toUpperCase()}]`,
+      text:
+        `• **Target:** ${targetDisplayName}\n` +
+        `• **Role(s):** ${rolesDisplay}\n` +
+        `• **Progress:** ${renderProgressBar(0, totalMembers)} (0/${totalMembers})\n` +
+        `Added: **0** | Removed: **0** | Skipped: **0**`,
+    });
+
+    const statusMsg = await (channel as GuildTextBasedChannel).send({
+      components: initialPayload.components,
+      flags: initialPayload.flags as any,
+    }).catch(() => null);
+
+    const tracker = statusMsg ? new LiveProgressTracker(statusMsg, `Role [${modeText.toUpperCase()}]`, totalMembers) : null;
+
+    let addedCount = 0;
+    let removedCount = 0;
+    let skippedCount = 0;
+    let processed = 0;
+
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < targetMembers.length; i += CHUNK_SIZE) {
+      const chunk = targetMembers.slice(i, i + CHUNK_SIZE);
+      const results = await Promise.all(
+        chunk.map(async (targetMem) => {
+          let memAdded = 0;
+          let memRemoved = 0;
+          let memSkipped = 0;
+
+          for (const role of targetRoles) {
+            if (actionMode === 'add') {
+              const res = await addRoleToMember(guild, targetMem, role, member);
+              if (res === 'added') memAdded++;
+              else memSkipped++;
+            } else if (actionMode === 'remove') {
+              const res = await removeRoleFromMember(guild, targetMem, role, member);
+              if (res === 'removed') memRemoved++;
+              else memSkipped++;
+            } else {
+              const res = await toggleRoleForMember(guild, targetMem, role, member);
+              if (res === 'added') memAdded++;
+              else if (res === 'removed') memRemoved++;
+              else memSkipped++;
+            }
+          }
+          return { memAdded, memRemoved, memSkipped };
+        })
+      );
+
+      for (const r of results) {
+        addedCount += r.memAdded;
+        removedCount += r.memRemoved;
+        skippedCount += r.memSkipped;
+      }
+      processed += chunk.length;
+
+      if (tracker) {
+        await tracker.update(processed, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`);
+      }
+
+      if (i + CHUNK_SIZE < targetMembers.length) {
+        await new Promise(r => setTimeout(r, 200));
+      }
+    }
+
+    if (tracker) {
+      await tracker.update(totalMembers, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
+    }
+
+    const diffLines: string[] = [];
+    if (addedCount > 0) diffLines.push(`[+] Added **${addedCount}** role instance(s)`);
+    if (removedCount > 0) diffLines.push(`[-] Removed **${removedCount}** role instance(s)`);
+    if (skippedCount > 0) diffLines.push(`[!] Skipped **${skippedCount}** (already has / hierarchy)`);
+    if (diffLines.length === 0) diffLines.push('No changes applied.');
+
+    const summaryText =
+      `Role update for **${targetDisplayName}** [${modeText}]:\n` +
+      `• **Role(s):** ${rolesDisplay}\n` +
+      diffLines.map(l => `• ${l}`).join('\n') +
+      `\n• *(Auto-deleting in 5s)*`;
+
+    if (statusMsg) {
+      const finalPayload = ui.standard({
+        title: 'Role Operation Completed',
+        text: summaryText,
+      });
+      await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
+      setTimeout(() => statusMsg?.delete().catch(() => {}), 5000);
+    } else {
+      const replyMsg = await respond.success(summaryText);
+      setTimeout(() => replyMsg.delete().catch(() => {}), 5000);
+    }
+
+    logAuditAction({
+      guild,
+      action: `Batch Role ${modeText}`,
+      executor: member,
+      target: targetDisplayName,
+      details: [
+        `• **Role(s):** ${targetRoles.map(r => r.name).join(', ')}`,
+        `• **Mode:** ${modeText}`,
+        ...diffLines.map(line => `• ${line}`),
+      ],
+    });
+
+    logEvent('info', 'command_execution', `Batch role ${modeText} by ${member.user.tag}`, {
+      executor: member.user.tag,
+      executorId: member.id,
+      guild: guild.name,
+      guildId: guild.id,
+      target: targetDisplayName,
+      mode: actionMode,
+      addedCount,
+      removedCount,
+      skippedCount,
+    });
+    return;
+  }
+
+  // ── Single / Few Members Execution (1 to 3 members) ──
   const addedRoles: Role[] = [];
   const removedRoles: Role[] = [];
   let skippedCount = 0;
 
-  for (const roleArg of roleArgs) {
-    const roleRes = resolveRole(roleArg, guild);
-    if (!roleRes.success) {
-      skippedCount++;
-      continue;
+  for (const targetMem of targetMembers) {
+    for (const role of targetRoles) {
+      if (actionMode === 'add') {
+        const res = await addRoleToMember(guild, targetMem, role, member);
+        if (res === 'added') addedRoles.push(role);
+        else skippedCount++;
+      } else if (actionMode === 'remove') {
+        const res = await removeRoleFromMember(guild, targetMem, role, member);
+        if (res === 'removed') removedRoles.push(role);
+        else skippedCount++;
+      } else {
+        const res = await toggleRoleForMember(guild, targetMem, role, member);
+        if (res === 'added') addedRoles.push(role);
+        else if (res === 'removed') removedRoles.push(role);
+        else skippedCount++;
+      }
     }
-
-    const role = roleRes.value.role;
-    const res = await toggleRoleForMember(guild, targetMember, role, member);
-    if (res === 'added') addedRoles.push(role);
-    else if (res === 'removed') removedRoles.push(role);
-    else skippedCount++;
   }
 
   const diffLines: string[] = [];
   if (addedRoles.length > 0) diffLines.push(`[+] Added: ${addedRoles.map(r => mentionRole(r, guild)).join(', ')}`);
   if (removedRoles.length > 0) diffLines.push(`[-] Removed: ${removedRoles.map(r => mentionRole(r, guild)).join(', ')}`);
-  if (skippedCount > 0) diffLines.push(`[!] Skipped: **${skippedCount}** role(s) (hierarchy/permissions)`);
+  if (skippedCount > 0) diffLines.push(`[!] Skipped: **${skippedCount}** (already has / hierarchy)`);
   if (diffLines.length === 0) diffLines.push('No role changes applied.');
 
-  const diffText = `Role update for ${formatUser(targetMember, guild)}:\n${diffLines.join('\n')}`;
+  const diffText = `Role update for ${targetDisplayName} [${modeText}]:\n${diffLines.join('\n')}`;
   await respond.transientSuccess(diffText, 5000);
 
   logAuditAction({
     guild,
-    action: 'Member Role Updated',
+    action: `Member Role ${modeText}`,
     executor: member,
-    target: formatUser(targetMember, guild),
+    target: targetDisplayName,
     details: [
-      `• **Target:** ${targetMember.user.tag} (${targetMember.id})`,
+      `• **Target:** ${targetDisplayName}`,
+      `• **Mode:** ${modeText}`,
       ...diffLines.map(line => `• ${line}`),
     ],
   });
 
-  logEvent('info', 'command_execution', `Role toggle by ${member.user.tag}`, {
+  logEvent('info', 'command_execution', `Role ${modeText} by ${member.user.tag}`, {
     executor: member.user.tag,
     executorId: member.id,
     guild: guild.name,
     guildId: guild.id,
-    targetUser: targetMember.user.tag,
+    target: targetDisplayName,
+    mode: actionMode,
     addedCount: addedRoles.length,
     removedCount: removedRoles.length,
-    skippedCount,
-  });
-}
-
-async function handleURole(ctx: CommandContext, args: string[]): Promise<void> {
-  const { guild, respond, member, channel } = ctx;
-
-  if (args.length < 2) {
-    await respond.error(`Usage: \`${ctx.parsed.prefix}role <role> <users...>\``);
-    return;
-  }
-
-  const roleRes = resolveRole(args[0], guild);
-  if (!roleRes.success) {
-    await respond.error(`Role: ${roleRes.error}`);
-    return;
-  }
-
-  const targetRole = roleRes.value.role;
-  const userArgs = args.slice(1);
-  const totalUsers = userArgs.length;
-
-  let statusMsg = null;
-  let tracker: LiveProgressTracker | null = null;
-  if (totalUsers > 3) {
-    const initialPayload = ui.standard({
-      title: `URole: ${targetRole.name}`,
-      text: `Target: ${mentionRole(targetRole, guild)} (${totalUsers} users)\n**Progress:** ${renderProgressBar(0, totalUsers)} (0/${totalUsers})\nAdded: **0** | Removed: **0** | Skipped: **0**`,
-    });
-    statusMsg = await (channel as GuildTextBasedChannel).send({
-      components: initialPayload.components,
-      flags: initialPayload.flags as any,
-    }).catch(() => null);
-    if (statusMsg) {
-      tracker = new LiveProgressTracker(statusMsg, `URole (${targetRole.name})`, totalUsers);
-    }
-  }
-
-  let addedCount = 0;
-  let removedCount = 0;
-  let skippedCount = 0;
-
-  let processed = 0;
-  const CHUNK_SIZE = 5;
-  for (let i = 0; i < userArgs.length; i += CHUNK_SIZE) {
-    const chunk = userArgs.slice(i, i + CHUNK_SIZE);
-    const results = await Promise.all(
-      chunk.map(async (userArg) => {
-        const userRes = await resolveUser(userArg, guild);
-        if (!userRes.success || !userRes.value.member) {
-          return { member: null, res: 'skipped' as const };
-        }
-        const targetMem = userRes.value.member;
-        const res = await toggleRoleForMember(guild, targetMem, targetRole, member);
-        return { member: targetMem, res };
-      })
-    );
-
-    for (const { res } of results) {
-      if (res === 'added') addedCount++;
-      else if (res === 'removed') removedCount++;
-      else skippedCount++;
-    }
-    processed += chunk.length;
-    if (tracker) {
-      await tracker.update(processed, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`);
-    }
-    if (i + CHUNK_SIZE < userArgs.length) {
-      await new Promise(r => setTimeout(r, 200));
-    }
-  }
-
-  if (tracker) {
-    await tracker.update(totalUsers, `Added: **${addedCount}** | Removed: **${removedCount}** | Skipped: **${skippedCount}**`, true);
-  }
-
-  const diffLines: string[] = [];
-  if (addedCount > 0) diffLines.push(`[+] Added to **${addedCount}** member(s)`);
-  if (removedCount > 0) diffLines.push(`[-] Removed from **${removedCount}** member(s)`);
-  if (skippedCount > 0) diffLines.push(`[!] Skipped **${skippedCount}** member(s)`);
-  if (diffLines.length === 0) diffLines.push('No changes applied.');
-
-  const summaryText = `Role update for ${mentionRole(targetRole, guild)}:\n${diffLines.join('\n')}\n• *(Auto-deleting in 5s)*`;
-
-  if (statusMsg) {
-    const finalPayload = ui.standard({
-      title: 'URole Completed',
-      text: summaryText,
-    });
-    await statusMsg.edit({ components: finalPayload.components, flags: finalPayload.flags as any }).catch(() => {});
-    setTimeout(() => statusMsg?.delete().catch(() => {}), 5000);
-  } else {
-    const replyMsg = await respond.success(summaryText);
-    setTimeout(() => replyMsg.delete().catch(() => {}), 5000);
-  }
-
-  logAuditAction({
-    guild,
-    action: 'Batch Role Update (URole)',
-    executor: member,
-    target: mentionRole(targetRole, guild),
-    details: [
-      `• **Role:** \`${targetRole.name}\` (${targetRole.id})`,
-      ...diffLines.map(line => `• ${line}`),
-    ],
-  });
-
-  logEvent('info', 'command_execution', `URole toggle by ${member.user.tag}`, {
-    executor: member.user.tag,
-    executorId: member.id,
-    guild: guild.name,
-    guildId: guild.id,
-    targetRole: targetRole.name,
-    addedCount,
-    removedCount,
     skippedCount,
   });
 }
