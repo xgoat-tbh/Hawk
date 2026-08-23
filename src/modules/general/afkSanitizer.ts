@@ -56,56 +56,68 @@ export function formatDuration(ms: number): string {
 
 import { PermissionsBitField } from 'discord.js';
 import type { GuildMember } from 'discord.js';
+import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
-export async function applyAfkNickname(member: GuildMember): Promise<void> {
+export async function applyAfkNickname(member: GuildMember): Promise<{ success: boolean; reason?: string }> {
   try {
     const guild = member.guild;
-    const botMember = guild.members.me;
-    if (!botMember || !botMember.permissions.has(PermissionsBitField.Flags.ManageNicknames)) {
-      return;
+    const botMember = guild.members.me ?? await guild.members.fetchMe().catch(() => null);
+    if (!botMember) {
+      return { success: false, reason: 'bot_member_not_found' };
+    }
+    if (!botMember.permissions.has(PermissionsBitField.Flags.ManageNicknames) && !botMember.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      consoleLog('warning', 'afk', `Cannot change AFK nickname for ${member.user.tag}: Bot lacks ManageNicknames permission`);
+      return { success: false, reason: 'missing_manage_nicknames' };
     }
     if (member.id === guild.ownerId) {
-      return;
+      consoleLog('info', 'afk', `Skipping AFK nickname for ${member.user.tag}: User is Server Owner (Discord API forbids modifying server owner nickname)`);
+      return { success: false, reason: 'server_owner' };
     }
     if (botMember.roles.highest.position <= member.roles.highest.position) {
-      return;
+      consoleLog('warning', 'afk', `Cannot change AFK nickname for ${member.user.tag}: User role hierarchy (${member.roles.highest.name} pos ${member.roles.highest.position}) >= Bot role (${botMember.roles.highest.name} pos ${botMember.roles.highest.position})`);
+      return { success: false, reason: 'hierarchy_restricted' };
     }
 
     const currentName = member.displayName;
     if (currentName.startsWith('[AFK] ')) {
-      return;
+      return { success: true };
     }
 
     const newName = `[AFK] ${currentName}`.slice(0, 32);
-    await member.setNickname(newName).catch(() => {});
-  } catch {
-    // Fail silently if nickname change is restricted
+    await member.setNickname(newName, 'User set AFK status');
+    return { success: true };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    consoleLog('warning', 'afk', `Failed to set AFK nickname for ${member.user.tag}: ${msg}`);
+    return { success: false, reason: msg };
   }
 }
 
-export async function removeAfkNickname(member: GuildMember): Promise<void> {
+export async function removeAfkNickname(member: GuildMember): Promise<{ success: boolean; reason?: string }> {
   try {
     const guild = member.guild;
-    const botMember = guild.members.me;
-    if (!botMember || !botMember.permissions.has(PermissionsBitField.Flags.ManageNicknames)) {
-      return;
+    const botMember = guild.members.me ?? await guild.members.fetchMe().catch(() => null);
+    if (!botMember) return { success: false, reason: 'bot_member_not_found' };
+    if (!botMember.permissions.has(PermissionsBitField.Flags.ManageNicknames) && !botMember.permissions.has(PermissionsBitField.Flags.Administrator)) {
+      return { success: false, reason: 'missing_manage_nicknames' };
     }
-    if (member.id === guild.ownerId) {
-      return;
-    }
+    if (member.id === guild.ownerId) return { success: false, reason: 'server_owner' };
     if (botMember.roles.highest.position <= member.roles.highest.position) {
-      return;
+      return { success: false, reason: 'hierarchy_restricted' };
     }
 
     const currentName = member.displayName;
     if (!currentName.startsWith('[AFK] ')) {
-      return;
+      return { success: true };
     }
 
     const restoredName = currentName.replace(/^\[AFK\]\s*/i, '');
-    await member.setNickname(restoredName).catch(() => {});
-  } catch {
-    // Fail silently if nickname change is restricted
+    await member.setNickname(restoredName, 'User returned from AFK');
+    return { success: true };
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    consoleLog('warning', 'afk', `Failed to restore nickname for ${member.user.tag}: ${msg}`);
+    return { success: false, reason: msg };
   }
 }
 
