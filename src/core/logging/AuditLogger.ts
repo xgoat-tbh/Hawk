@@ -2,6 +2,7 @@ import type { Guild, GuildTextBasedChannel, GuildMember, User, Client } from 'di
 import { getLogChannel } from '../database/repositories/guildConfigRepo.js';
 import { ui } from '../ui/index.js';
 import { formatUser } from '../utils/formatters.js';
+import { getEmoji } from '../config/branding.js';
 import type { CommandLogEvent } from '../../types/logging.js';
 import { truncate } from '../utils/validators.js';
 
@@ -12,6 +13,26 @@ export interface AuditLogOptions {
   target?: string;
   channelName?: string;
   details?: string | string[];
+}
+
+function getOutcomeEmoji(outcome: string): string {
+  switch (outcome.toLowerCase()) {
+    case 'success':
+      return getEmoji('success');
+    case 'fail':
+    case 'error':
+    case 'denied':
+      return getEmoji('error') || getEmoji('denied');
+    case 'warning':
+    case 'cooldown':
+    case 'maintenance':
+      return getEmoji('warning');
+    case 'info':
+    case 'ignored':
+    case 'unknown':
+    default:
+      return getEmoji('info');
+  }
 }
 
 export async function logAuditAction(options: AuditLogOptions): Promise<void> {
@@ -28,6 +49,8 @@ export async function logAuditAction(options: AuditLogOptions): Promise<void> {
 
     const executorDisplay = formatUser(executor, guild);
     const unixNow = Math.floor(Date.now() / 1000);
+    const modEmoji = getEmoji('moderation') || getEmoji('success');
+    const modPrefix = modEmoji ? `${modEmoji} ` : '';
 
     const sections: string[] = [
       `• **Action:** ${action}\n` +
@@ -46,7 +69,7 @@ export async function logAuditAction(options: AuditLogOptions): Promise<void> {
     }
 
     const payload = ui.standard({
-      title: `Audit Log | ${action}`,
+      title: `${modPrefix}Audit Log | ${action}`,
       sections,
     });
 
@@ -76,13 +99,15 @@ export async function logCommandAudit(client: Client, event: CommandLogEvent): P
 
     const outcomeKey = event.outcome || (event.success ? 'success' : 'fail');
     const unixNow = Math.floor(Date.now() / 1000);
+    const statusEmoji = getOutcomeEmoji(outcomeKey);
+    const statusPrefix = statusEmoji ? `${statusEmoji} ` : '';
 
     const sections: string[] = [
       `• **User:** ${event.userTag} (<@${event.userId}>)\n` +
       `• **Channel:** #${event.channelName} (<#${event.channelId}>)\n` +
       `• **Command:** \`${event.commandName}\`${event.aliasUsed !== event.commandName ? ` (alias: \`${event.aliasUsed}\`)` : ''}\n` +
       `• **Content:** \`${truncate(event.rawContent, 300)}\`\n` +
-      `• **Status:** \`${outcomeKey.toUpperCase()}\`\n` +
+      `• **Status:** ${statusPrefix}\`${outcomeKey.toUpperCase()}\`\n` +
       `• **Time:** <t:${unixNow}:T> (<t:${unixNow}:R>)`,
     ];
 
@@ -97,7 +122,7 @@ export async function logCommandAudit(client: Client, event: CommandLogEvent): P
     }
 
     const payload = ui.standard({
-      title: `Command Log | ${event.commandName} [${outcomeKey.toUpperCase()}]`,
+      title: `${statusPrefix}Command Log | ${event.commandName} [${outcomeKey.toUpperCase()}]`,
       sections,
     });
 
@@ -140,6 +165,9 @@ export async function logInteractionAudit(
     if (!channel || !('send' in channel)) return;
 
     const unixNow = Math.floor(Date.now() / 1000);
+    const infoEmoji = getEmoji('info');
+    const infoPrefix = infoEmoji ? `${infoEmoji} ` : '';
+
     const sections: string[] = [
       `• **User:** ${data.userTag} (<@${data.userId}>)\n` +
       `• **Channel:** #${data.channelName ?? 'unknown'}` + (data.channelId ? ` (<#${data.channelId}>)` : '') + `\n` +
@@ -153,7 +181,7 @@ export async function logInteractionAudit(
     }
 
     const payload = ui.standard({
-      title: `Interaction Log | ${data.type.toUpperCase()}`,
+      title: `${infoPrefix}Interaction Log | ${data.type.toUpperCase()}`,
       sections,
     });
 

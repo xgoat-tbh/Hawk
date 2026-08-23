@@ -18,6 +18,7 @@ import {
   setLeavePayload,
 } from '../../core/database/repositories/welcomeRepo.js';
 import { buildVariableContext, renderWelcomePayload } from './welcomeEngine.js';
+import { getEmoji } from '../../core/config/branding.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
@@ -98,8 +99,9 @@ export async function handleWelcomeModal(interaction: ModalSubmitInteraction): P
     await setLeavePayload(guild.id, rawInput);
   }
 
+  const successEmoji = getEmoji('success');
   await interaction.reply({
-    content: `✅ ${isGreet ? 'Welcome' : 'Leave'} ${isJson ? 'JSON payload' : 'simple message'} configured successfully. Use \`!welcome ${type} test\` to send a preview.`,
+    content: `${successEmoji ? `${successEmoji} ` : ''}${isGreet ? 'Welcome' : 'Leave'} ${isJson ? 'JSON payload' : 'simple message'} configured successfully. Use \`!welcome ${type} test\` to send a preview.`,
     flags: MessageFlags.Ephemeral,
   });
 

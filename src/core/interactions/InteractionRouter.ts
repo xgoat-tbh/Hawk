@@ -85,19 +85,6 @@ export class InteractionRouter {
 
   private async dispatchButton(interaction: ButtonInteraction): Promise<boolean> {
     const route = this.buttonRoutes.find(r => interaction.customId.startsWith(r.prefix));
-    const data = {
-      type: 'button',
-      customId: interaction.customId,
-      userTag: interaction.user.tag,
-      userId: interaction.user.id,
-      guildId: interaction.guild?.id,
-      guildName: interaction.guild?.name,
-      channelId: interaction.channel?.id,
-      channelName: (interaction.channel as any)?.name,
-      details: route ? `Routed to ${route.moduleName}` : 'Unrouted button',
-    };
-    logInteraction(data);
-    logInteractionAudit(interaction.client, data).catch(() => {});
     if (route) {
       await route.handler(interaction);
       return true;
