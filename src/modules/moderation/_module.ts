@@ -1,7 +1,8 @@
 import type { ModuleManifest } from '../../types/module.js';
 import { handleNukeInteraction } from './_nukeHandler.js';
-import { handleAntiSpam } from './AntiSpamService.js';
-import { runStartupSpamCleanup } from './StartupSpamCleaner.js';
+import { handleAntiSpam } from './_antiSpamHandler.js';
+import { runStartupSpamCleanup } from './_startupSpamCleaner.js';
+
 
 export default {
   name: 'moderation',

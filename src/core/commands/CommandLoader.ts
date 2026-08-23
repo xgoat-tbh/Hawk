@@ -47,7 +47,10 @@ export async function loadCommands(modulesDir: string, enabledModules?: string[]
         cleanName.endsWith('Engine') ||
         cleanName.endsWith('Detector') ||
         cleanName.endsWith('Helpers') ||
-        cleanName.endsWith('Sanitizer')
+        cleanName.endsWith('Helper') ||
+        cleanName.endsWith('Sanitizer') ||
+        cleanName.endsWith('Service') ||
+        cleanName.endsWith('Cleaner')
       ) {
         continue;
       }
