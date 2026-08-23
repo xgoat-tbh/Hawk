@@ -7,8 +7,8 @@ import type {
 } from 'discord.js';
 import type { ModuleManifest } from '../../types/module.js';
 import { consoleLog } from '../logging/ConsoleLogger.js';
-
 import { logInteraction } from '../logging/WebhookLogger.js';
+import { logInteractionAudit } from '../logging/AuditLogger.js';
 
 type ButtonHandler = (interaction: ButtonInteraction) => Promise<void>;
 type SelectHandler = (interaction: StringSelectMenuInteraction) => Promise<void>;
@@ -85,15 +85,19 @@ export class InteractionRouter {
 
   private async dispatchButton(interaction: ButtonInteraction): Promise<boolean> {
     const route = this.buttonRoutes.find(r => interaction.customId.startsWith(r.prefix));
-    logInteraction({
+    const data = {
       type: 'button',
       customId: interaction.customId,
       userTag: interaction.user.tag,
       userId: interaction.user.id,
+      guildId: interaction.guild?.id,
       guildName: interaction.guild?.name,
+      channelId: interaction.channel?.id,
       channelName: (interaction.channel as any)?.name,
       details: route ? `Routed to ${route.moduleName}` : 'Unrouted button',
-    });
+    };
+    logInteraction(data);
+    logInteractionAudit(interaction.client, data).catch(() => {});
     if (route) {
       await route.handler(interaction);
       return true;
@@ -103,15 +107,19 @@ export class InteractionRouter {
 
   private async dispatchSelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
     const route = this.selectRoutes.find(r => interaction.customId.startsWith(r.prefix));
-    logInteraction({
+    const data = {
       type: 'select_menu',
       customId: interaction.customId,
       userTag: interaction.user.tag,
       userId: interaction.user.id,
+      guildId: interaction.guild?.id,
       guildName: interaction.guild?.name,
+      channelId: interaction.channel?.id,
       channelName: (interaction.channel as any)?.name,
       details: `Selected: [${interaction.values.join(', ')}]${route ? ` (Routed to ${route.moduleName})` : ''}`,
-    });
+    };
+    logInteraction(data);
+    logInteractionAudit(interaction.client, data).catch(() => {});
     if (route) {
       await route.handler(interaction);
       return true;
@@ -121,15 +129,19 @@ export class InteractionRouter {
 
   private async dispatchChannelSelect(interaction: ChannelSelectMenuInteraction): Promise<boolean> {
     const route = this.channelSelectRoutes.find(r => interaction.customId.startsWith(r.prefix));
-    logInteraction({
+    const data = {
       type: 'channel_select',
       customId: interaction.customId,
       userTag: interaction.user.tag,
       userId: interaction.user.id,
+      guildId: interaction.guild?.id,
       guildName: interaction.guild?.name,
+      channelId: interaction.channel?.id,
       channelName: (interaction.channel as any)?.name,
       details: `Selected channels: [${interaction.values.join(', ')}]${route ? ` (Routed to ${route.moduleName})` : ''}`,
-    });
+    };
+    logInteraction(data);
+    logInteractionAudit(interaction.client, data).catch(() => {});
     if (route) {
       await route.handler(interaction);
       return true;
@@ -139,15 +151,19 @@ export class InteractionRouter {
 
   private async dispatchModal(interaction: ModalSubmitInteraction): Promise<boolean> {
     const route = this.modalRoutes.find(r => interaction.customId.startsWith(r.prefix));
-    logInteraction({
+    const data = {
       type: 'modal_submit',
       customId: interaction.customId,
       userTag: interaction.user.tag,
       userId: interaction.user.id,
+      guildId: interaction.guild?.id,
       guildName: interaction.guild?.name,
+      channelId: interaction.channel?.id,
       channelName: (interaction.channel as any)?.name,
       details: route ? `Routed to ${route.moduleName}` : 'Unrouted modal',
-    });
+    };
+    logInteraction(data);
+    logInteractionAudit(interaction.client, data).catch(() => {});
     if (route) {
       await route.handler(interaction);
       return true;

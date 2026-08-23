@@ -10,6 +10,8 @@ import { isIgnored } from '../ignore/IgnoreChecker.js';
 import { checkCooldown, setCooldown } from '../cooldowns/CooldownManager.js';
 import { ResponseBuilder } from '../responses/ResponseBuilder.js';
 import { logCommand, logEvent } from '../logging/WebhookLogger.js';
+import { logCommandAudit } from '../logging/AuditLogger.js';
+import type { CommandLogEvent } from '../../types/logging.js';
 import { getUserMessage, getInternalMessage, BotError } from '../errors/BotError.js';
 import { getPrefix } from '../database/repositories/guildConfigRepo.js';
 import { getGameTestChannel } from '../database/repositories/gameRepo.js';
@@ -17,6 +19,11 @@ import { AuthorityLevel } from '../../types/permission.js';
 import { isNoPrefixEnabled } from '../config/NoPrefixConfig.js';
 import { presenceManager } from '../presence/PresenceManager.js';
 import { getMaintenanceState } from '../database/repositories/systemRepo.js';
+
+function recordCommandLog(client: any, event: CommandLogEvent): void {
+  logCommand(event);
+  logCommandAudit(client, event).catch(() => {});
+}
 
 function tryNoPrefixParse(content: string): ParsedCommand | null {
   const trimmed = content.trim();
@@ -59,7 +66,7 @@ export async function handleMessage(message: Message): Promise<void> {
   const command = resolveCommand(parsed.commandName);
   if (!command) {
     if (wasPrefixed) {
-      logCommand({
+      recordCommandLog(message.client, {
         guildId: message.guild.id,
         guildName: message.guild.name,
         channelId: guildChannel.id,
@@ -81,7 +88,7 @@ export async function handleMessage(message: Message): Promise<void> {
   parsed.aliasUsed = parsed.commandName;
   parsed.commandName = command.name;
   if (!command.enabled) {
-    logCommand({
+    recordCommandLog(message.client, {
       guildId: message.guild.id,
       guildName: message.guild.name,
       channelId: guildChannel.id,
@@ -120,7 +127,7 @@ export async function handleMessage(message: Message): Promise<void> {
   if (authority < AuthorityLevel.Owner) {
     const maintenance = await getMaintenanceState();
     if (maintenance.enabled) {
-      logCommand({
+      recordCommandLog(message.client, {
         guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
         userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
         rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'maintenance',
@@ -140,7 +147,7 @@ export async function handleMessage(message: Message): Promise<void> {
   if (authority < AuthorityLevel.ServerAdmin) {
     const ignored = await isIgnored(message.guild.id, message.author.id, permCtx.memberRoleIds, guildChannel.id, categoryId, command.name, command.module, message.member.roles.cache);
     if (ignored) {
-      logCommand({
+      recordCommandLog(message.client, {
         guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
         userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
         rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'ignored',
@@ -152,7 +159,7 @@ export async function handleMessage(message: Message): Promise<void> {
 
   const permResult = await checkPermission(command, permCtx, message.member);
   if (!permResult.allowed) {
-    logCommand({
+    recordCommandLog(message.client, {
       guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
       userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
       rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'denied',
@@ -163,7 +170,7 @@ export async function handleMessage(message: Message): Promise<void> {
 
   const restrictResult = await checkRestrictions(permCtx, permResult.authority);
   if (!restrictResult.allowed) {
-    logCommand({
+    recordCommandLog(message.client, {
       guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
       userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
       rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'denied',
@@ -177,7 +184,7 @@ export async function handleMessage(message: Message): Promise<void> {
     if (botMember) {
       const botPerms = checkBotPermissions(botMember, command.botPermissions);
       if (!botPerms.hasAll) {
-        logCommand({
+        recordCommandLog(message.client, {
           guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
           userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
           rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'fail',
@@ -203,7 +210,7 @@ export async function handleMessage(message: Message): Promise<void> {
   if (!isGameTestChannel) {
     const remaining = checkCooldown(message.author.id, command.name, command.cooldown, permResult.authority);
     if (remaining > 0) {
-      logCommand({
+      recordCommandLog(message.client, {
         guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
         userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
         rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'cooldown',
@@ -260,7 +267,7 @@ export async function handleMessage(message: Message): Promise<void> {
     else if (replyType === 'info') outcome = 'info';
     else if (replyType === 'error') outcome = 'fail';
 
-    logCommand({
+    recordCommandLog(message.client, {
       guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
       userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
       rawContent: message.content, rawArgs: parsed.rawArgs, success: outcome !== 'fail', outcome,
@@ -270,7 +277,7 @@ export async function handleMessage(message: Message): Promise<void> {
     const userMsg = getUserMessage(error);
     const internalMsg = getInternalMessage(error);
     if (error instanceof BotError) { await respond.error(userMsg).catch(() => {}); } else { await respond.error('An unexpected error occurred.').catch(() => {}); }
-    logCommand({
+    recordCommandLog(message.client, {
       guildId: message.guild.id, guildName: message.guild.name, channelId: guildChannel.id, channelName: guildChannel.name,
       userId: message.author.id, userTag: message.author.tag, commandName: command.name, aliasUsed: parsed.aliasUsed,
       rawContent: message.content, rawArgs: parsed.rawArgs, success: false, outcome: 'fail', error: internalMsg,
