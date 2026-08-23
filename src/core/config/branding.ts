@@ -17,7 +17,7 @@ export const branding: BrandingConfig = {
     voice: '<:24204voicechannelgreen:1533458532400103574>',
     gaming: '<a:SG_game:1533459336460767243>',
     suggestion: '<a:thinking:1533459594289090682>',
-    confession: '<:icon:1533458895685685378>',
+    confession: '',
     sticky: '<:sticky:1533459770550259882>',
     moderation: '<:773429modshieldicon:1533459893653340371>',
     welcome: '<:icon_welcome:1533460007801323611>',

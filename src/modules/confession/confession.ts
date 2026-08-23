@@ -9,9 +9,12 @@ import {
   setConfessionLogChannel,
   getConfessionLogChannel,
   setConfessionPanelMessageId,
+  getConfessionConfig,
+  getConfessionRecordsForGuild,
+  updateConfessionMessageId,
   resetConfessionDataForGuild,
 } from '../../core/database/repositories/confessionRepo.js';
-import { buildConfessionPanel } from './confessionUI.js';
+import { buildConfessionPanel, buildAnonymousConfessionPayload } from './confessionUI.js';
 import { registerConfessionPanelChannel } from './_confessionHandler.js';
 import { mentionChannel, bold } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
@@ -19,13 +22,15 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 export default defineCommand({
   name: 'confession',
   module: 'confession',
-  description: 'Manage Confession module channel, log channel, submission panel, or perform a reset.',
-  usage: 'confession <channel|log|panel|reset> [args...]',
+  description: 'Manage Confession module channel, log channel, submission panel, repair/repost clean confessions, or perform a reset.',
+  usage: 'confession <channel|log|panel|fix|reset> [args...]',
   examples: [
     'confession channel #confessions',
     'confession log #mod-logs',
     'confession log none',
     'confession panel',
+    'confession fix',
+    'confession fix repost',
     'confession reset confirm',
   ],
   permissions: [PermissionsBitField.Flags.ManageGuild],
@@ -36,7 +41,7 @@ export default defineCommand({
     const { parsed, respond } = ctx;
 
     if (parsed.args.length === 0) {
-      await respond.error('Specify a subcommand: `channel`, `log`, `panel`, or `reset`.');
+      await respond.error('Specify a subcommand: `channel`, `log`, `panel`, `fix`, or `reset`.');
       return;
     }
 
@@ -60,13 +65,20 @@ export default defineCommand({
         await handlePanel(ctx);
         break;
 
+      case 'fix':
+      case 'repair':
+      case 'repost':
+      case 'clean':
+        await handleFix(ctx, subArgs);
+        break;
+
       case 'reset':
       case 'nuke':
         await handleReset(ctx, subArgs);
         break;
 
       default:
-        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`log\`, \`panel\`, \`reset\`.`);
+        await respond.error(`Unknown subcommand \`${subcommand}\`. Valid options: \`channel\`, \`log\`, \`panel\`, \`fix\`, \`reset\`.`);
         break;
     }
   },
@@ -180,6 +192,142 @@ async function handlePanel(ctx: CommandContext): Promise<void> {
     guild: guild.name,
     guildId: guild.id,
     channel: channel.name,
+  });
+}
+
+async function handleFix(ctx: CommandContext, args: string[]): Promise<void> {
+  const { guild, respond, member } = ctx;
+  const isRepost = args[0]?.toLowerCase() === 'repost';
+
+  const channelId = await getConfessionChannel(guild.id);
+  if (!channelId) {
+    await respond.error('No confession channel has been configured for this server. Use `!confession channel <#channel>` first.');
+    return;
+  }
+
+  const confessionChannel = (guild.channels.cache.get(channelId) ??
+    (await guild.channels.fetch(channelId).catch(() => null))) as GuildTextBasedChannel | null;
+
+  if (!confessionChannel || !('send' in confessionChannel)) {
+    await respond.error(`Configured confession channel ${mentionChannel(channelId)} could not be reached.`);
+    return;
+  }
+
+  const records = await getConfessionRecordsForGuild(guild.id);
+  const config = await getConfessionConfig(guild.id);
+
+  let updatedCount = 0;
+  let repostedCount = 0;
+  let failedCount = 0;
+
+  if (isRepost) {
+    // Repost mode: purge bot's existing messages in the channel and repost clean confessions sequentially
+    const fetched = await confessionChannel.messages.fetch({ limit: 100 }).catch(() => null);
+    if (fetched) {
+      const botMessages = fetched.filter(m => m.author.id === ctx.message.client.user.id);
+      for (const msg of botMessages.values()) {
+        await msg.delete().catch(() => {});
+      }
+    }
+
+    for (const rec of records) {
+      try {
+        const payload = buildAnonymousConfessionPayload(rec.content);
+        const sent = await confessionChannel.send({
+          components: payload.components,
+          flags: payload.flags as any,
+          allowedMentions: { parse: [], roles: [], users: [] },
+        });
+        await updateConfessionMessageId(rec.id, sent.id);
+        repostedCount++;
+      } catch {
+        failedCount++;
+      }
+    }
+
+    // Post fresh non-emoji panel at the bottom
+    const panelPayload = buildConfessionPanel();
+    const newPanelMsg = await confessionChannel.send({
+      components: panelPayload.components,
+      flags: panelPayload.flags as any,
+      allowedMentions: { parse: [], roles: [], users: [] },
+    });
+    await setConfessionPanelMessageId(guild.id, newPanelMsg.id);
+  } else {
+    // In-place fix mode: edit all tracked confession messages and the panel in-place to strip emojis
+    for (const rec of records) {
+      try {
+        if (!rec.messageId) {
+          failedCount++;
+          continue;
+        }
+        const existingMsg = await confessionChannel.messages.fetch(rec.messageId).catch(() => null);
+        if (existingMsg) {
+          const payload = buildAnonymousConfessionPayload(rec.content);
+          await existingMsg.edit({
+            components: payload.components,
+            flags: payload.flags as any,
+            allowedMentions: { parse: [], roles: [], users: [] },
+          });
+          updatedCount++;
+        } else {
+          // If message is missing, repost it
+          const payload = buildAnonymousConfessionPayload(rec.content);
+          const sent = await confessionChannel.send({
+            components: payload.components,
+            flags: payload.flags as any,
+            allowedMentions: { parse: [], roles: [], users: [] },
+          });
+          await updateConfessionMessageId(rec.id, sent.id);
+          repostedCount++;
+        }
+      } catch {
+        failedCount++;
+      }
+    }
+
+    // Fix or recreate panel
+    let panelFixed = false;
+    if (config?.panelMessageId) {
+      const panelMsg = await confessionChannel.messages.fetch(config.panelMessageId).catch(() => null);
+      if (panelMsg) {
+        const panelPayload = buildConfessionPanel();
+        await panelMsg.edit({
+          components: panelPayload.components,
+          flags: panelPayload.flags as any,
+          allowedMentions: { parse: [], roles: [], users: [] },
+        });
+        panelFixed = true;
+      }
+    }
+
+    if (!panelFixed) {
+      const panelPayload = buildConfessionPanel();
+      const newPanelMsg = await confessionChannel.send({
+        components: panelPayload.components,
+        flags: panelPayload.flags as any,
+        allowedMentions: { parse: [], roles: [], users: [] },
+      });
+      await setConfessionPanelMessageId(guild.id, newPanelMsg.id);
+    }
+  }
+
+  const resultSummary = isRepost
+    ? `Reposted **${repostedCount} confession(s)** and refreshed submission panel in ${mentionChannel(channelId)} with clean non-emoji format.`
+    : `Fixed and updated **${updatedCount} confession message(s)**${repostedCount > 0 ? `, reposted **${repostedCount}**` : ''} and refreshed submission panel in ${mentionChannel(channelId)} with clean non-emoji format.`;
+
+  await respond.success(resultSummary);
+
+  logEvent('info', 'command_execution', `Confession channel fixed by ${member.user.tag}`, {
+    administrator: member.user.tag,
+    adminId: member.id,
+    guild: guild.name,
+    guildId: guild.id,
+    channelId,
+    mode: isRepost ? 'repost' : 'edit',
+    updatedCount,
+    repostedCount,
+    failedCount,
   });
 }
 

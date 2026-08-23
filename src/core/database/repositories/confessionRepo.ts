@@ -111,6 +111,34 @@ export async function createConfessionRecord(
   };
 }
 
+export async function getConfessionRecordsForGuild(guildId: string): Promise<ConfessionRecord[]> {
+  const db = getDb();
+  const rows = await db`
+    SELECT id, guild_id, author_id, content, channel_id, message_id, created_at
+    FROM confession_records
+    WHERE guild_id = ${guildId}
+    ORDER BY id ASC
+  `;
+  return rows.map((r) => ({
+    id: r.id as number,
+    guildId: r.guild_id as string,
+    authorId: r.author_id as string,
+    content: r.content as string,
+    channelId: r.channel_id as string,
+    messageId: r.message_id as string,
+    createdAt: r.created_at as Date,
+  }));
+}
+
+export async function updateConfessionMessageId(id: number, messageId: string): Promise<void> {
+  const db = getDb();
+  await db`
+    UPDATE confession_records
+    SET message_id = ${messageId}
+    WHERE id = ${id}
+  `;
+}
+
 export async function resetConfessionDataForGuild(guildId: string): Promise<void> {
   const db = getDb();
   await db.begin(async (tx) => {
@@ -118,3 +146,4 @@ export async function resetConfessionDataForGuild(guildId: string): Promise<void
     await tx`DELETE FROM confession_configs WHERE guild_id = ${guildId}`;
   });
 }
+
