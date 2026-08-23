@@ -5,7 +5,7 @@ import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { getSuggestionByNumber, getSuggestionByMessageId } from '../../core/database/repositories/suggestionRepo.js';
 
 import { formatUser } from '../../core/utils/formatters.js';
-import { getEmoji } from '../../core/config/branding.js';
+
 
 export function buildSuggestionPayload(
   suggestion: SuggestionRecord,
@@ -16,14 +16,11 @@ export function buildSuggestionPayload(
 
   let statusHeader = `Suggestion #${suggestion.number}`;
   if (suggestion.status === 'accepted') {
-    const em = getEmoji('accepted');
-    statusHeader += em ? ` · ${em} Accepted` : ' · Accepted';
+    statusHeader += ' · Accepted';
   } else if (suggestion.status === 'considered') {
-    const em = getEmoji('considered');
-    statusHeader += em ? ` · ${em} Under Consideration` : ' · Under Consideration';
+    statusHeader += ' · Under Consideration';
   } else if (suggestion.status === 'denied') {
-    const em = getEmoji('denied');
-    statusHeader += em ? ` · ${em} Denied` : ' · Denied';
+    statusHeader += ' · Denied';
   }
 
   const sections: string[] = [

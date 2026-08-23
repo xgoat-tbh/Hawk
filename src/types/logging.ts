@@ -27,7 +27,7 @@ export interface LogEvent {
 
 // ── Command Log ─────────────────────────────────────────────
 
-export type CommandOutcome = 'success' | 'fail' | 'warning' | 'info' | 'denied' | 'cooldown' | 'maintenance' | 'ignored';
+export type CommandOutcome = 'success' | 'fail' | 'warning' | 'info' | 'denied' | 'cooldown' | 'maintenance' | 'ignored' | 'unknown';
 
 export interface CommandLogEvent {
   guildId: string;

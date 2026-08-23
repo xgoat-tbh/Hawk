@@ -4,10 +4,14 @@ import { consoleLog } from './ConsoleLogger.js';
 import type { LogSeverity, LogCategory, CommandLogEvent } from '../../types/logging.js';
 import { truncate } from '../utils/validators.js';
 
-interface QueuedLog { content: string; timestamp: number; }
+interface QueuedLog {
+  content: string;
+  timestamp: number;
+}
 
 const queue: QueuedLog[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
+let flushTimeout: ReturnType<typeof setTimeout> | null = null;
 let lastSend = 0;
 
 export function startWebhookLogger(): void {
@@ -17,49 +21,109 @@ export function startWebhookLogger(): void {
 }
 
 export async function stopWebhookLogger(): Promise<void> {
-  if (flushTimer) { clearInterval(flushTimer); flushTimer = null; }
+  if (flushTimer) {
+    clearInterval(flushTimer);
+    flushTimer = null;
+  }
+  if (flushTimeout) {
+    clearTimeout(flushTimeout);
+    flushTimeout = null;
+  }
   await flushQueue();
 }
 
-export function logEvent(severity: LogSeverity, category: LogCategory, message: string, details?: Record<string, unknown>): void {
+export function logEvent(
+  severity: LogSeverity,
+  category: LogCategory,
+  message: string,
+  details?: Record<string, unknown>,
+): void {
   if (isDev()) consoleLog(severity, category, message, details);
   if (severity === 'debug') return;
 
   const emoji = severityEmoji(severity);
-  const detailLines = details ? Object.entries(details).map(([k, v]) => `**${k}:** ${String(v)}`).join('\n') : '';
-  const content = [`${emoji} **[${severity.toUpperCase()}]** \`${category}\``, message, detailLines].filter(Boolean).join('\n');
+  const detailLines = details
+    ? Object.entries(details)
+        .map(([k, v]) => `• **${k}:** ${String(v)}`)
+        .join('\n')
+    : '';
+  const content = [`${emoji} **[${severity.toUpperCase()}]** \`${category}\``, message, detailLines]
+    .filter(Boolean)
+    .join('\n');
   enqueue(truncate(content, 1900));
 }
 
 export function logCommand(event: CommandLogEvent): void {
   const outcomeKey = event.outcome || (event.success ? 'success' : 'fail');
-  if (isDev()) consoleLog('info', 'command_execution', `${event.userTag} used ${event.commandName} [${outcomeKey}]`, { guild: event.guildName, channel: event.channelName, args: event.rawArgs });
+  if (isDev()) {
+    consoleLog('info', 'command_execution', `${event.userTag} used ${event.commandName} [${outcomeKey}]`, {
+      guild: event.guildName,
+      channel: event.channelName,
+      args: event.rawArgs,
+    });
+  }
 
-  let statusEmoji = '\u2705'; // green check
-  if (outcomeKey === 'fail') statusEmoji = '\u274c'; // red cross
-  else if (outcomeKey === 'warning') statusEmoji = '\u26a0\ufe0f'; // warning
-  else if (outcomeKey === 'info') statusEmoji = '\u2139\ufe0f'; // info
-  else if (outcomeKey === 'denied') statusEmoji = '\ud83d\udeab'; // no entry
-  else if (outcomeKey === 'cooldown') statusEmoji = '\u23f3'; // hourglass
-  else if (outcomeKey === 'maintenance') statusEmoji = '\ud83d\udee0\ufe0f'; // wrench
-  else if (outcomeKey === 'ignored') statusEmoji = '\ud83d\udd07'; // mute/ignored
+  let statusEmoji = '✅';
+  if (outcomeKey === 'fail') statusEmoji = '❌';
+  else if (outcomeKey === 'warning') statusEmoji = '⚠️';
+  else if (outcomeKey === 'info') statusEmoji = 'ℹ️';
+  else if (outcomeKey === 'denied') statusEmoji = '🚫';
+  else if (outcomeKey === 'cooldown') statusEmoji = '⏳';
+  else if (outcomeKey === 'maintenance') statusEmoji = '🛠️';
+  else if (outcomeKey === 'ignored') statusEmoji = '🔇';
+  else if (outcomeKey === 'unknown') statusEmoji = '❓';
 
   const content = [
     `${statusEmoji} **Command Triggered** \`[${outcomeKey.toUpperCase()}]\``,
     `• **Who:** ${event.userTag} (\`${event.userId}\`)`,
-    `• **Where:** ${event.guildName} \u2192 #${event.channelName}`,
+    `• **Where:** ${event.guildName} → #${event.channelName}`,
     `• **Command:** \`${event.commandName}\`${event.aliasUsed !== event.commandName ? ` (alias: \`${event.aliasUsed}\`)` : ''}`,
     `• **Full:** \`${truncate(event.rawContent, 400)}\``,
     event.responseSnippet ? `• **Reply:** \`${truncate(event.responseSnippet, 250)}\`` : '',
     event.resolvedTargets?.length ? `• **Targets:** ${event.resolvedTargets.join(', ')}` : '',
     event.error ? `• **Reason / Error:** ${event.error}` : '',
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
+  enqueue(truncate(content, 1900));
+}
+
+export function logInteraction(data: {
+  type: string;
+  customId: string;
+  userTag: string;
+  userId: string;
+  guildName?: string;
+  channelName?: string;
+  details?: string;
+}): void {
+  if (isDev()) {
+    consoleLog('info', 'interaction', `${data.userTag} interacted: ${data.customId} (${data.type})`);
+  }
+
+  const content = [
+    `🔘 **Interaction Triggered** \`[${data.type.toUpperCase()}]\``,
+    `• **Who:** ${data.userTag} (\`${data.userId}\`)`,
+    `• **Where:** ${data.guildName ?? 'DM'} → #${data.channelName ?? 'unknown'}`,
+    `• **Custom ID:** \`${data.customId}\``,
+    data.details ? `• **Details:** ${data.details}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
   enqueue(truncate(content, 1900));
 }
 
 function enqueue(content: string): void {
   queue.push({ content, timestamp: Date.now() });
-  if (queue.length >= constants.webhookBatchSize) void flushQueue();
+
+  if (queue.length >= constants.webhookBatchSize) {
+    void flushQueue();
+  } else if (!flushTimeout) {
+    flushTimeout = setTimeout(() => {
+      flushTimeout = null;
+      void flushQueue();
+    }, 2000);
+  }
 }
 
 async function flushQueue(): Promise<void> {
@@ -76,12 +140,34 @@ async function flushQueue(): Promise<void> {
   lastSend = now;
 
   try {
-    await fetch(env.devWebhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: truncate(combined, 1950), username: 'Dev Logs' }) });
+    await fetch(env.devWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: truncate(combined, 1950),
+        username: 'Hawk Logs',
+      }),
+    });
   } catch (error) {
-    consoleLog('error', 'api_error', `Webhook send failed: ${error instanceof Error ? error.message : String(error)}`);
+    consoleLog(
+      'error',
+      'api_error',
+      `Webhook send failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
 function severityEmoji(severity: LogSeverity): string {
-  switch (severity) { case 'debug': return '\ud83d\udd0d'; case 'info': return '\u2139\ufe0f'; case 'warning': return '\u26a0\ufe0f'; case 'error': return '\u274c'; case 'critical': return '\ud83d\udea8'; }
+  switch (severity) {
+    case 'debug':
+      return '🔍';
+    case 'info':
+      return 'ℹ️';
+    case 'warning':
+      return '⚠️';
+    case 'error':
+      return '❌';
+    case 'critical':
+      return '🚨';
+  }
 }

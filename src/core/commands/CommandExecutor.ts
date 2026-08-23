@@ -50,17 +50,54 @@ export async function handleMessage(message: Message): Promise<void> {
 
   const prefix = await getPrefix(message.guild.id);
   let parsed = parseCommand(message.content, prefix);
+  const wasPrefixed = !!parsed;
   if (!parsed && isNoPrefixEnabled(message.guild.id, message.author.id)) {
     parsed = tryNoPrefixParse(message.content);
   }
   if (!parsed) return;
 
   const command = resolveCommand(parsed.commandName);
-  if (!command) return;
+  if (!command) {
+    if (wasPrefixed) {
+      logCommand({
+        guildId: message.guild.id,
+        guildName: message.guild.name,
+        channelId: guildChannel.id,
+        channelName: guildChannel.name,
+        userId: message.author.id,
+        userTag: message.author.tag,
+        commandName: parsed.commandName,
+        aliasUsed: parsed.commandName,
+        rawContent: message.content,
+        rawArgs: parsed.rawArgs,
+        success: false,
+        outcome: 'unknown',
+        error: `Unknown command '${parsed.commandName}'`,
+      });
+    }
+    return;
+  }
 
   parsed.aliasUsed = parsed.commandName;
   parsed.commandName = command.name;
-  if (!command.enabled) return;
+  if (!command.enabled) {
+    logCommand({
+      guildId: message.guild.id,
+      guildName: message.guild.name,
+      channelId: guildChannel.id,
+      channelName: guildChannel.name,
+      userId: message.author.id,
+      userTag: message.author.tag,
+      commandName: command.name,
+      aliasUsed: parsed.aliasUsed,
+      rawContent: message.content,
+      rawArgs: parsed.rawArgs,
+      success: false,
+      outcome: 'denied',
+      error: 'Command is disabled',
+    });
+    return;
+  }
 
   const categoryId = ('parentId' in guildChannel && guildChannel.parentId) ? guildChannel.parentId : null;
   const permCtx: PermissionContext = {

@@ -11,7 +11,7 @@ import { classifyMessage, MessageType } from '../../services/MentionHandler.js';
 import { handleMessage } from '../commands/CommandExecutor.js';
 import { runMigrations } from '../database/migrations/runner.js';
 import { validateConnection, closeDb } from '../database/pool.js';
-import { logEvent, stopWebhookLogger } from '../logging/WebhookLogger.js';
+import { logEvent, startWebhookLogger, stopWebhookLogger } from '../logging/WebhookLogger.js';
 import { consoleLog } from '../logging/ConsoleLogger.js';
 import { isNoPrefixEnabled, loadNoPrefixCache } from '../config/NoPrefixConfig.js';
 import { loadAfkCache } from '../database/repositories/afkRepo.js';
@@ -33,7 +33,8 @@ export class Bootstrap {
     const startTime = Date.now();
     consoleLog('info', 'startup', 'Starting Hawk Discord Bot (Amo Architecture)...');
 
-    // 0. Start HTTP Health Server Immediately (required for Render / cloud container port scanning)
+    // 0. Start Webhook Logger & HTTP Health Server Immediately
+    startWebhookLogger();
     startHealthServer();
 
     // 1. Database Connection & Migrations
