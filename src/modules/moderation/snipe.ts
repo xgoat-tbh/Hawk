@@ -94,7 +94,7 @@ function buildNavButtons(prefix: string, currentIndex: number, total: number): A
 
 export default defineCommand({
   name: 'snipe',
-  aliases: ['s', 'snip', 'snipes', 'esnipe', 'editsnipe', 'es', 'clearsnipe', 'cs', 'csnipe'],
+  aliases: ['s', 'esnipe', 'clearsnipe'],
   module: 'moderation',
   description: 'Retrieve recently deleted or edited messages in this channel, or clear snipe history.',
   usage: 'snipe [index|list] | snipe edit [index|list] | snipe clear',

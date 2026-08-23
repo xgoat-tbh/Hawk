@@ -16,7 +16,7 @@ import { ui } from '../../core/ui/index.js';
 
 export default defineCommand({
   name: 'sticky',
-  aliases: ['stick', 'unstick', 'removesticky', 'stickyedit', 'stickyremove', 'stickyrefresh', 'srefresh', 'refreshsticky'],
+  aliases: ['stick', 'unstick', 'stickyedit', 'stickyrefresh'],
   module: 'sticky',
   description: 'Create, edit, remove, refresh, or list sticky messages in channels.',
   usage: 'sticky <message...> | sticky edit <new_message...> | sticky remove | sticky refresh | sticky list',

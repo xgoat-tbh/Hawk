@@ -8,7 +8,7 @@ import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'hide',
-  aliases: ['h', 'hidechannel', 'unhide', 'unh', 'unhidechannel'],
+  aliases: ['h', 'unhide'],
   module: 'moderation',
   description: 'Hide or unhide a channel by managing ViewChannel permissions for @everyone, all roles, or a specific role.',
   usage: 'hide [@Role|all|off] | unhide [@Role|all]',

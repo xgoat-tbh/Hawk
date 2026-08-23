@@ -9,7 +9,7 @@ import { logAuditAction } from '../../core/logging/AuditLogger.js';
 
 export default defineCommand({
   name: 'lock',
-  aliases: ['l', 'lockchannel', 'unlock', 'ul', 'unlockchannel'],
+  aliases: ['l', 'unlock'],
   module: 'moderation',
   description: 'Lock or unlock a channel by managing SendMessages permissions for @everyone, all roles, or a specific role.',
   usage: 'lock [@Role|all|off] | unlock [@Role|all]',

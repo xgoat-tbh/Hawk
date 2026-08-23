@@ -22,7 +22,7 @@ import { LiveProgressTracker, renderProgressBar } from '../../core/utils/Progres
 
 export default defineCommand({
   name: 'purge',
-  aliases: ['c', 'clear', 'clean', 'prune', 'purgerole', 'rr'],
+  aliases: ['c', 'purgerole'],
   module: 'moderation',
   description: 'Purge recent messages matching an optional user/filter, or purge a role from all members.',
   usage: 'purge [@user] <amount> | purge <amount> [filter] | purge role <@role>',
