@@ -636,44 +636,93 @@ async function handleSlam(ctx: CommandContext, rawArgs: string[], isSlam: boolea
     return;
   }
 
+  // ── Strict Failsafes: Exclude executor, server owner, bots, moderators/staff, and higher-hierarchy roles ──
   const targets = membersInVc.filter((m) => {
     if (m.id === member.id) return false;
+    if (m.id === guild.ownerId) return false;
+    if (m.user.bot) return false;
+
+    // Staff / Mod check
     const isStaff =
+      m.permissions.has(PermissionsBitField.Flags.Administrator) ||
+      m.permissions.has(PermissionsBitField.Flags.ManageGuild) ||
+      m.permissions.has(PermissionsBitField.Flags.ManageChannels) ||
+      m.permissions.has(PermissionsBitField.Flags.ModerateMembers) ||
       m.permissions.has(PermissionsBitField.Flags.MuteMembers) ||
       m.permissions.has(PermissionsBitField.Flags.DeafenMembers) ||
-      m.permissions.has(PermissionsBitField.Flags.Administrator) ||
-      m.permissions.has(PermissionsBitField.Flags.ManageGuild);
-    return !isStaff;
+      m.permissions.has(PermissionsBitField.Flags.MoveMembers);
+
+    if (isSlam && isStaff) return false; // Staff are strictly exempt from being slammed
+
+    // Hierarchy check
+    if (!isMemberManageable(guild, m, member)) return false;
+
+    // State check: Avoid redundant Discord API calls
+    if (isSlam && m.voice.serverMute && m.voice.serverDeaf) return false;
+    if (!isSlam && !m.voice.serverMute && !m.voice.serverDeaf) return false;
+
+    return true;
   });
 
   if (targets.length === 0) {
-    await respond.info(`No non-staff members found in ${mentionChannel(targetVc.id)}.`);
+    await respond.info(
+      isSlam
+        ? `No non-staff manageable members found to slam in ${mentionChannel(targetVc.id)} (all members are staff, bots, or already muted & deafened).`
+        : `No members require unslam in ${mentionChannel(targetVc.id)} (all members are already unmuted & undeafened).`
+    );
     return;
   }
 
   let affectedCount = 0;
+  let failCount = 0;
   const CHUNK_SIZE = 5;
+  const actionReason = isSlam ? `VC Slam by ${member.user.tag}` : `VC Unslam by ${member.user.tag}`;
+
   for (let i = 0; i < targets.length; i += CHUNK_SIZE) {
     const chunk = targets.slice(i, i + CHUNK_SIZE);
     const results = await Promise.all(
       chunk.map(async (target) => {
         try {
-          await target.voice.setMute(isSlam, `VC Slam by ${member.user.tag}`);
-          await target.voice.setDeaf(isSlam, `VC Slam by ${member.user.tag}`);
+          if (target.voice.channelId !== targetVc?.id) return false;
+          if (isSlam) {
+            if (!target.voice.serverMute) await target.voice.setMute(true, actionReason);
+            if (!target.voice.serverDeaf) await target.voice.setDeaf(true, actionReason);
+          } else {
+            if (target.voice.serverMute) await target.voice.setMute(false, actionReason);
+            if (target.voice.serverDeaf) await target.voice.setDeaf(false, actionReason);
+          }
           return true;
         } catch {
           return false;
         }
       })
     );
-    affectedCount += results.filter(Boolean).length;
+    for (const res of results) {
+      if (res) affectedCount++;
+      else failCount++;
+    }
+    if (i + CHUNK_SIZE < targets.length) {
+      await new Promise(r => setTimeout(r, 100));
+    }
   }
 
   const actionText = isSlam ? 'Muted & Deafened' : 'Unmuted & Undeafened';
   await respond.transientSuccess(
-    `Successfully **${actionText} ${affectedCount} member(s)** in ${mentionChannel(targetVc.id)}. *(Auto-deleting in 5s)*`,
+    `Successfully **${actionText} ${affectedCount} member(s)** in ${mentionChannel(targetVc.id)}.${failCount > 0 ? ` (Failed: ${failCount})` : ''} *(Auto-deleting in 5s)*`,
     5000,
   );
+
+  logAuditAction({
+    guild,
+    action: isSlam ? 'VC Slam (Raid Control)' : 'VC Unslam',
+    executor: member,
+    channelName: targetVc.name,
+    details: [
+      `• **Action:** ${actionText}`,
+      `• **Members Affected:** ${affectedCount}`,
+      `• **Channel:** ${targetVc.name} (\`${targetVc.id}\`)`,
+    ],
+  });
 
   logEvent('info', 'command_execution', `VC Slam (${isSlam ? 'slam' : 'unslam'}) by ${member.user.tag}`, {
     executor: member.user.tag,
@@ -683,5 +732,6 @@ async function handleSlam(ctx: CommandContext, rawArgs: string[], isSlam: boolea
     vc: targetVc.name,
     action: actionText,
     affectedCount,
+    failCount,
   });
 }
