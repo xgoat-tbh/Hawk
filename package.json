@@ -6,11 +6,11 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "node scripts/build.js",
+    "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src/",
     "test": "tsx --test tests/**/*.test.ts",
-    "migrate": "node dist/core/database/migrations/runner.js"
+    "migrate": "tsx src/core/database/migrations/runner.ts"
   },
   "dependencies": {
     "discord.js": "^14.18.0",
