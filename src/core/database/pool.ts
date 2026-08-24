@@ -6,11 +6,25 @@ let sql: postgres.Sql | null = null;
 
 export function getDb(): postgres.Sql {
   if (!sql) {
+    const isLocalOrDisabled =
+      env.databaseUrl.includes('localhost') ||
+      env.databaseUrl.includes('127.0.0.1') ||
+      env.databaseUrl.includes('sslmode=disable') ||
+      env.databaseUrl.includes('ssl=false');
+
+    const isExplicitSsl =
+      env.databaseUrl.includes('sslmode=require') ||
+      env.databaseUrl.includes('ssl=true') ||
+      env.databaseUrl.includes('neon.tech') ||
+      env.databaseUrl.includes('supabase.co');
+
+    const sslMode = isLocalOrDisabled ? false : isExplicitSsl ? 'require' : 'prefer';
+
     sql = postgres(env.databaseUrl, {
       max: constants.dbPoolMax,
       idle_timeout: constants.dbIdleTimeout,
       connect_timeout: constants.dbConnectTimeout,
-      ssl: env.databaseUrl.includes('localhost') || env.databaseUrl.includes('127.0.0.1') ? false : 'require',
+      ssl: sslMode,
       onnotice: () => {},
     });
   }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { resolveUser } from '../src/core/resolver/UserResolver.js';
-import multimoveCmd from '../src/modules/voice/multimove.js';
+import moveCmd from '../src/modules/voice/move.js';
 import shiftvcCmd from '../src/modules/voice/shiftvc.js';
 import mvCmd from '../src/modules/voice/mv.js';
 import pingCmd from '../src/modules/general/ping.js';
@@ -69,21 +69,21 @@ test('UserResolver resolves users by name, username, mention, and snowflake', as
 });
 
 test('Voice commands have correct requested aliases', () => {
-  assert.ok(multimoveCmd.aliases.includes('mmv'), 'multimove command should have mmv alias');
+  assert.ok(moveCmd.aliases.includes('multimove'), 'move command should have multimove alias');
+  assert.ok(moveCmd.aliases.includes('mmv'), 'move command should have mmv alias');
   assert.ok(shiftvcCmd.aliases.includes('svc'), 'shiftvc command should have svc alias');
   assert.ok(mvCmd.aliases.includes('pull'), 'mv command should have pull alias');
 });
 
-test('vcmute, vcdeafen, vcunmute, and vcundeafen support all in usage and examples', async () => {
-  const vcmuteCmd = (await import('../src/modules/moderation/vcmute.js')).default;
-  const vcdeafenCmd = (await import('../src/modules/moderation/vcdeafen.js')).default;
-  const vcunmuteCmd = (await import('../src/modules/moderation/vcunmute.js')).default;
-  const vcundeafenCmd = (await import('../src/modules/moderation/vcundeafen.js')).default;
+test('vc commands support mute, deafen, unmute, undeafen in usage and examples', async () => {
+  const vcCmd = (await import('../src/modules/voice/vc.js')).default;
 
-  assert.ok(vcmuteCmd.usage.includes('all'));
-  assert.ok(vcdeafenCmd.usage.includes('all'));
-  assert.ok(vcunmuteCmd.usage.includes('all'));
-  assert.ok(vcundeafenCmd.usage.includes('all'));
+  assert.ok(vcCmd.aliases.includes('vcmute'));
+  assert.ok(vcCmd.aliases.includes('vcdeafen'));
+  assert.ok(vcCmd.aliases.includes('vcunmute'));
+  assert.ok(vcCmd.aliases.includes('vcundeafen'));
+  assert.ok(vcCmd.usage.includes('mute'));
+  assert.ok(vcCmd.usage.includes('deafen'));
 });
 
 test('Ping and Info commands exist with proper metadata', () => {
@@ -133,30 +133,25 @@ test('RoleResolver resolves ?all and all directly to @everyone role without fuzz
 
 test('Moderation commands have memorable short aliases', async () => {
   const hideCmd = (await import('../src/modules/moderation/hide.js')).default;
-  const unhideCmd = (await import('../src/modules/moderation/unhide.js')).default;
   const lockCmd = (await import('../src/modules/moderation/lock.js')).default;
-  const unlockCmd = (await import('../src/modules/moderation/unlock.js')).default;
   const purgeCmd = (await import('../src/modules/moderation/purge.js')).default;
   const slowmodeCmd = (await import('../src/modules/moderation/slowmode.js')).default;
   const snipeCmd = (await import('../src/modules/moderation/snipe.js')).default;
   const roleCmd = (await import('../src/modules/moderation/role.js')).default;
-  const uroleCmd = (await import('../src/modules/moderation/urole.js')).default;
-  const vcmuteCmd = (await import('../src/modules/moderation/vcmute.js')).default;
-  const vcslamCmd = (await import('../src/modules/moderation/vcslam.js')).default;
+  const vcCmd = (await import('../src/modules/voice/vc.js')).default;
 
   assert.ok(hideCmd.aliases.includes('h'));
-  assert.ok(unhideCmd.aliases.includes('unh'));
-  assert.equal(unhideCmd.aliases.includes('uh'), false);
+  assert.ok(hideCmd.aliases.includes('unhide'));
   assert.ok(lockCmd.aliases.includes('l'));
-  assert.ok(unlockCmd.aliases.includes('ul'));
+  assert.ok(lockCmd.aliases.includes('unlock'));
   assert.ok(purgeCmd.aliases.includes('c'));
-  assert.ok(purgeCmd.aliases.includes('clear'));
+  assert.ok(purgeCmd.aliases.includes('purgerole'));
   assert.ok(slowmodeCmd.aliases.includes('sm'));
   assert.ok(snipeCmd.aliases.includes('s'));
   assert.ok(roleCmd.aliases.includes('r'));
-  assert.ok(uroleCmd.aliases.includes('ur'));
-  assert.ok(vcmuteCmd.aliases.includes('vm'));
-  assert.ok(vcslamCmd.aliases.includes('slam'));
+  assert.ok(roleCmd.aliases.includes('urole'));
+  assert.ok(vcCmd.aliases.includes('vcmute'));
+  assert.ok(vcCmd.aliases.includes('vcslam'));
 });
 
 test('Nuke command exists with proper metadata and aliases', async () => {
@@ -166,16 +161,16 @@ test('Nuke command exists with proper metadata and aliases', async () => {
   assert.ok(nukeCmd.aliases.includes('recreatechannel'));
 });
 
-test('purgerole command exists with proper metadata and aliases', async () => {
-  const purgeroleCmd = (await import('../src/modules/moderation/purgerole.js')).default;
+test('purge command supports purgerole alias and role purging', async () => {
+  const purgeCmd = (await import('../src/modules/moderation/purge.js')).default;
 
-  assert.equal(purgeroleCmd.name, 'purgerole');
-  assert.ok(purgeroleCmd.aliases.includes('rr'));
-  assert.ok(purgeroleCmd.usage.includes('<@role>'));
+  assert.equal(purgeCmd.name, 'purge');
+  assert.ok(purgeCmd.aliases.includes('purgerole'));
+  assert.ok(purgeCmd.usage.includes('purge role <@role>'));
 });
 
 test('addRoleToMember and removeRoleFromMember respect existing member roles', async () => {
-  const { addRoleToMember, removeRoleFromMember } = await import('../src/modules/moderation/roleHelpers.ts');
+  const { addRoleToMember, removeRoleFromMember } = await import('../src/modules/moderation/roleHelpers.js');
 
   const mockRole = { id: 'role1', position: 10, managed: false } as any;
   const mockBot = { roles: { highest: { position: 100 } } } as any;
@@ -231,7 +226,7 @@ test('addRoleToMember and removeRoleFromMember respect existing member roles', a
 });
 
 test('move command supports multiple users and has updated usage metadata', async () => {
-  const moveCmd = (await import('../src/modules/voice/move.ts')).default;
+  const moveCmd = (await import('../src/modules/voice/move.js')).default;
   assert.equal(moveCmd.name, 'move');
   assert.ok(moveCmd.usage.includes('<users...>'));
   assert.ok(moveCmd.description.includes('user or multiple users'));
@@ -296,7 +291,7 @@ test('sanitizeAsync resolves uncached members via Discord API fetch', async () =
 });
 
 test('toggleRoleForMember allows self-targeting and performs hybrid role toggling', async () => {
-  const { toggleRoleForMember } = await import('../src/modules/moderation/roleHelpers.ts');
+  const { toggleRoleForMember } = await import('../src/modules/moderation/roleHelpers.js');
 
   const mockRole1 = { id: 'role1', position: 10, managed: false } as any;
   const mockRole2 = { id: 'role2', position: 10, managed: false } as any;

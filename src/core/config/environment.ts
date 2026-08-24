@@ -18,7 +18,7 @@ export const env: EnvironmentConfig = {
   databaseUrl: required('DATABASE_URL'),
   devWebhookUrl: optional('DEV_WEBHOOK_URL', ''),
   mainGuildId: required('MAIN_GUILD_ID'),
-  testGuildId: required('TEST_GUILD_ID'),
+  testGuildId: optional('TEST_GUILD_ID', process.env.MAIN_GUILD_ID?.trim() || ''),
   emojiGuildId: optional('EMOJI_GUILD_ID', ''),
   botOwnerId: required('BOT_OWNER_ID').split(',')[0].trim(),
   botOwnerIds: required('BOT_OWNER_ID').split(',').map(id => id.trim()).filter(Boolean),

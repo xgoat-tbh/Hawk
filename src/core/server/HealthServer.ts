@@ -6,7 +6,8 @@ let server: http.Server | null = null;
 export function startHealthServer(): void {
   if (server) return;
 
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
+  const rawPort = process.env.PORT || process.env.SERVER_PORT;
+  const port = rawPort ? parseInt(rawPort, 10) : 10000;
   const host = '0.0.0.0';
 
   server = http.createServer((_req, res) => {

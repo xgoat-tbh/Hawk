@@ -18,7 +18,7 @@ const modulesDir = join(__dirname, '..', 'src', 'modules');
 test('Command Integrity & Full Audit Test', async (t) => {
   await t.test('all module command files load without syntax or definition errors', async () => {
     const loadedCount = await loadCommands(modulesDir);
-    assert.ok(loadedCount > 40, `Expected at least 40 commands to be loaded, got ${loadedCount}`);
+    assert.ok(loadedCount >= 35, `Expected at least 35 commands to be loaded, got ${loadedCount}`);
   });
 
   await t.test('every command has valid structure, name, description, usage, and examples', () => {

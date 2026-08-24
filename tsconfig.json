@@ -22,6 +22,11 @@
     "sourceMap": true,
     "resolveJsonModule": true
   },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node",
+    "transpileOnly": true
+  },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }
