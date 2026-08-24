@@ -1,0 +1,1 @@
+{"version":3,"file":"MentionHandler.d.ts","sourceRoot":"","sources":["../../src/services/MentionHandler.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,YAAY,CAAC;AAE1C,oBAAY,WAAW;IACrB,MAAM,WAAW;IACjB,aAAa,mBAAmB;CACjC;AAED,wBAAgB,eAAe,CAAC,OAAO,EAAE,OAAO,EAAE,MAAM,EAAE,MAAM,GAAG,WAAW,CAI7E"}

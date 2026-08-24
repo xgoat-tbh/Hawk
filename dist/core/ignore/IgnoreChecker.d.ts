@@ -1,0 +1,2 @@
+export declare function isIgnored(guildId: string, userId: string, roleIds: string[], channelId: string, categoryId: string | null, commandName: string, moduleName: string, memberRolesCache?: any): Promise<boolean>;
+//# sourceMappingURL=IgnoreChecker.d.ts.map

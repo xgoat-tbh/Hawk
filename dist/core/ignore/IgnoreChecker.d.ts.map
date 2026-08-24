@@ -1,0 +1,1 @@
+{"version":3,"file":"IgnoreChecker.d.ts","sourceRoot":"","sources":["../../../src/core/ignore/IgnoreChecker.ts"],"names":[],"mappings":"AAEA,wBAAsB,SAAS,CAC7B,OAAO,EAAE,MAAM,EACf,MAAM,EAAE,MAAM,EACd,OAAO,EAAE,MAAM,EAAE,EACjB,SAAS,EAAE,MAAM,EACjB,UAAU,EAAE,MAAM,GAAG,IAAI,EACzB,WAAW,EAAE,MAAM,EACnB,UAAU,EAAE,MAAM,EAClB,gBAAgB,CAAC,EAAE,GAAG,GACrB,OAAO,CAAC,OAAO,CAAC,CA8ElB"}

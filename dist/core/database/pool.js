@@ -1,0 +1,44 @@
+import postgres from 'postgres';
+import { env } from '../config/environment.js';
+import { constants } from '../config/constants.js';
+let sql = null;
+export function getDb() {
+    if (!sql) {
+        const isLocalOrDisabled = env.databaseUrl.includes('localhost') ||
+            env.databaseUrl.includes('127.0.0.1') ||
+            env.databaseUrl.includes('sslmode=disable') ||
+            env.databaseUrl.includes('ssl=false');
+        const isExplicitSsl = env.databaseUrl.includes('sslmode=require') ||
+            env.databaseUrl.includes('ssl=true') ||
+            env.databaseUrl.includes('neon.tech') ||
+            env.databaseUrl.includes('supabase.co');
+        const sslMode = isLocalOrDisabled ? false : isExplicitSsl ? 'require' : 'prefer';
+        sql = postgres(env.databaseUrl, {
+            max: constants.dbPoolMax,
+            idle_timeout: constants.dbIdleTimeout,
+            connect_timeout: constants.dbConnectTimeout,
+            ssl: sslMode,
+            onnotice: () => { },
+        });
+    }
+    return sql;
+}
+export async function validateConnection() {
+    const db = getDb();
+    try {
+        const result = await db `SELECT 1 as connected`;
+        if (!result[0]?.connected) {
+            throw new Error('Database validation query returned unexpected result');
+        }
+    }
+    catch (error) {
+        throw new Error(`Database connection failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+export async function closeDb() {
+    if (sql) {
+        await sql.end();
+        sql = null;
+    }
+}
+//# sourceMappingURL=pool.js.map

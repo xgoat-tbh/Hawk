@@ -1,0 +1,140 @@
+import { getDb } from '../pool.js';
+const permitCache = new Map(); // guildId -> PermitRecord[]
+export function invalidatePermitCache(guildId) {
+    permitCache.delete(guildId);
+}
+export async function getPermitsForGuild(guildId) {
+    const cached = permitCache.get(guildId);
+    if (cached)
+        return cached;
+    try {
+        const db = getDb();
+        const rows = await db `SELECT * FROM permits WHERE guild_id = ${guildId}`;
+        const mapped = rows.map(mapPermitRow);
+        permitCache.set(guildId, mapped);
+        return mapped;
+    }
+    catch {
+        return [];
+    }
+}
+export async function getPermits(guildId, commandName, moduleName) {
+    const permits = await getPermitsForGuild(guildId);
+    return permits.filter((p) => {
+        const matchCmd = p.commandName === commandName || p.commandName === null;
+        const matchMod = p.moduleName === moduleName || p.moduleName === null;
+        return matchCmd && matchMod;
+    });
+}
+export async function hasPermit(guildId, userId, roleIds, commandName, moduleName) {
+    const permits = await getPermitsForGuild(guildId);
+    return permits.some((p) => {
+        const matchTarget = (p.targetType === 'user' && p.targetId === userId) ||
+            (p.targetType === 'role' && roleIds.includes(p.targetId));
+        if (!matchTarget)
+            return false;
+        const matchCmd = (p.commandName === commandName && p.moduleName === moduleName) ||
+            (p.commandName === null && p.moduleName === moduleName) ||
+            (p.commandName === null && p.moduleName === null);
+        return matchCmd;
+    });
+}
+export async function addPermit(guildId, targetType, targetId, commandName, moduleName) {
+    const db = getDb();
+    await db `
+    INSERT INTO permits (guild_id, target_type, target_id, command_name, module_name)
+    VALUES (${guildId}, ${targetType}, ${targetId}, ${commandName}, ${moduleName})
+    ON CONFLICT (guild_id, target_type, target_id, command_name, module_name) DO NOTHING
+  `;
+    invalidatePermitCache(guildId);
+}
+export async function removePermit(guildId, targetType, targetId, commandName, moduleName, revokedById, revokedByName) {
+    const db = getDb();
+    const result = await db `
+    DELETE FROM permits
+    WHERE guild_id = ${guildId}
+      AND target_type = ${targetType}
+      AND target_id = ${targetId}
+      AND command_name IS NOT DISTINCT FROM ${commandName}
+      AND module_name IS NOT DISTINCT FROM ${moduleName}
+  `;
+    if (result.count > 0 && revokedById && revokedByName) {
+        await db `
+      INSERT INTO permit_revocations (guild_id, target_type, target_id, command_name, module_name, revoked_by_id, revoked_by_name)
+      VALUES (${guildId}, ${targetType}, ${targetId}, ${commandName}, ${moduleName}, ${revokedById}, ${revokedByName})
+    `.catch(() => { });
+    }
+    invalidatePermitCache(guildId);
+    return result.count > 0;
+}
+export async function deletePermitsByIds(guildId, ids) {
+    if (ids.length === 0)
+        return 0;
+    const db = getDb();
+    const result = await db `
+    DELETE FROM permits
+    WHERE guild_id = ${guildId}
+      AND id = ANY(${ids})
+  `;
+    invalidatePermitCache(guildId);
+    return result.count;
+}
+export async function removeAllPermitsForTarget(guildId, targetType, targetId, revokedById, revokedByName) {
+    const db = getDb();
+    const result = await db `
+    DELETE FROM permits
+    WHERE guild_id = ${guildId}
+      AND target_type = ${targetType}
+      AND target_id = ${targetId}
+  `;
+    if (result.count > 0 && revokedById && revokedByName) {
+        await db `
+      INSERT INTO permit_revocations (guild_id, target_type, target_id, command_name, module_name, revoked_by_id, revoked_by_name)
+      VALUES (${guildId}, ${targetType}, ${targetId}, 'ALL', 'ALL', ${revokedById}, ${revokedByName})
+    `.catch(() => { });
+    }
+    invalidatePermitCache(guildId);
+    return result.count;
+}
+export async function getLatestRevocation(guildId, userId, roleIds, commandName, moduleName) {
+    try {
+        const db = getDb();
+        const rows = await db `
+      SELECT revoked_by_name, revoked_at
+      FROM permit_revocations
+      WHERE guild_id = ${guildId}
+        AND (
+          (target_type = 'user' AND target_id = ${userId})
+          OR (target_type = 'role' AND target_id = ANY(${roleIds}))
+        )
+        AND (
+          (command_name = ${commandName} AND module_name = ${moduleName})
+          OR (command_name IS NULL AND module_name = ${moduleName})
+          OR (command_name IS NULL AND module_name IS NULL)
+        )
+      ORDER BY revoked_at DESC
+      LIMIT 1
+    `;
+        if (rows.length === 0)
+            return null;
+        return {
+            revokedByName: rows[0].revoked_by_name,
+            revokedAt: new Date(rows[0].revoked_at),
+        };
+    }
+    catch {
+        return null;
+    }
+}
+function mapPermitRow(row) {
+    return {
+        id: row.id,
+        guildId: row.guild_id,
+        targetType: row.target_type,
+        targetId: row.target_id,
+        commandName: row.command_name,
+        moduleName: row.module_name,
+        createdAt: row.created_at,
+    };
+}
+//# sourceMappingURL=permissionRepo.js.map
