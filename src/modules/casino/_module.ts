@@ -3,7 +3,6 @@ import { activeBlackjackGames } from './blackjack.js';
 import { hit, stand, doubleDown, split, resolveGame } from './blackjackEngine.js';
 import { buildBlackjackEmbed, buildBlackjackButtons } from './casinoUI.js';
 import { casinoService } from './casinoService.js';
-import { getEmoji } from '../../core/config/branding.js';
 
 export default {
   name: 'casino',
@@ -61,7 +60,7 @@ export default {
     updatedGame.timestamp = Date.now();
     activeBlackjackGames.set(gameKey, updatedGame);
     
-    const currencySymbol = getEmoji('currency') || '$';
+    const currencySymbol = '$';
     const embed = buildBlackjackEmbed(updatedGame, interaction.user.username, updatedGame.bet, currencySymbol);
     const components = buildBlackjackButtons(updatedGame, guildId, userId);
     

@@ -14,7 +14,7 @@ export default defineCommand({
   module: 'general',
   description: 'Display interactive bot help menu, category details, or specific command information.',
   usage: 'help [module|command]',
-  examples: ['help', 'help voice', 'help gaming', 'help mv', 'help suggest', 'help lock'],
+  examples: ['help', 'help voice', 'help gaming', 'help economy', 'help pvc', 'help mv', 'help lock'],
   permissions: [],
   botPermissions: [],
   cooldown: 2,

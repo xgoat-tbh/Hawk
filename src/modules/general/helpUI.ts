@@ -44,6 +44,18 @@ export const HELP_CATEGORIES: HelpCategory[] = [
     modules: ['suggestion', 'confession', 'sticky', 'welcome', 'media'],
   },
   {
+    id: 'economy',
+    name: 'Economy & Income',
+    description: 'Currency system, banking, income, casino games, and server store',
+    modules: ['economy', 'income', 'casino', 'store'],
+  },
+  {
+    id: 'pvc',
+    name: 'Private Voice',
+    description: 'Create and manage private voice channels with access controls',
+    modules: ['pvc'],
+  },
+  {
     id: 'general',
     name: 'General & Info',
     description: 'Bot statistics, AFK status, and emoji stealing',
