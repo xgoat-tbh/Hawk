@@ -3,12 +3,12 @@ import type { CommandContext } from '../../types/command.js';
 import { resolveVoiceChannel } from '../../core/resolver/VoiceChannelResolver.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
 import { ui } from '../../core/ui/index.js';
-import type { GuildMember } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 
 export default defineCommand({
   name: 'invc',
   module: 'voice',
-  description: 'List all members in a voice channel with structured status groupings.',
+  description: 'List all members in a voice channel.',
   usage: 'invc [voice-channel]',
   examples: ['invc', 'invc General', 'invc 123456789012345678'],
   permitOnly: true,
@@ -42,89 +42,42 @@ export default defineCommand({
     }
 
     const members = voiceChannel.members;
-    if (members.size === 0) {
-      const emptyPayload = ui.standard({
-        title: voiceChannel.name,
-        text: '*This voice channel is currently empty.*',
-      });
-      await respond.raw({
-        components: emptyPayload.components,
-        flags: emptyPayload.flags as any,
-      });
-      return;
-    }
-
-    // Categorize members into structured groups
-    const streamingMembers: { member: GuildMember; tags: string[] }[] = [];
-    const activeMembers: { member: GuildMember; tags: string[] }[] = [];
-    const mutedMembers: { member: GuildMember; tags: string[] }[] = [];
-
-    for (const m of members.values()) {
-      const tags: string[] = [];
-      const vs = m.voice;
-
-      if (vs.streaming) tags.push('`LIVE`');
-      if (vs.selfVideo) tags.push('`CAM`');
-      if (vs.serverDeaf) tags.push('`SERVER-DEAF`');
-      else if (vs.selfDeaf) tags.push('`DEAF`');
-      if (vs.serverMute) tags.push('`SERVER-MUTE`');
-      else if (vs.selfMute) tags.push('`MUTED`');
-      if (m.user.bot) tags.push('`BOT`');
-
-      if (vs.streaming || vs.selfVideo) {
-        streamingMembers.push({ member: m, tags });
-      } else if (vs.selfMute || vs.serverMute || vs.selfDeaf || vs.serverDeaf) {
-        mutedMembers.push({ member: m, tags });
-      } else {
-        activeMembers.push({ member: m, tags });
-      }
-    }
-
-    const sections: string[] = [];
-    let counter = 1;
-
-    if (streamingMembers.length > 0) {
-      const lines = streamingMembers.map(item => {
-        const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
-        return `${counter++}. <@${item.member.id}>${tagSuffix}`;
-      });
-      sections.push(`\`[STREAMING & VIDEO (${streamingMembers.length})]\`\n${lines.join('\n')}`);
-    }
-
-    if (activeMembers.length > 0) {
-      const lines = activeMembers.map(item => {
-        const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
-        return `${counter++}. <@${item.member.id}>${tagSuffix}`;
-      });
-      sections.push(`\`[ACTIVE VOICE (${activeMembers.length})]\`\n${lines.join('\n')}`);
-    }
-
-    if (mutedMembers.length > 0) {
-      const lines = mutedMembers.map(item => {
-        const tagSuffix = item.tags.length > 0 ? ` ${item.tags.join(' ')}` : '';
-        return `${counter++}. <@${item.member.id}>${tagSuffix}`;
-      });
-      sections.push(`\`[MUTED / DEAFENED (${mutedMembers.length})]\`\n${lines.join('\n')}`);
-    }
-
     const limitNum = 'userLimit' in voiceChannel && voiceChannel.userLimit && voiceChannel.userLimit > 0 ? voiceChannel.userLimit : null;
     const limitStr = limitNum ? `${limitNum}` : '∞';
-    const percentStr = limitNum ? ` (${Math.round((members.size / limitNum) * 100)}%)` : '';
-    const bitrateStr = 'bitrate' in voiceChannel && voiceChannel.bitrate ? ` • \`${Math.round(voiceChannel.bitrate / 1000)} kbps\`` : '';
-    const categoryStr = voiceChannel.parent ? ` • Category: \`${voiceChannel.parent.name}\`` : '';
+    const headerText = `**${voiceChannel.name} | \`${members.size}/${limitStr}\`**`;
 
-    const payload = ui.standard({
-      title: `${voiceChannel.name} [ ${members.size}/${limitStr}${percentStr} ]`,
-      text: `• **Occupancy:** \`${members.size}/${limitStr}\`${bitrateStr}${categoryStr}`,
-      sections,
-      sanitize: false,
-    });
+    const container = ui.container();
+    container.addTextDisplayComponents(ui.text(headerText));
+    container.addSeparatorComponents(ui.separator(true));
+
+    if (members.size === 0) {
+      container.addTextDisplayComponents(ui.text('*This voice channel is currently empty.*'));
+    } else {
+      const lines: string[] = [];
+      for (const m of members.values()) {
+        const tags: string[] = [];
+        const vs = m.voice;
+
+        if (vs.streaming) tags.push('`LIVE`');
+        if (vs.selfVideo) tags.push('`CAM`');
+        if (vs.serverDeaf) tags.push('`SERVER-DEAF`');
+        else if (vs.selfDeaf) tags.push('`DEAF`');
+        if (vs.serverMute) tags.push('`SERVER-MUTE`');
+        else if (vs.selfMute) tags.push('`MUTED`');
+        if (m.user.bot) tags.push('`BOT`');
+
+        const tagSuffix = tags.length > 0 ? ` ${tags.join(' ')}` : '';
+        lines.push(`• <@${m.id}>${tagSuffix}`);
+      }
+      container.addTextDisplayComponents(ui.text(lines.join('\n')));
+    }
 
     await respond.raw({
-      components: payload.components,
-      flags: payload.flags as any,
+      components: [container],
+      flags: MessageFlags.IsComponentsV2,
       allowedMentions: {
-        parse: ['users'],
+        parse: [],
+        users: [],
         roles: [],
       },
     });

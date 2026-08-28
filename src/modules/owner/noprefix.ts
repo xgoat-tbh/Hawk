@@ -35,7 +35,7 @@ export default defineCommand({
       }
 
       const userList = userIds.map((id, index) => `${index + 1}. ${mentionUser(id, guild)} (\`${id}\`)`).join('\n');
-      await respond.send(`**⚡ No-Prefix Mode Users (${userIds.length})**\n\n${userList}`);
+      await respond.send(`**No-Prefix Mode Users (${userIds.length})**\n\n${userList}`);
       return;
     }
 

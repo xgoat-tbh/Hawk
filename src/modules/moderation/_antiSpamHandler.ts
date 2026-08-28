@@ -99,7 +99,7 @@ export async function handleAntiSpam(message: Message): Promise<void> {
 
     // Send temporary self-deleting warning
     const warnMsg = await textChannel.send({
-      content: `⚠️ ${message.author}, please slow down and refrain from spamming.`,
+      content: `${message.author}, please slow down and refrain from spamming.`,
     }).catch(() => null);
 
     if (warnMsg) {

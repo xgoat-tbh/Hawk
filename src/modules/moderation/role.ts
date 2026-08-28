@@ -36,7 +36,7 @@ export default defineCommand({
     'role @RoleA @RoleB ?add',
     'role @RoleA @RoleB ?rem',
     'role @RoleA @RoleB',
-    'role icon @VIP 👑',
+    'role icon @VIP https://example.com/icon.png',
     'role icon @VIP none',
   ],
   permissions: [PermissionsBitField.Flags.ManageRoles],

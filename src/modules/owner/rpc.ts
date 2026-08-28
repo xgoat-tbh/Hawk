@@ -38,7 +38,7 @@ export default defineCommand({
 
       const sections: string[] = [
         `**Mode:** \`${mode.toUpperCase()}\`\n` +
-        `**State:** ${isBusy ? `🔴 Busy (${busyDesc})` : (isIdle ? `🟡 Idle (${idleSec}s inactive)` : '🟢 Online / Active')}\n` +
+        `**State:** ${isBusy ? `[Busy] (${busyDesc})` : (isIdle ? `[Idle] (${idleSec}s inactive)` : '[Online / Active]')}\n` +
         `**Idle Timer:** \`${idleSec}s\` since last command`,
       ];
 

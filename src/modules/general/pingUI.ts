@@ -38,12 +38,12 @@ function formatUptime(totalSeconds: number): string {
 }
 
 function getStatusIndicator(ms: number): string {
-  if (ms < 0) return '🔴 Error';
-  if (ms <= 80) return '🟢 Optimal';
-  if (ms <= 180) return '🟢 Good';
-  if (ms <= 350) return '🟡 Normal';
-  if (ms <= 600) return '🟠 Moderate';
-  return '🔴 High';
+  if (ms < 0) return 'Error';
+  if (ms <= 80) return 'Optimal';
+  if (ms <= 180) return 'Good';
+  if (ms <= 350) return 'Normal';
+  if (ms <= 600) return 'Moderate';
+  return 'High';
 }
 
 export async function measurePing(client: Client, messageTimestamp?: number): Promise<PingData> {
@@ -111,21 +111,21 @@ export function buildPingV2Embed(data: PingData, userId: string): ComponentV2Pay
     nodeVersion,
   } = data;
 
-  const dbStatusStr = dbLatency >= 0 ? `\`${dbLatency}ms\` (${getStatusIndicator(dbLatency)})` : '`Error` (🔴 Disconnected)';
+  const dbStatusStr = dbLatency >= 0 ? `\`${dbLatency}ms\` (${getStatusIndicator(dbLatency)})` : '`Error` (Disconnected)';
   const wsStatusStr = `\`${wsLatency}ms\` (${getStatusIndicator(wsLatency)})`;
   const roundtripStr = `\`${roundtripLatency}ms\` (${getStatusIndicator(roundtripLatency)})`;
   const restStr = restLatency > 0 ? `\`${restLatency}ms\` (${getStatusIndicator(restLatency)})` : wsStatusStr;
 
   const content =
-    `### ⚡ Network & Gateway\n` +
+    `### Network & Gateway\n` +
     `• **Gateway Ping (WS):** ${wsStatusStr}\n` +
     `• **REST API Latency:** ${restStr}\n` +
     `• **Message Roundtrip:** ${roundtripStr}\n` +
     `• **Shard Connection:** \`Shard #${shardId}\` (Online)\n\n` +
-    `### 🗄️ Database & Storage\n` +
+    `### Database & Storage\n` +
     `• **PostgreSQL Query:** ${dbStatusStr}\n` +
     `• **Connection Pool:** \`Active & Healthy\`\n\n` +
-    `### 🖥️ System & Resource Telemetry\n` +
+    `### System & Resource Telemetry\n` +
     `• **Memory (Heap):** \`${heapUsedMb.toFixed(1)} MB / ${heapTotalMb.toFixed(1)} MB\`\n` +
     `• **Memory (RSS):** \`${rssMb.toFixed(1)} MB\`\n` +
     `• **Process Uptime:** \`${formatUptime(uptimeSeconds)}\`\n` +
@@ -140,7 +140,7 @@ export function buildPingV2Embed(data: PingData, userId: string): ComponentV2Pay
   const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(refreshBtn);
 
   return ui.standard({
-    title: '🛰️ Hawk Telemetry & Diagnostics',
+    title: 'Hawk Telemetry & Diagnostics',
     text: content,
     components: [actionRow],
   });

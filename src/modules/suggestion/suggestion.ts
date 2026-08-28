@@ -382,7 +382,7 @@ async function handleReset(ctx: CommandContext, args: string[]): Promise<void> {
 
   if (args.length === 0 || args[0].toLowerCase() !== 'confirm') {
     await respond.warning(
-      `⚠️ ${bold('DESTRUCTIVE OPERATION')}: Resetting suggestions will delete all suggestion history, vote records, suggestion counters, and blacklist data for this server.\n\nTo confirm, run: \`${ctx.parsed.prefix}suggestion reset confirm\``,
+      `${bold('DESTRUCTIVE OPERATION')}: Resetting suggestions will delete all suggestion history, vote records, suggestion counters, and blacklist data for this server.\n\nTo confirm, run: \`${ctx.parsed.prefix}suggestion reset confirm\``,
     );
     return;
   }

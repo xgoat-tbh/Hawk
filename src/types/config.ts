@@ -53,6 +53,32 @@ export interface EmojiConfig {
   media: string;
   general: string;
   owner: string;
+  // Economy & Casino
+  currency: string;
+  cash: string;
+  bank: string;
+  leaderboard: string;
+  casino: string;
+  dice: string;
+  cards: string;
+  slots: string;
+  cockfight: string;
+  roulette: string;
+  // Store & Inventory
+  store: string;
+  inventory: string;
+  // PVC
+  pvc: string;
+  fastag: string;
+  lock: string;
+  unlock: string;
+  hide: string;
+  delete: string;
+  transfer: string;
+  rename: string;
+  limit: string;
+  economy: string;
+  income: string;
   [key: string]: string;
 }
 

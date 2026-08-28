@@ -30,7 +30,7 @@ export default defineCommand({
       return;
     }
 
-    await respond.info('🔄 **Gracefully shutting down bot instance for restart...**');
+    await respond.info('**Gracefully shutting down bot instance for restart...**');
 
     logAuditAction({
       guild,
