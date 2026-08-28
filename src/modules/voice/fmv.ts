@@ -6,7 +6,6 @@ import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { mentionUser } from '../../core/utils/formatters.js';
 import { checkVoiceAccess } from './vconfigEvaluator.js';
 import { createFmvRequest, cancelFmvRequest } from './FmvManager.js';
-import { ui } from '../../core/ui/index.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
 
@@ -109,16 +108,9 @@ export default defineCommand({
       return;
     }
 
-    // Send initial FMV Notice Payload with explicit user ping
-    const initialPayload = ui.standard({
-      title: 'Force Move',
-      text: `<@${targetMember.id}>\nCreating force-move request to <#${destVc.id}>...`,
-    });
-
+    // Send initial FMV Notice message with user ping
     const noticeMessage = await (channel as GuildTextBasedChannel).send({
-      content: `<@${targetMember.id}>`,
-      components: initialPayload.components,
-      flags: initialPayload.flags as any,
+      content: `> **Force Move:** Creating force-move request for <@${targetMember.id}> to <#${destVc.id}>...`,
       allowedMentions: { users: [targetMember.id] },
     });
     message.delete().catch(() => {});
