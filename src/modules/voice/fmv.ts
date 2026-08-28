@@ -16,7 +16,7 @@ export default defineCommand({
   description: 'Force Move a target user to your voice channel when they are in or join voice.',
   usage: 'fmv <@user> | fmv cancel [@user]',
   examples: ['fmv @User', 'fmv cancel @User', 'fmv cancel'],
-  permissions: [PermissionsBitField.Flags.Administrator],
+  permissions: [PermissionsBitField.Flags.MoveMembers],
   botPermissions: [PermissionsBitField.Flags.MoveMembers],
   cooldown: 5,
 
