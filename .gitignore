@@ -4,4 +4,5 @@ dist/
 *.log
 *.tsbuildinfo
 *.zip
+.restart_state.json
 

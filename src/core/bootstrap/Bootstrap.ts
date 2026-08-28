@@ -98,6 +98,9 @@ export class Bootstrap {
         .map(m => m.onReady!(client));
       await Promise.allSettled(readyHooks);
 
+      // Check and update restart state message if rebooted via command
+      await this.handleRestartResume(client);
+
       logEvent('info', 'startup', `Bot started: ${client.user?.tag}`, {
         commands: getCommandCount(),
         modules: this.manifests.length,
@@ -255,6 +258,32 @@ export class Bootstrap {
     this.setupProcessHandlers();
 
     return client;
+  }
+
+  private static async handleRestartResume(client: Client): Promise<void> {
+    const statePath = path.join(process.cwd(), '.restart_state.json');
+    try {
+      const raw = await fs.readFile(statePath, 'utf-8');
+      const state = JSON.parse(raw);
+      await fs.unlink(statePath).catch(() => {});
+
+      if (!state.channelId || !state.messageId) return;
+
+      const elapsed = ((Date.now() - (state.startTime || Date.now())) / 1000).toFixed(2);
+      const channel = await client.channels.fetch(state.channelId).catch(() => null);
+      if (channel && channel.isTextBased()) {
+        const msg = await channel.messages.fetch(state.messageId).catch(() => null);
+        if (msg) {
+          await msg.edit({
+            content: `> **Successfully restarted!** (Completed in \`${elapsed}s\`)`,
+            allowedMentions: { parse: [] },
+          }).catch(() => {});
+          consoleLog('info', 'startup', `Updated restart state message in channel ${state.channelId} (${elapsed}s)`);
+        }
+      }
+    } catch {
+      // No active restart state or failed to read
+    }
   }
 
   private static setupProcessHandlers(): void {

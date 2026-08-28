@@ -1,4 +1,6 @@
 import { PermissionsBitField } from 'discord.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
@@ -30,7 +32,25 @@ export default defineCommand({
       return;
     }
 
-    await respond.info('**Gracefully shutting down bot instance for restart...**');
+    const sentMsg = await respond.info('**Restarting bot instance...**');
+
+    // Save restart state to file so bot can edit message upon restarting
+    try {
+      const state = {
+        guildId: guild.id,
+        channelId: message.channel.id,
+        messageId: sentMsg.id,
+        startTime: Date.now(),
+        executorId: member.id,
+      };
+      await fs.writeFile(
+        path.join(process.cwd(), '.restart_state.json'),
+        JSON.stringify(state, null, 2),
+        'utf-8',
+      );
+    } catch {
+      // Non-fatal if file write fails
+    }
 
     logAuditAction({
       guild,
@@ -45,7 +65,7 @@ export default defineCommand({
       guild: guild.name,
     });
 
-    // Small delay to ensure the response is delivered to Discord before process terminates
+    // Small delay to ensure the response and state file are completed before process terminates
     setTimeout(async () => {
       try {
         stopCooldownCleanup();
