@@ -3,7 +3,6 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { createGame } from './blackjackEngine.js';
 import { buildBlackjackEmbed, buildBlackjackButtons } from './casinoUI.js';
-import { getEmoji } from '../../core/config/branding.js';
 
 // In-memory store for active games, exported so module can access it
 export const activeBlackjackGames = new Map<string, any>();
@@ -64,7 +63,7 @@ export default defineCommand({
       timestamp: Date.now()
     });
     
-    const currencySymbol = getEmoji('currency') || '$';
+    const currencySymbol = '$';
     const embed = buildBlackjackEmbed(game, ctx.message.author.username, bet, currencySymbol);
     const components = buildBlackjackButtons(game, guildId, userId);
     

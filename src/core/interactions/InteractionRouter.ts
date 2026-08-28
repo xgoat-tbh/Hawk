@@ -1,7 +1,7 @@
 import type {
   Interaction,
   ButtonInteraction,
-  StringSelectMenuInteraction,
+  AnySelectMenuInteraction,
   ChannelSelectMenuInteraction,
   ModalSubmitInteraction,
 } from 'discord.js';
@@ -11,7 +11,7 @@ import { logInteraction } from '../logging/WebhookLogger.js';
 import { logInteractionAudit } from '../logging/AuditLogger.js';
 
 type ButtonHandler = (interaction: ButtonInteraction) => Promise<void>;
-type SelectHandler = (interaction: StringSelectMenuInteraction) => Promise<void>;
+type SelectHandler = (interaction: AnySelectMenuInteraction) => Promise<void>;
 type ChannelSelectHandler = (interaction: ChannelSelectMenuInteraction) => Promise<void>;
 type ModalHandler = (interaction: ModalSubmitInteraction) => Promise<void>;
 
@@ -67,7 +67,7 @@ export class InteractionRouter {
       if (interaction.isChannelSelectMenu()) {
         return await this.dispatchChannelSelect(interaction);
       }
-      if (interaction.isStringSelectMenu()) {
+      if (interaction.isAnySelectMenu()) {
         return await this.dispatchSelect(interaction);
       }
       if (interaction.isModalSubmit()) {
@@ -92,7 +92,7 @@ export class InteractionRouter {
     return false;
   }
 
-  private async dispatchSelect(interaction: StringSelectMenuInteraction): Promise<boolean> {
+  private async dispatchSelect(interaction: AnySelectMenuInteraction): Promise<boolean> {
     const route = this.selectRoutes.find(r => interaction.customId.startsWith(r.prefix));
     const data = {
       type: 'select_menu',

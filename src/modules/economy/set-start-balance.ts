@@ -13,7 +13,10 @@ export default defineCommand({
   cooldown: 3,
   async execute(ctx: CommandContext): Promise<void> {
     const amount = parseInt(ctx.parsed.args[0], 10);
-    if (isNaN(amount) || amount < 0) await ctx.respond.error('Provide a valid positive amount.');
+    if (isNaN(amount) || amount < 0) {
+      await ctx.respond.error('Provide a valid positive amount.');
+      return;
+    }
 
     await setEconomyConfigField(ctx.guild.id, 'startBalance', amount);
     await ctx.respond.success(`Starting balance set to **${amount}**`);

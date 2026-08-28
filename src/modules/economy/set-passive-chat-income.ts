@@ -14,7 +14,10 @@ export default defineCommand({
   cooldown: 3,
   async execute(ctx: CommandContext): Promise<void> {
     const state = ctx.parsed.args[0]?.toLowerCase();
-    if (state !== 'on' && state !== 'off') await ctx.respond.error('Use "on" or "off".');
+    if (state !== 'on' && state !== 'off') {
+      await ctx.respond.error('Use "on" or "off".');
+      return;
+    }
 
     const enabled = state === 'on';
     await setEconomyConfigField(ctx.guild.id, 'passiveIncome', enabled);

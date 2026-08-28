@@ -7,7 +7,6 @@ import {
   UserSelectMenuBuilder,
   type Client
 } from 'discord.js';
-import { getEmoji } from '../../core/config/branding.js';
 import type { PvcSession, PvcAccessEntry } from './pvcService.js';
 
 export function buildPvcInfoEmbed(
@@ -16,13 +15,13 @@ export function buildPvcInfoEmbed(
   accessList: PvcAccessEntry[],
   client: Client
 ): { embeds: EmbedBuilder[]; components: ActionRowBuilder<any>[] } {
-  const fastagBadge = session.autoPayEnabled ? getEmoji('fastag') : '';
+  const fastagBadge = session.autoPayEnabled ? ' [FASTag]' : '';
   
   const embed = new EmbedBuilder()
     .setTitle(`Private Voice Channel Info`)
     .setColor('#2F3136')
     .addFields(
-      { name: 'Owner', value: `${ownerName}${fastagBadge ? ` [${fastagBadge}]` : ''}`, inline: true },
+      { name: 'Owner', value: `${ownerName}${fastagBadge}`, inline: true },
       { name: 'Expires At', value: `<t:${Math.floor(session.expiresAt.getTime() / 1000)}:R>`, inline: true },
       { name: 'Status', value: `${session.isLocked ? 'Locked' : 'Unlocked'} | ${session.isHidden ? 'Hidden' : 'Visible'}`, inline: true },
       { name: 'User Limit', value: session.userLimit ? session.userLimit.toString() : 'Unlimited', inline: true }

@@ -3,7 +3,6 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { spin, parseBet, evaluateBet } from './rouletteEngine.js';
 import { buildRouletteEmbed } from './casinoUI.js';
-import { getEmoji } from '../../core/config/branding.js';
 
 export default defineCommand({
   name: 'roulette',
@@ -63,7 +62,7 @@ export default defineCommand({
       await casinoService.awardWinnings(guildId, userId, payout);
     }
     
-    const currencySymbol = getEmoji('currency') || '$';
+    const currencySymbol = '$';
     const embed = buildRouletteEmbed(result, parsedBet, won, payout, currencySymbol);
     
     await ctx.message.reply({ embeds: [embed] });

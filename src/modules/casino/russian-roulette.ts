@@ -3,7 +3,6 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { createChamber, pullTrigger, calculatePayout } from './russianRouletteEngine.js';
 import { buildRussianRouletteEmbed } from './casinoUI.js';
-import { getEmoji } from '../../core/config/branding.js';
 
 export default defineCommand({
   name: 'russian-roulette',
@@ -65,7 +64,7 @@ export default defineCommand({
       await casinoService.awardWinnings(guildId, userId, payout);
     }
     
-    const currencySymbol = getEmoji('currency') || '$';
+    const currencySymbol = '$';
     const embed = buildRussianRouletteEmbed(survived, payout, bet, currencySymbol);
     
     await ctx.message.reply({ embeds: [embed] });

@@ -3,7 +3,6 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { generateRooster, simulateFight } from './cockfightEngine.js';
 import { buildCockfightEmbed } from './casinoUI.js';
-import { getEmoji } from '../../core/config/branding.js';
 
 export default defineCommand({
   name: 'cock-fight',
@@ -56,7 +55,7 @@ export default defineCommand({
       await casinoService.awardWinnings(guildId, userId, payout);
     }
     
-    const currencySymbol = getEmoji('currency') || '$';
+    const currencySymbol = '$';
     const embed = buildCockfightEmbed(fight, bet, won, payout, currencySymbol);
     
     await ctx.message.reply({ embeds: [embed] });

@@ -6,7 +6,7 @@ import type {
   MessageReaction,
   User,
   ButtonInteraction,
-  StringSelectMenuInteraction,
+  AnySelectMenuInteraction,
   ChannelSelectMenuInteraction,
   ModalSubmitInteraction,
 } from 'discord.js';
@@ -26,7 +26,7 @@ export interface ModuleManifest {
 
   /** Component interaction handlers */
   onButton?: (interaction: ButtonInteraction) => Promise<void>;
-  onSelect?: (interaction: StringSelectMenuInteraction) => Promise<void>;
+  onSelect?: (interaction: AnySelectMenuInteraction) => Promise<void>;
   onChannelSelect?: (interaction: ChannelSelectMenuInteraction) => Promise<void>;
   onModal?: (interaction: ModalSubmitInteraction) => Promise<void>;
 

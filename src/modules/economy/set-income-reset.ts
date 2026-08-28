@@ -13,7 +13,10 @@ export default defineCommand({
   cooldown: 3,
   async execute(ctx: CommandContext): Promise<void> {
     const duration = parseInt(ctx.parsed.args[0], 10);
-    if (isNaN(duration) || duration < 0) await ctx.respond.error('Provide a valid duration in seconds.');
+    if (isNaN(duration) || duration < 0) {
+      await ctx.respond.error('Provide a valid duration in seconds.');
+      return;
+    }
 
     await setEconomyConfigField(ctx.guild.id, 'passiveCooldown' as any, duration).catch(() => {});
     await ctx.respond.success(`Income reset duration set to **${duration}s**`);

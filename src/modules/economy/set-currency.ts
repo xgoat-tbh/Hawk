@@ -14,7 +14,10 @@ export default defineCommand({
   cooldown: 3,
   async execute(ctx: CommandContext): Promise<void> {
     const symbol = ctx.parsed.args[0];
-    if (!symbol) await ctx.respond.error('Please provide a currency symbol.');
+    if (!symbol) {
+      await ctx.respond.error('Please provide a currency symbol.');
+      return;
+    }
 
     await setEconomyConfigField(ctx.guild.id, 'currencySymbol', symbol);
     await ctx.respond.success(`Currency symbol set to **${symbol}**`);

@@ -1,9 +1,10 @@
-import type { StringSelectMenuInteraction, ButtonInteraction } from 'discord.js';
+import type { AnySelectMenuInteraction, ButtonInteraction } from 'discord.js';
 import { MessageFlags } from 'discord.js';
 import { getPrefix } from '../../core/database/repositories/guildConfigRepo.js';
 import { buildCategoryHelpEmbed, getCategory } from './helpUI.js';
 
-export async function handleHelpSelect(interaction: StringSelectMenuInteraction): Promise<void> {
+export async function handleHelpSelect(interaction: AnySelectMenuInteraction): Promise<void> {
+  if (!interaction.isStringSelectMenu()) return;
   if (!interaction.customId.startsWith('help_category_select')) return;
   if (!interaction.guild || interaction.replied || interaction.deferred) return;
 

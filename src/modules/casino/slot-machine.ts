@@ -3,7 +3,6 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { spinReels, evaluatePaylines, formatGrid } from './slotsEngine.js';
 import { buildSlotsEmbed } from './casinoUI.js';
-import { getEmoji } from '../../core/config/branding.js';
 
 export default defineCommand({
   name: 'slot-machine',
@@ -53,7 +52,7 @@ export default defineCommand({
     }
     
     const gridStr = formatGrid(grid);
-    const currencySymbol = getEmoji('currency') || '$';
+    const currencySymbol = '$';
     const embed = buildSlotsEmbed(gridStr, won, payout, bet, currencySymbol);
     
     await ctx.message.reply({ embeds: [embed] });

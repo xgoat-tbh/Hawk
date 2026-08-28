@@ -82,12 +82,12 @@ export async function buyItem(guildId: string, userId: string, itemId: number, q
     
     const cost = item.price * quantity;
     const [balance] = await sql`
-      SELECT cash FROM users WHERE guild_id = ${guildId} AND user_id = ${userId}
+      SELECT cash FROM economy_balances WHERE guild_id = ${guildId} AND user_id = ${userId} FOR UPDATE
     `;
-    if (!balance || balance.cash < cost) throw new Error('Insufficient funds.');
+    if (!balance || Number(balance.cash) < cost) throw new Error('Insufficient funds.');
 
     await sql`
-      UPDATE users SET cash = cash - ${cost} WHERE guild_id = ${guildId} AND user_id = ${userId}
+      UPDATE economy_balances SET cash = cash - ${cost}, updated_at = NOW() WHERE guild_id = ${guildId} AND user_id = ${userId}
     `;
 
     const [inv] = await sql`
@@ -134,7 +134,10 @@ export async function sellItem(guildId: string, userId: string, itemId: number, 
     const refund = Math.floor((item.price * quantity) / 2);
     
     await sql`
-      UPDATE users SET cash = cash + ${refund} WHERE guild_id = ${guildId} AND user_id = ${userId}
+      INSERT INTO economy_balances (guild_id, user_id, cash)
+      VALUES (${guildId}, ${userId}, ${refund})
+      ON CONFLICT (guild_id, user_id)
+      DO UPDATE SET cash = economy_balances.cash + ${refund}, updated_at = NOW()
     `;
 
     return { refund };

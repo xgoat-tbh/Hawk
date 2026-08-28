@@ -16,8 +16,14 @@ export default defineCommand({
     const seconds = parseInt(ctx.parsed.args[1], 10);
     
     const valid = ['work', 'slut', 'crime', 'rob'];
-    if (!valid.includes(game)) await ctx.respond.error('Valid games: ' + valid.join(', '));
-    if (isNaN(seconds) || seconds < 0) await ctx.respond.error('Provide valid seconds.');
+    if (!game || !valid.includes(game)) {
+      await ctx.respond.error('Valid games: ' + valid.join(', '));
+      return;
+    }
+    if (isNaN(seconds) || seconds < 0) {
+      await ctx.respond.error('Provide valid seconds.');
+      return;
+    }
 
     await setEconomyConfigField(ctx.guild.id, `${game}Cooldown` as any, seconds);
     await ctx.respond.success(`Cooldown for **${game}** set to **${seconds}s**`);
