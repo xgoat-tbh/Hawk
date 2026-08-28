@@ -60,10 +60,6 @@ export default defineCommand({
 
         if (vs.streaming) tags.push('`LIVE`');
         if (vs.selfVideo) tags.push('`CAM`');
-        if (vs.serverDeaf) tags.push('`SERVER-DEAF`');
-        else if (vs.selfDeaf) tags.push('`DEAF`');
-        if (vs.serverMute) tags.push('`SERVER-MUTE`');
-        else if (vs.selfMute) tags.push('`MUTED`');
         if (m.user.bot) tags.push('`BOT`');
 
         const tagSuffix = tags.length > 0 ? ` ${tags.join(' ')}` : '';
