@@ -6,7 +6,7 @@ import { branding } from '../../core/config/branding.js';
 
 export default defineCommand({
   name: 'money-audit-log',
-  aliases: ['auditlog'],
+  aliases: ['moneyaudit', 'ecolog', 'moneylog'],
   module: 'economy',
   description: 'View recent money audit logs',
   usage: 'money-audit-log',

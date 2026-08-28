@@ -50,7 +50,11 @@ export async function loadCommands(modulesDir: string, enabledModules?: string[]
         cleanName.endsWith('Helper') ||
         cleanName.endsWith('Sanitizer') ||
         cleanName.endsWith('Service') ||
-        cleanName.endsWith('Cleaner')
+        cleanName.endsWith('Cleaner') ||
+        cleanName.endsWith('Panel') ||
+        cleanName.endsWith('Modals') ||
+        cleanName.endsWith('Scheduler') ||
+        cleanName.endsWith('Builder')
       ) {
         continue;
       }

@@ -5,7 +5,7 @@ import { buildPvcInfoEmbed } from './pvcInfoUI.js';
 
 export default defineCommand({
   name: 'i',
-  aliases: ['pvc-info', 'info'],
+  aliases: ['pvc-info', 'pvcinfo'],
   module: 'pvc',
   description: 'Show info and control panel for your PVC',
   usage: 'i',

@@ -6,11 +6,11 @@ import { buildInfoV2Embed } from './infoUI.js';
 
 export default defineCommand({
   name: 'info',
-  aliases: ['botinfo', 'about', 'stats'],
+  aliases: ['botinfo', 'about'],
   module: 'general',
   description: 'Display comprehensive bot specs, system stats, and community telemetry.',
   usage: 'info',
-  examples: ['info', 'botinfo', 'stats'],
+  examples: ['info', 'botinfo'],
   permissions: [],
   botPermissions: [],
   cooldown: 3,

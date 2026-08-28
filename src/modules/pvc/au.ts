@@ -4,7 +4,7 @@ import { getSessionByOwner, addAccess } from './pvcService.js';
 
 export default defineCommand({
   name: 'au',
-  aliases: ['allow-user', 'permit'],
+  aliases: ['allow-user', 'allowuser', 'pvc-permit'],
   module: 'pvc',
   description: 'Allow users into your PVC',
   usage: 'au <@user1> [@user2]',
