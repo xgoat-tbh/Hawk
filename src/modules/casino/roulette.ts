@@ -3,6 +3,7 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { spin, parseBet, evaluateBet } from './rouletteEngine.js';
 import { buildRouletteEmbed } from './casinoUI.js';
+import { parseAmount } from '../economy/economyUtils.js';
 
 export default defineCommand({
   name: 'roulette',
@@ -10,7 +11,7 @@ export default defineCommand({
   module: 'casino',
   description: 'Play a game of European single-zero roulette',
   usage: 'roulette <bet> <bet_type>',
-  examples: ['roulette 100 red', 'roulette 50 17', 'roulette 200 even'],
+  examples: ['roulette 100 red', 'roulette 1e6 red', 'roulette 50k 17'],
   permissions: [],
   botPermissions: [],
   cooldown: 5,
@@ -23,9 +24,9 @@ export default defineCommand({
       return;
     }
     
-    const bet = parseInt(betStr, 10);
-    if (isNaN(bet) || bet <= 0) {
-      await ctx.respond.error('Invalid bet amount.');
+    const bet = parseAmount(betStr);
+    if (!bet || bet <= 0) {
+      await ctx.respond.error('Invalid bet amount (e.g. `100`, `1e6`, `50k`).');
       return;
     }
     

@@ -1,9 +1,10 @@
-﻿import { PermissionsBitField } from 'discord.js';
+import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
 import { setBankCapacity, setGuildDefaultBankCapacity } from './economyService.js';
 import { mentionUser } from '../../core/utils/formatters.js';
+import { parseAmount } from './economyUtils.js';
 
 export default defineCommand({
   name: 'set-bank-capacity',
@@ -29,11 +30,12 @@ export default defineCommand({
 
     let capacity = 0;
     if (capacityArg !== 'unlimited' && capacityArg !== 'infinite' && capacityArg !== 'none' && capacityArg !== '0') {
-      capacity = parseInt(capacityArg, 10);
-      if (isNaN(capacity) || capacity < 0) {
-        await respond.error('Please provide a valid positive capacity or "unlimited".');
+      const parsedCap = parseAmount(capacityArg);
+      if (parsedCap === null || parsedCap < 0) {
+        await respond.error('Please provide a valid positive capacity (e.g. `50000`, `1e6`, `1m`) or "unlimited".');
         return;
       }
+      capacity = parsedCap;
     }
 
     const capDisplay = capacity > 0 ? capacity.toLocaleString() : 'Unlimited';

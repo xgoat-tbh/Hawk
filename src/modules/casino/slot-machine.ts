@@ -3,6 +3,7 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { spinReels, evaluatePaylines, formatGrid } from './slotsEngine.js';
 import { buildSlotsEmbed } from './casinoUI.js';
+import { parseAmount } from '../economy/economyUtils.js';
 
 export default defineCommand({
   name: 'slot-machine',
@@ -10,7 +11,7 @@ export default defineCommand({
   module: 'casino',
   description: 'Play the slot machine',
   usage: 'slots <bet>',
-  examples: ['slots 100'],
+  examples: ['slots 100', 'slots 1e6', 'slots 50k'],
   permissions: [],
   botPermissions: [],
   cooldown: 3,
@@ -21,9 +22,9 @@ export default defineCommand({
       return;
     }
     
-    const bet = parseInt(betStr, 10);
-    if (isNaN(bet) || bet <= 0) {
-      await ctx.respond.error('Invalid bet amount.');
+    const bet = parseAmount(betStr);
+    if (!bet || bet <= 0) {
+      await ctx.respond.error('Invalid bet amount (e.g. `100`, `1e6`, `50k`).');
       return;
     }
     

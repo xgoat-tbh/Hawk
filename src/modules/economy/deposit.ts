@@ -3,13 +3,15 @@ import type { CommandContext } from '../../types/command.js';
 import { deposit, getBalance } from './economyService.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
 
+import { parseAmount } from './economyUtils.js';
+
 export default defineCommand({
   name: 'deposit',
   aliases: ['dep'],
   module: 'economy',
   description: 'Deposit cash into your bank',
   usage: 'deposit <amount|all>',
-  examples: ['deposit 100', 'deposit all'],
+  examples: ['deposit 100', 'deposit 1e6', 'deposit all'],
   permissions: [],
   botPermissions: [],
   cooldown: 3,
@@ -32,12 +34,12 @@ export default defineCommand({
         amount = balance.cash;
       }
     } else {
-      amount = parseInt(amountStr, 10);
-    }
-
-    if (isNaN(amount) || amount <= 0) {
-      await ctx.respond.error('Please provide a valid positive number.');
-      return;
+      const parsed = parseAmount(amountStr);
+      if (!parsed || parsed <= 0) {
+        await ctx.respond.error('Please provide a valid positive number (e.g. `1000`, `1e6`, `50k`, `all`).');
+        return;
+      }
+      amount = parsed;
     }
 
     if (amount > balance.cash) {

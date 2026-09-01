@@ -3,6 +3,7 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { generateRooster, simulateFight } from './cockfightEngine.js';
 import { buildCockfightEmbed } from './casinoUI.js';
+import { parseAmount } from '../economy/economyUtils.js';
 
 export default defineCommand({
   name: 'cock-fight',
@@ -10,7 +11,7 @@ export default defineCommand({
   module: 'casino',
   description: 'Bet on a stochastic combat between two roosters',
   usage: 'cock-fight <bet>',
-  examples: ['cockfight 100'],
+  examples: ['cockfight 100', 'cockfight 1e6', 'cockfight 50k'],
   permissions: [],
   botPermissions: [],
   cooldown: 5,
@@ -21,9 +22,9 @@ export default defineCommand({
       return;
     }
     
-    const bet = parseInt(betStr, 10);
-    if (isNaN(bet) || bet <= 0) {
-      await ctx.respond.error('Invalid bet amount.');
+    const bet = parseAmount(betStr);
+    if (!bet || bet <= 0) {
+      await ctx.respond.error('Invalid bet amount (e.g. `100`, `1e6`, `50k`).');
       return;
     }
     

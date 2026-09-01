@@ -4,6 +4,8 @@ import { casinoService } from './casinoService.js';
 import { createGame } from './blackjackEngine.js';
 import { buildBlackjackEmbed, buildBlackjackButtons } from './casinoUI.js';
 
+import { parseAmount } from '../economy/economyUtils.js';
+
 // In-memory store for active games, exported so module can access it
 export const activeBlackjackGames = new Map<string, any>();
 
@@ -23,7 +25,7 @@ export default defineCommand({
   module: 'casino',
   description: 'Play a game of Blackjack',
   usage: 'blackjack <bet>',
-  examples: ['blackjack 100'],
+  examples: ['blackjack 100', 'blackjack 1e6', 'blackjack 50k'],
   permissions: [],
   botPermissions: [],
   cooldown: 5,
@@ -34,9 +36,9 @@ export default defineCommand({
       return;
     }
     
-    const bet = parseInt(betStr, 10);
-    if (isNaN(bet) || bet <= 0) {
-      await ctx.respond.error('Invalid bet amount.');
+    const bet = parseAmount(betStr);
+    if (!bet || bet <= 0) {
+      await ctx.respond.error('Invalid bet amount (e.g. `100`, `1e6`, `50k`).');
       return;
     }
     

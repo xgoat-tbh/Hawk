@@ -2,6 +2,8 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { transferCash, getBalance, logAuditAction } from './economyService.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
+import { resolveUser } from '../../core/resolver/UserResolver.js';
+import { parseAmount } from './economyUtils.js';
 
 export default defineCommand({
   name: 'give-money',
@@ -9,28 +11,47 @@ export default defineCommand({
   module: 'economy',
   description: 'Give cash to another user',
   usage: 'give-money <@user> <amount>',
-  examples: ['give-money @User 100'],
+  examples: ['give-money @User 100', 'give-money @User 1e6', 'give-money @User 50k'],
   permissions: [],
   botPermissions: [],
   cooldown: 3,
   async execute(ctx: CommandContext): Promise<void> {
-    const mentionToken = ctx.parsed.tokens.find(t => t.type === 'mention_user');
-    if (!mentionToken || !mentionToken.value) {
-      await ctx.respond.error('Please mention a user to give money to.');
+    if (ctx.parsed.args.length < 2) {
+      await ctx.respond.error('Usage: `give-money <@user> <amount>`');
       return;
     }
+
+    let targetId: string | null = null;
+    let amountStr: string = '';
+
+    // Check if first argument is amount and second is user
+    const parsedAmount0 = parseAmount(ctx.parsed.args[0]);
+    if (parsedAmount0 !== null && ctx.parsed.args.length >= 2) {
+      const resolved = await resolveUser(ctx.parsed.args[1], ctx.guild);
+      if (resolved.success) {
+        targetId = resolved.value.id;
+        amountStr = ctx.parsed.args[0];
+      }
+    }
+
+    if (!targetId) {
+      const resolved = await resolveUser(ctx.parsed.args[0], ctx.guild);
+      if (!resolved.success) {
+        await ctx.respond.error(resolved.error);
+        return;
+      }
+      targetId = resolved.value.id;
+      amountStr = ctx.parsed.args[1];
+    }
     
-    const targetId = mentionToken.value;
     if (targetId === ctx.message.author.id) {
       await ctx.respond.error('You cannot give money to yourself.');
       return;
     }
 
-    const amountStr = ctx.parsed.args.find(arg => !arg.includes('<@'));
-    const amount = parseInt(amountStr || '', 10);
-
-    if (isNaN(amount) || amount <= 0) {
-      await ctx.respond.error('Please provide a valid positive amount.');
+    const amount = parseAmount(amountStr);
+    if (!amount || amount <= 0) {
+      await ctx.respond.error('Please provide a valid positive amount (e.g. `100`, `1e6`, `50k`).');
       return;
     }
 

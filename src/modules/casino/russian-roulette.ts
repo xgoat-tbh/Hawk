@@ -3,6 +3,7 @@ import type { CommandContext } from '../../types/command.js';
 import { casinoService } from './casinoService.js';
 import { createChamber, pullTrigger, calculatePayout } from './russianRouletteEngine.js';
 import { buildRussianRouletteEmbed } from './casinoUI.js';
+import { parseAmount } from '../economy/economyUtils.js';
 
 export default defineCommand({
   name: 'russian-roulette',
@@ -10,7 +11,7 @@ export default defineCommand({
   module: 'casino',
   description: 'Play a dangerous game of Russian Roulette',
   usage: 'russian-roulette <bet> [bullets]',
-  examples: ['rr 100', 'rr 50 2'],
+  examples: ['rr 100', 'rr 1e6', 'rr 50k 2'],
   permissions: [],
   botPermissions: [],
   cooldown: 5,
@@ -21,9 +22,9 @@ export default defineCommand({
       return;
     }
     
-    const bet = parseInt(betStr, 10);
-    if (isNaN(bet) || bet <= 0) {
-      await ctx.respond.error('Invalid bet amount.');
+    const bet = parseAmount(betStr);
+    if (!bet || bet <= 0) {
+      await ctx.respond.error('Invalid bet amount (e.g. `100`, `1e6`, `50k`).');
       return;
     }
     
