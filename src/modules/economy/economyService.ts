@@ -33,7 +33,7 @@ function mapBalance(row: Record<string, unknown>): Balance {
   return {
     cash: Number(row.cash ?? 0),
     bank: Number(row.bank ?? 0),
-    bankCapacity: Number(row.bank_capacity ?? 10000),
+    bankCapacity: Number(row.bank_capacity ?? 0),
     workLast: row.work_last ? new Date(row.work_last as string) : null,
     slutLast: row.slut_last ? new Date(row.slut_last as string) : null,
     crimeLast: row.crime_last ? new Date(row.crime_last as string) : null,
@@ -50,7 +50,7 @@ export async function getBalance(guildId: string, userId: string): Promise<Balan
     SELECT * FROM economy_balances WHERE guild_id = ${guildId} AND user_id = ${userId}
   `;
   if (rows.length === 0) {
-    return { cash: 0, bank: 0, bankCapacity: 10000, workLast: null, slutLast: null, crimeLast: null, robLast: null, passiveLast: null };
+    return { cash: 0, bank: 0, bankCapacity: 0, workLast: null, slutLast: null, crimeLast: null, robLast: null, passiveLast: null };
   }
   return mapBalance(rows[0]);
 }
@@ -61,7 +61,7 @@ export async function ensureBalance(guildId: string, userId: string): Promise<Ba
 
   const rows = await db`
     INSERT INTO economy_balances (guild_id, user_id, cash, bank_capacity)
-    VALUES (${guildId}, ${userId}, ${config.startBalance}, ${10000})
+    VALUES (${guildId}, ${userId}, ${config.startBalance}, 0)
     ON CONFLICT (guild_id, user_id) DO NOTHING
     RETURNING *
   `;
@@ -102,10 +102,13 @@ export async function addBank(guildId: string, userId: string, amount: number): 
   const db = getDb();
   await db.begin(async (tx) => {
     await tx`
-      INSERT INTO economy_balances (guild_id, user_id, bank)
-      VALUES (${guildId}, ${userId}, ${amount})
+      INSERT INTO economy_balances (guild_id, user_id, bank, bank_capacity)
+      VALUES (${guildId}, ${userId}, ${amount}, 0)
       ON CONFLICT (guild_id, user_id)
-      DO UPDATE SET bank = LEAST(economy_balances.bank + ${amount}, economy_balances.bank_capacity), updated_at = NOW()
+      DO UPDATE SET bank = CASE 
+        WHEN economy_balances.bank_capacity > 0 THEN LEAST(economy_balances.bank + ${amount}, economy_balances.bank_capacity)
+        ELSE economy_balances.bank + ${amount}
+      END, updated_at = NOW()
     `;
   });
 }
@@ -138,7 +141,7 @@ export async function deposit(guildId: string, userId: string, amount: number): 
     const bank = Number(bal.bank);
     const cap = Number(bal.bank_capacity);
 
-    const maxDeposit = Math.min(amount, cash, cap - bank);
+    const maxDeposit = cap > 0 ? Math.min(amount, cash, Math.max(0, cap - bank)) : Math.min(amount, cash);
     if (maxDeposit <= 0) throw new Error('Nothing to deposit');
 
     await tx`
@@ -322,10 +325,13 @@ export async function addMoneyToRole(
         `;
       } else {
         await tx`
-          INSERT INTO economy_balances (guild_id, user_id, bank)
-          VALUES (${guildId}, ${userId}, ${Math.max(0, amount)})
+          INSERT INTO economy_balances (guild_id, user_id, bank, bank_capacity)
+          VALUES (${guildId}, ${userId}, ${Math.max(0, amount)}, 0)
           ON CONFLICT (guild_id, user_id)
-          DO UPDATE SET bank = GREATEST(0, LEAST(economy_balances.bank + ${amount}, economy_balances.bank_capacity)), updated_at = NOW()
+          DO UPDATE SET bank = CASE
+            WHEN economy_balances.bank_capacity > 0 THEN GREATEST(0, LEAST(economy_balances.bank + ${amount}, economy_balances.bank_capacity))
+            ELSE GREATEST(0, economy_balances.bank + ${amount})
+          END, updated_at = NOW()
         `;
       }
       updated++;
@@ -396,6 +402,28 @@ export async function getAuditLog(
   };
 }
 
+export async function setBankCapacity(guildId: string, userId: string, capacity: number): Promise<void> {
+  const db = getDb();
+  await db`
+    INSERT INTO economy_balances (guild_id, user_id, bank_capacity)
+    VALUES (${guildId}, ${userId}, ${Math.max(0, capacity)})
+    ON CONFLICT (guild_id, user_id)
+    DO UPDATE SET bank_capacity = ${Math.max(0, capacity)}, updated_at = NOW()
+  `;
+}
+
+export async function setGuildDefaultBankCapacity(guildId: string, capacity: number): Promise<number> {
+  const db = getDb();
+  const rows = await db`
+    UPDATE economy_balances
+    SET bank_capacity = ${Math.max(0, capacity)}, updated_at = NOW()
+    WHERE guild_id = ${guildId}
+    RETURNING user_id
+  `;
+  return rows.length;
+}
+
 export function formatCurrency(amount: number, symbol: string): string {
   return `${symbol} ${amount.toLocaleString()}`;
 }
+

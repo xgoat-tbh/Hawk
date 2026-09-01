@@ -5,12 +5,16 @@ import type { Balance, LeaderboardEntry } from './economyService.js';
 
 export function buildBalanceEmbed(member: GuildMember, balance: Balance, currencySymbol: string): EmbedBuilder {
   const netWorth = balance.cash + balance.bank;
+  const bankDisplay = balance.bankCapacity > 0
+    ? `${currencySymbol}${balance.bank.toLocaleString()} / ${balance.bankCapacity.toLocaleString()}`
+    : `${currencySymbol}${balance.bank.toLocaleString()}`;
+
   return new EmbedBuilder()
     .setColor(branding.defaultColor)
     .setAuthor({ name: `${member.user.username}'s Balance`, iconURL: member.user.displayAvatarURL() })
     .addFields(
       { name: 'Cash', value: `${currencySymbol}${balance.cash.toLocaleString()}`, inline: true },
-      { name: 'Bank', value: `${currencySymbol}${balance.bank.toLocaleString()} / ${balance.bankCapacity.toLocaleString()}`, inline: true },
+      { name: 'Bank', value: bankDisplay, inline: true },
       { name: 'Net Worth', value: `${currencySymbol}${netWorth.toLocaleString()}`, inline: true }
     );
 }

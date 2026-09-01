@@ -17,32 +17,44 @@ export default defineCommand({
     const amountStr = ctx.parsed.args[0]?.toLowerCase();
     if (!amountStr) {
       await ctx.respond.error('Please specify an amount to deposit or "all".');
+      return;
     }
 
     const config = await getEconomyConfig(ctx.guild.id);
     const balance = await getBalance(ctx.guild.id, ctx.message.author.id);
     
     let amount = 0;
-    if (amountStr === 'all') {
-      const space = balance.bankCapacity - balance.bank;
-      amount = Math.min(balance.cash, space);
+    if (amountStr === 'all' || amountStr === 'max') {
+      if (balance.bankCapacity > 0) {
+        const space = Math.max(0, balance.bankCapacity - balance.bank);
+        amount = Math.min(balance.cash, space);
+      } else {
+        amount = balance.cash;
+      }
     } else {
       amount = parseInt(amountStr, 10);
     }
 
     if (isNaN(amount) || amount <= 0) {
       await ctx.respond.error('Please provide a valid positive number.');
+      return;
     }
 
     if (amount > balance.cash) {
       await ctx.respond.error('You do not have that much cash.');
+      return;
     }
 
-    if (balance.bank + amount > balance.bankCapacity) {
+    if (balance.bankCapacity > 0 && balance.bank + amount > balance.bankCapacity) {
       await ctx.respond.error('Your bank cannot hold that much.');
+      return;
     }
 
-    await deposit(ctx.guild.id, ctx.message.author.id, amount);
-    await ctx.respond.success(`Successfully deposited **${config.currencySymbol}${amount.toLocaleString()}** into your bank.`);
+    try {
+      const { deposited } = await deposit(ctx.guild.id, ctx.message.author.id, amount);
+      await ctx.respond.success(`Successfully deposited **${config.currencySymbol}${deposited.toLocaleString()}** into your bank.`);
+    } catch (err: any) {
+      await ctx.respond.error(err.message || 'Failed to deposit.');
+    }
   },
 });
