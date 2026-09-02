@@ -17,10 +17,12 @@ export async function startWebDashboard(): Promise<void> {
     return;
   }
 
-  const isDev = process.env.NODE_ENV !== 'production';
+  const hasProductionBuild = fs.existsSync(path.join(webDir, '.next', 'BUILD_ID')) || fs.existsSync(path.join(webDir, '.next', 'server'));
+  const isDev = process.env.NODE_ENV !== 'production' || !hasNextProductionBuild(webDir);
 
   try {
-    consoleLog('info', 'dashboard', `Initializing Next.js Dashboard on port ${port} (mode: ${isDev ? 'development' : 'production'})...`);
+    const modeLabel = hasProductionBuild ? (process.env.NODE_ENV === 'production' ? 'production' : 'development') : 'on-the-fly';
+    consoleLog('info', 'dashboard', `Initializing Next.js Dashboard on port ${port} (mode: ${modeLabel})...`);
     
     // Dynamically import next to support ESM & CJS runtimes seamlessly
     const nextModule = await import('next');
@@ -45,6 +47,15 @@ export async function startWebDashboard(): Promise<void> {
     consoleLog('warning', 'dashboard', `Failed to initialize dashboard server: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
+
+function hasNextProductionBuild(webDir: string): boolean {
+  try {
+    return fs.existsSync(path.join(webDir, '.next', 'BUILD_ID')) || fs.existsSync(path.join(webDir, '.next', 'server'));
+  } catch {
+    return false;
+  }
+}
+
 
 export function stopWebDashboard(): void {
   if (webServer) {
