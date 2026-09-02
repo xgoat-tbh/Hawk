@@ -96,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: `👋 **Welcome System Test** (Triggered by <@${session.id}> via Web Dashboard)\n\n${description}`,
+          content: description,
           allowed_mentions: { parse: [] }, // Prevent accidental mass pings
         }),
       });
@@ -156,7 +156,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        content: `👋 **Welcome System Live Test** (Triggered by <@${session.id}> via Web Dashboard)`,
         embeds: [discordEmbed],
         allowed_mentions: { parse: [] }, // Prevent accidental mass pings
       }),

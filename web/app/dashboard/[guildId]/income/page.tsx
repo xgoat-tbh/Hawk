@@ -1,42 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { Briefcase, Plus, Trash2, Coins, Shield, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function IncomeRolesPage() {
   const { guildId } = useParams() as { guildId: string };
+  const { roles, config, refreshData } = useGuildData();
 
-  const [loading, setLoading] = useState(true);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [incomeRoles, setIncomeRoles] = useState<any[]>([]);
-  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const incomeRoles = config?.incomeRoles || [];
+  const currencySymbol = config?.economy?.currency_symbol || '$';
 
   const [newRoleId, setNewRoleId] = useState<string | null>(null);
   const [newAmount, setNewAmount] = useState('500');
   const [isAdding, setIsAdding] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  async function loadData() {
-    try {
-      const res = await fetch(`/api/guilds/${guildId}`);
-      const data = await res.json();
-      setRoles(data.roles || []);
-      setIncomeRoles(data.config?.incomeRoles || []);
-      setCurrencySymbol(data.config?.economy?.currency_symbol || '$');
-    } catch (err) {
-      console.error('Failed to load income roles:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, [guildId]);
 
   const handleAddRole = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +48,7 @@ export default function IncomeRolesPage() {
       setNewRoleId(null);
       setNewAmount('500');
       setActionSuccess('Role income reward configured.');
-      await loadData();
+      await refreshData();
     } catch (err: any) {
       setActionError(err.message || 'Error adding income role');
     } finally {
@@ -85,15 +66,11 @@ export default function IncomeRolesPage() {
           data: { role_id: roleId },
         }),
       });
-      await loadData();
+      await refreshData();
     } catch (err) {
       console.error('Failed to delete income role:', err);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Role Salaries" subtitle="Fetching periodic income assignments mapped to Discord roles..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">
@@ -182,7 +159,7 @@ export default function IncomeRolesPage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {incomeRoles.map((item) => {
+              {incomeRoles.map((item: any) => {
                 const targetRole = roles.find((r) => r.id === item.role_id);
                 return (
                   <div

@@ -4,14 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { MessageSquare, Lightbulb, Lock } from 'lucide-react';
 
 export default function CommunitySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-
-  const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
+  const { channels, config, updateConfigLocally } = useGuildData();
 
   // Suggestion State
   const [sugSubmission, setSugSubmission] = useState<string | null>(null);
@@ -27,33 +25,21 @@ export default function CommunitySettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(`/api/guilds/${guildId}`);
-        const data = await res.json();
-        if (data.config) {
-          const sug = data.config.suggestion || {};
-          const conf = data.config.confession || {};
+    if (config) {
+      const sug = config.suggestion || {};
+      const conf = config.confession || {};
 
-          setSugSubmission(sug.submission_channel_id || null);
-          setConfSubmission(conf.submission_channel_id || null);
-          setConfLog(conf.log_channel_id || null);
+      setSugSubmission(sug.submission_channel_id || null);
+      setConfSubmission(conf.submission_channel_id || null);
+      setConfLog(conf.log_channel_id || null);
 
-          setOriginal({
-            sugSubmission: sug.submission_channel_id || null,
-            confSubmission: conf.submission_channel_id || null,
-            confLog: conf.log_channel_id || null,
-          });
-        }
-        setChannels(data.channels || []);
-      } catch (err) {
-        console.error('Failed to load community config:', err);
-      } finally {
-        setLoading(false);
-      }
+      setOriginal({
+        sugSubmission: sug.submission_channel_id || null,
+        confSubmission: conf.submission_channel_id || null,
+        confLog: conf.log_channel_id || null,
+      });
     }
-    loadData();
-  }, [guildId]);
+  }, [config]);
 
   const hasChanges =
     original &&
@@ -74,20 +60,22 @@ export default function CommunitySettingsPage() {
     setSaveSuccess(false);
 
     try {
+      const payload = {
+        suggestion: {
+          submission_channel_id: sugSubmission,
+        },
+        confession: {
+          submission_channel_id: confSubmission,
+          log_channel_id: confLog,
+        },
+      };
+
       const res = await fetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           module: 'community',
-          data: {
-            suggestion: {
-              submission_channel_id: sugSubmission,
-            },
-            confession: {
-              submission_channel_id: confSubmission,
-              log_channel_id: confLog,
-            },
-          },
+          data: payload,
         }),
       });
 
@@ -95,6 +83,9 @@ export default function CommunitySettingsPage() {
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to save');
       }
+
+      updateConfigLocally('suggestion', payload.suggestion);
+      updateConfigLocally('confession', payload.confession);
 
       setOriginal({
         sugSubmission,
@@ -109,10 +100,6 @@ export default function CommunitySettingsPage() {
       setIsSaving(false);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Community Tools" subtitle="Fetching suggestion boards and confession channels..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">

@@ -5,15 +5,12 @@ import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { RoleSelect } from '@/components/RoleSelect';
 import { SaveBar } from '@/components/SaveBar';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { Sliders, Shield, Terminal, FileText } from 'lucide-react';
 
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-
-  const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
+  const { channels, roles, config, updateConfigLocally } = useGuildData();
 
   // Form State
   const [prefix, setPrefix] = useState('!');
@@ -28,34 +25,21 @@ export default function GeneralSettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(`/api/guilds/${guildId}`);
-        const data = await res.json();
-        if (data.config?.general) {
-          const gen = data.config.general;
-          setPrefix(gen.prefix || '!');
-          setLogChannelId(gen.log_channel_id || null);
-          setAuditChannelId(gen.audit_channel_id || null);
-          setBotCommanderRoleId(gen.bot_commander_role_id || null);
+    if (config?.general) {
+      const gen = config.general;
+      setPrefix(gen.prefix || '!');
+      setLogChannelId(gen.log_channel_id || null);
+      setAuditChannelId(gen.audit_channel_id || null);
+      setBotCommanderRoleId(gen.bot_commander_role_id || null);
 
-          setOriginal({
-            prefix: gen.prefix || '!',
-            logChannelId: gen.log_channel_id || null,
-            auditChannelId: gen.audit_channel_id || null,
-            botCommanderRoleId: gen.bot_commander_role_id || null,
-          });
-        }
-        setChannels(data.channels || []);
-        setRoles(data.roles || []);
-      } catch (err) {
-        console.error('Failed to load general config:', err);
-      } finally {
-        setLoading(false);
-      }
+      setOriginal({
+        prefix: gen.prefix || '!',
+        logChannelId: gen.log_channel_id || null,
+        auditChannelId: gen.audit_channel_id || null,
+        botCommanderRoleId: gen.bot_commander_role_id || null,
+      });
     }
-    loadData();
-  }, [guildId]);
+  }, [config]);
 
   const hasChanges =
     original &&
@@ -78,17 +62,19 @@ export default function GeneralSettingsPage() {
     setSaveSuccess(false);
 
     try {
+      const payload = {
+        prefix,
+        log_channel_id: logChannelId,
+        audit_channel_id: auditChannelId,
+        bot_commander_role_id: botCommanderRoleId,
+      };
+
       const res = await fetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           module: 'general',
-          data: {
-            prefix,
-            log_channel_id: logChannelId,
-            audit_channel_id: auditChannelId,
-            bot_commander_role_id: botCommanderRoleId,
-          },
+          data: payload,
         }),
       });
 
@@ -97,6 +83,7 @@ export default function GeneralSettingsPage() {
         throw new Error(errData.error || 'Failed to save');
       }
 
+      updateConfigLocally('general', payload);
       setOriginal({
         prefix,
         logChannelId,
@@ -111,10 +98,6 @@ export default function GeneralSettingsPage() {
       setIsSaving(false);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading General Settings" subtitle="Fetching Discord roles, channels, and prefix settings..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">

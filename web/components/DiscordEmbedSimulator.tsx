@@ -12,6 +12,8 @@ interface DiscordEmbedSimulatorProps {
   footerText?: string | null;
   serverName?: string;
   memberCount?: number;
+  botName?: string;
+  botAvatarUrl?: string | null;
 }
 
 export function DiscordEmbedSimulator({
@@ -24,6 +26,8 @@ export function DiscordEmbedSimulator({
   footerText = 'Member #{server.count}',
   serverName = 'Discord Server',
   memberCount = 1250,
+  botName = 'Hawk',
+  botAvatarUrl,
 }: DiscordEmbedSimulatorProps) {
   const currentServer = serverName || 'Discord Server';
 
@@ -123,9 +127,12 @@ export function DiscordEmbedSimulator({
         {/* Bot Avatar */}
         <div className="w-10 h-10 rounded-full bg-[#1e1f22] flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden ring-1 ring-white/10">
           <img
-            src="https://cdn.discordapp.com/embed/avatars/0.png"
-            alt="Hawk Avatar"
+            src={botAvatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png'}
+            alt={`${botName} Avatar`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+            }}
           />
         </div>
 
@@ -133,7 +140,7 @@ export function DiscordEmbedSimulator({
           {/* Header Info */}
           <div className="flex items-center gap-1.5 leading-none">
             <span className="font-medium text-white text-sm hover:underline cursor-pointer">
-              Hawk
+              {botName}
             </span>
             <span className="bg-white/20 text-white text-[9px] font-bold px-1 py-0.5 rounded-[3px] uppercase tracking-wider flex items-center gap-0.5">
               <span>✓</span>

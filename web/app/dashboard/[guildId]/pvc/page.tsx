@@ -4,14 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { Radio, Clock, LayoutTemplate, Loader2, Plus, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function PvcSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-
-  const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
+  const { channels, config, updateConfigLocally, refreshData } = useGuildData();
 
   // Form State
   const [pvcHourlyRate, setPvcHourlyRate] = useState(100);
@@ -45,10 +43,8 @@ export default function PvcSettingsPage() {
       setPvcCategoryId(data.categoryId);
       setPvcJtcChannelId(data.jtcChannelId);
 
-      // Refresh channels list
-      const gRes = await fetch(`/api/guilds/${guildId}`);
-      const gData = await gRes.json();
-      if (gData.channels) setChannels(gData.channels);
+      // Refresh channels from Discord
+      await refreshData();
 
       setAutoCreateStatus('Private Voice Category & Join-to-Create voice channel created.');
       setTimeout(() => setAutoCreateStatus(null), 5000);
@@ -61,36 +57,24 @@ export default function PvcSettingsPage() {
   };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(`/api/guilds/${guildId}`);
-        const data = await res.json();
-        if (data.config?.economy) {
-          const eco = data.config.economy;
-          setPvcHourlyRate(Number(eco.pvc_hourly_rate) || 100);
-          setPvcJtcChannelId(eco.pvc_jtc_channel_id || null);
-          setPvcCategoryId(eco.pvc_category_id || null);
-          setPvcCommandChannelId(eco.pvc_command_channel_id || null);
-          setPvcPanelChannelId(eco.pvc_panel_channel_id || null);
-          setCurrencySymbol(eco.currency_symbol || '$');
+    if (config?.economy) {
+      const eco = config.economy;
+      setPvcHourlyRate(Number(eco.pvc_hourly_rate) || 100);
+      setPvcJtcChannelId(eco.pvc_jtc_channel_id || null);
+      setPvcCategoryId(eco.pvc_category_id || null);
+      setPvcCommandChannelId(eco.pvc_command_channel_id || null);
+      setPvcPanelChannelId(eco.pvc_panel_channel_id || null);
+      setCurrencySymbol(eco.currency_symbol || '$');
 
-          setOriginal({
-            pvcHourlyRate: Number(eco.pvc_hourly_rate) || 100,
-            pvcJtcChannelId: eco.pvc_jtc_channel_id || null,
-            pvcCategoryId: eco.pvc_category_id || null,
-            pvcCommandChannelId: eco.pvc_command_channel_id || null,
-            pvcPanelChannelId: eco.pvc_panel_channel_id || null,
-          });
-        }
-        setChannels(data.channels || []);
-      } catch (err) {
-        console.error('Failed to load PVC config:', err);
-      } finally {
-        setLoading(false);
-      }
+      setOriginal({
+        pvcHourlyRate: Number(eco.pvc_hourly_rate) || 100,
+        pvcJtcChannelId: eco.pvc_jtc_channel_id || null,
+        pvcCategoryId: eco.pvc_category_id || null,
+        pvcCommandChannelId: eco.pvc_command_channel_id || null,
+        pvcPanelChannelId: eco.pvc_panel_channel_id || null,
+      });
     }
-    loadData();
-  }, [guildId]);
+  }, [config]);
 
   const hasChanges =
     original &&
@@ -115,18 +99,20 @@ export default function PvcSettingsPage() {
     setSaveSuccess(false);
 
     try {
+      const payload = {
+        pvc_hourly_rate: pvcHourlyRate,
+        pvc_jtc_channel_id: pvcJtcChannelId,
+        pvc_category_id: pvcCategoryId,
+        pvc_command_channel_id: pvcCommandChannelId,
+        pvc_panel_channel_id: pvcPanelChannelId,
+      };
+
       const res = await fetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           module: 'pvc',
-          data: {
-            pvc_hourly_rate: pvcHourlyRate,
-            pvc_jtc_channel_id: pvcJtcChannelId,
-            pvc_category_id: pvcCategoryId,
-            pvc_command_channel_id: pvcCommandChannelId,
-            pvc_panel_channel_id: pvcPanelChannelId,
-          },
+          data: payload,
         }),
       });
 
@@ -134,6 +120,11 @@ export default function PvcSettingsPage() {
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to save');
       }
+
+      updateConfigLocally('economy', {
+        ...(config?.economy || {}),
+        ...payload,
+      });
 
       setOriginal({
         pvcHourlyRate,
@@ -150,10 +141,6 @@ export default function PvcSettingsPage() {
       setIsSaving(false);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Private Voice Settings" subtitle="Fetching voice categories, rental rates, and Join-to-Create hubs..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">

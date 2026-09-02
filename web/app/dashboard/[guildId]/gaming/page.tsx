@@ -1,20 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
 import { ChannelSelect } from '@/components/ChannelSelect';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { Gamepad2, Plus, Trash2, Clock, Volume2, Shield, Radio, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function GamingSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const { channels, roles, config, refreshData, updateConfigLocally } = useGuildData();
 
-  const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [gamePings, setGamePings] = useState<any[]>([]);
-  const [testChannelId, setTestChannelId] = useState<string | null>(null);
+  const gamePings = config?.gamePings || [];
+  const testChannelId = config?.gameTestChannel || null;
 
   // New Trigger Form State
   const [newIdentifier, setNewIdentifier] = useState('');
@@ -26,25 +24,6 @@ export default function GamingSettingsPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  async function loadData() {
-    try {
-      const res = await fetch(`/api/guilds/${guildId}`);
-      const data = await res.json();
-      setChannels(data.channels || []);
-      setRoles(data.roles || []);
-      setGamePings(data.config?.gamePings || []);
-      setTestChannelId(data.config?.gameTestChannel || null);
-    } catch (err) {
-      console.error('Failed to load gaming config:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, [guildId]);
 
   const handleAddTrigger = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +60,7 @@ export default function GamingSettingsPage() {
       setNewVcId(null);
       setNewCooldown('1200');
       setActionSuccess('Gaming LFG trigger created successfully.');
-      await loadData();
+      await refreshData();
     } catch (err: any) {
       setActionError(err.message || 'Error creating trigger');
     } finally {
@@ -99,14 +78,14 @@ export default function GamingSettingsPage() {
           data: { identifier },
         }),
       });
-      await loadData();
+      await refreshData();
     } catch (err) {
       console.error('Failed to delete trigger:', err);
     }
   };
 
   const handleSaveTestChannel = async (channelId: string | null) => {
-    setTestChannelId(channelId);
+    updateConfigLocally('gameTestChannel', channelId);
     try {
       await fetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
@@ -120,10 +99,6 @@ export default function GamingSettingsPage() {
       console.error('Failed to save gaming test channel:', err);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Gaming LFG Settings" subtitle="Fetching gaming voice pings and notification channels..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">
@@ -273,7 +248,7 @@ export default function GamingSettingsPage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {gamePings.map((ping) => {
+              {gamePings.map((ping: any) => {
                 const targetRole = roles.find((r) => r.id === ping.role_id);
                 const targetVc = channels.find((c) => c.id === ping.vc_id);
                 return (

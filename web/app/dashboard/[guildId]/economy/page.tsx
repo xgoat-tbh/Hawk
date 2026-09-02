@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { SaveBar } from '@/components/SaveBar';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { Coins, Flame, MessageSquareText } from 'lucide-react';
 
 export default function EconomySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-
-  const [loading, setLoading] = useState(true);
+  const { config, updateConfigLocally } = useGuildData();
 
   // Form State
   const [currencySymbol, setCurrencySymbol] = useState('$');
@@ -26,36 +25,25 @@ export default function EconomySettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(`/api/guilds/${guildId}`);
-        const data = await res.json();
-        if (data.config?.economy) {
-          const eco = data.config.economy;
-          setCurrencySymbol(eco.currency_symbol || '$');
-          setStartBalance(Number(eco.start_balance) || 0);
-          setDailyRewardAmount(Number(eco.daily_reward_amount) || 1000);
-          setDailyStreakBonus(Number(eco.daily_streak_bonus) || 100);
-          setPassiveIncome(Boolean(eco.passive_income));
-          setPassiveAmount(Number(eco.passive_amount) || 10);
+    if (config?.economy) {
+      const eco = config.economy;
+      setCurrencySymbol(eco.currency_symbol || '$');
+      setStartBalance(Number(eco.start_balance) || 0);
+      setDailyRewardAmount(Number(eco.daily_reward_amount) || 1000);
+      setDailyStreakBonus(Number(eco.daily_streak_bonus) || 100);
+      setPassiveIncome(Boolean(eco.passive_income));
+      setPassiveAmount(Number(eco.passive_amount) || 10);
 
-          setOriginal({
-            currencySymbol: eco.currency_symbol || '$',
-            startBalance: Number(eco.start_balance) || 0,
-            dailyRewardAmount: Number(eco.daily_reward_amount) || 1000,
-            dailyStreakBonus: Number(eco.daily_streak_bonus) || 100,
-            passiveIncome: Boolean(eco.passive_income),
-            passiveAmount: Number(eco.passive_amount) || 10,
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load economy config:', err);
-      } finally {
-        setLoading(false);
-      }
+      setOriginal({
+        currencySymbol: eco.currency_symbol || '$',
+        startBalance: Number(eco.start_balance) || 0,
+        dailyRewardAmount: Number(eco.daily_reward_amount) || 1000,
+        dailyStreakBonus: Number(eco.daily_streak_bonus) || 100,
+        passiveIncome: Boolean(eco.passive_income),
+        passiveAmount: Number(eco.passive_amount) || 10,
+      });
     }
-    loadData();
-  }, [guildId]);
+  }, [config]);
 
   const hasChanges =
     original &&
@@ -82,19 +70,21 @@ export default function EconomySettingsPage() {
     setSaveSuccess(false);
 
     try {
+      const payload = {
+        currency_symbol: currencySymbol,
+        start_balance: startBalance,
+        daily_reward_amount: dailyRewardAmount,
+        daily_streak_bonus: dailyStreakBonus,
+        passive_income: passiveIncome,
+        passive_amount: passiveAmount,
+      };
+
       const res = await fetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           module: 'economy',
-          data: {
-            currency_symbol: currencySymbol,
-            start_balance: startBalance,
-            daily_reward_amount: dailyRewardAmount,
-            daily_streak_bonus: dailyStreakBonus,
-            passive_income: passiveIncome,
-            passive_amount: passiveAmount,
-          },
+          data: payload,
         }),
       });
 
@@ -102,6 +92,11 @@ export default function EconomySettingsPage() {
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to save');
       }
+
+      updateConfigLocally('economy', {
+        ...(config?.economy || {}),
+        ...payload,
+      });
 
       setOriginal({
         currencySymbol,
@@ -119,10 +114,6 @@ export default function EconomySettingsPage() {
       setIsSaving(false);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Economy Configuration" subtitle="Fetching currency balances, streak rewards, and passive payout settings..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">

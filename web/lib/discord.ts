@@ -321,3 +321,53 @@ export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild
     return [];
   }
 }
+
+export async function fetchBotProfile(
+  guildId?: string,
+): Promise<{ id: string; name: string; avatarUrl: string | null; username: string }> {
+  const cacheKey = `bot_profile_${guildId || 'global'}`;
+  const cached = getFromCache<{ id: string; name: string; avatarUrl: string | null; username: string }>(cacheKey, 60_000);
+  if (cached) return cached;
+
+  const token = getBotToken();
+  if (!token) {
+    return { id: 'bot', name: 'Hawk', avatarUrl: null, username: 'Hawk' };
+  }
+
+  try {
+    const meRes = await fetch('https://discord.com/api/v10/users/@me', {
+      headers: { Authorization: `Bot ${token}` },
+    });
+    if (!meRes.ok) throw new Error('Failed to fetch bot user');
+    const me = await meRes.json();
+
+    let name = me.username;
+    let avatar = me.avatar;
+
+    if (guildId) {
+      try {
+        const memberRes = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/@me`, {
+          headers: { Authorization: `Bot ${token}` },
+        });
+        if (memberRes.ok) {
+          const member = await memberRes.json();
+          if (member.nick) name = member.nick;
+          if (member.avatar) avatar = member.avatar;
+        }
+      } catch {
+        // Fallback to global profile
+      }
+    }
+
+    const avatarUrl = avatar
+      ? `https://cdn.discordapp.com/avatars/${me.id}/${avatar}.png?size=128`
+      : 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+    const result = { id: me.id, name, avatarUrl, username: me.username };
+    setToCache(cacheKey, result);
+    return result;
+  } catch (err) {
+    console.error('Error fetching bot profile:', err);
+    return { id: 'bot', name: 'Hawk', avatarUrl: null, username: 'Hawk' };
+  }
+}

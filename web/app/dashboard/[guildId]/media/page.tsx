@@ -1,41 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { Image as ImageIcon, Plus, Trash2, Hash, MessageSquare, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function MediaChannelsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const { channels, config, refreshData, updateConfigLocally } = useGuildData();
 
-  const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [mediaChannels, setMediaChannels] = useState<any[]>([]);
-  const [autoThread, setAutoThread] = useState(true);
+  const mediaChannels = config?.mediaChannels || [];
+  const autoThread = config?.mediaAutoThread ?? true;
 
   const [newChannelId, setNewChannelId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  async function loadData() {
-    try {
-      const res = await fetch(`/api/guilds/${guildId}`);
-      const data = await res.json();
-      setChannels(data.channels || []);
-      setMediaChannels(data.config?.mediaChannels || []);
-      setAutoThread(data.config?.mediaAutoThread ?? true);
-    } catch (err) {
-      console.error('Failed to load media channels:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, [guildId]);
 
   const handleAddMediaChannel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +43,7 @@ export default function MediaChannelsPage() {
 
       setNewChannelId(null);
       setActionSuccess('Channel designated as media-only.');
-      await loadData();
+      await refreshData();
     } catch (err: any) {
       setActionError(err.message || 'Error configuring media channel');
     } finally {
@@ -80,14 +61,14 @@ export default function MediaChannelsPage() {
           data: { channel_id: channelId },
         }),
       });
-      await loadData();
+      await refreshData();
     } catch (err) {
       console.error('Failed to remove media channel:', err);
     }
   };
 
   const handleToggleAutoThread = async (val: boolean) => {
-    setAutoThread(val);
+    updateConfigLocally('mediaAutoThread', val);
     try {
       await fetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
@@ -103,10 +84,6 @@ export default function MediaChannelsPage() {
       console.error('Failed to update auto-thread:', err);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Media Channels" subtitle="Fetching media-only filters and auto-thread settings..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">
@@ -208,7 +185,7 @@ export default function MediaChannelsPage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {mediaChannels.map((item) => {
+              {mediaChannels.map((item: any) => {
                 const targetChannel = channels.find((c) => c.id === item.channel_id);
                 return (
                   <div

@@ -3,16 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
-import { SyncLoader } from '@/components/SyncLoader';
+import { useGuildData } from '@/context/GuildContext';
 import { ShoppingBag, Plus, Trash2, Tag, Loader2, Shield, AlertCircle } from 'lucide-react';
 
 export default function StoreSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const { roles, config, refreshData } = useGuildData();
 
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const items = config?.storeItems || [];
+  const currencySymbol = config?.economy?.currency_symbol || '$';
 
   // New Item Form
   const [itemName, setItemName] = useState('');
@@ -21,24 +20,6 @@ export default function StoreSettingsPage() {
   const [itemRoleId, setItemRoleId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-
-  async function loadData() {
-    try {
-      const res = await fetch(`/api/guilds/${guildId}`);
-      const data = await res.json();
-      setItems(data.config?.storeItems || []);
-      setRoles(data.roles || []);
-      setCurrencySymbol(data.config?.economy?.currency_symbol || '$');
-    } catch (err) {
-      console.error('Failed to load store data:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, [guildId]);
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +52,7 @@ export default function StoreSettingsPage() {
       setItemPrice(5000);
       setItemDesc('');
       setItemRoleId(null);
-      await loadData();
+      await refreshData();
     } catch (err: any) {
       setAddError(err.message || 'Error creating item.');
     } finally {
@@ -89,15 +70,11 @@ export default function StoreSettingsPage() {
           data: { item_id: itemId },
         }),
       });
-      await loadData();
+      await refreshData();
     } catch (err) {
       console.error('Failed to delete item:', err);
     }
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Server Store" subtitle="Fetching shop items, role associations, and price listings..." />;
-  }
 
   return (
     <div className="space-y-6 pb-20">
@@ -206,7 +183,7 @@ export default function StoreSettingsPage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {items.map((item) => {
+              {items.map((item: any) => {
                 const grantedRole = roles.find((r) => r.id === item.inventory_role_id);
                 return (
                   <div

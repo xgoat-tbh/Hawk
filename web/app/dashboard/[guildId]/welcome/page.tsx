@@ -5,17 +5,13 @@ import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { EmojiPicker } from '@/components/EmojiPicker';
 import { SaveBar } from '@/components/SaveBar';
-import { SyncLoader } from '@/components/SyncLoader';
 import { DiscordEmbedSimulator } from '@/components/DiscordEmbedSimulator';
+import { useGuildData } from '@/context/GuildContext';
 import { Sparkles, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function WelcomeEmbedPage() {
   const { guildId } = useParams() as { guildId: string };
-
-  const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [emojis, setEmojis] = useState<any[]>([]);
-  const [guildName, setGuildName] = useState('Discord Server');
+  const { guild, bot, channels, emojis, config, updateConfigLocally } = useGuildData();
 
   // Form State
   const [enabled, setEnabled] = useState(false);
@@ -78,47 +74,32 @@ export default function WelcomeEmbedPage() {
   };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(`/api/guilds/${guildId}`);
-        const data = await res.json();
-        if (data.guild?.name) setGuildName(data.guild.name);
-        setChannels(data.channels || []);
-        setEmojis(data.emojis || []);
+    if (config?.welcome) {
+      const cfg = config.welcome.config || {};
+      const emb = config.welcome.embed || {};
 
-        if (data.config?.welcome) {
-          const cfg = data.config.welcome.config || {};
-          const emb = data.config.welcome.embed || {};
+      setEnabled(Boolean(cfg.enabled));
+      setChannelId(cfg.channel_id || null);
+      setTitle(emb.title || 'Welcome to {server}!');
+      setDescription(emb.description || 'Hey {user}, welcome to the server! Make sure to check out the rules.');
+      setColor(emb.color || '#ffffff');
+      setImageUrl(emb.image_url || '');
+      setThumbnailUrl(emb.thumbnail_url || '{user.avatar}');
+      setFooterText(emb.footer_text || 'Member #{server.count}');
 
-          setEnabled(Boolean(cfg.enabled));
-          setChannelId(cfg.channel_id || null);
-          setTitle(emb.title || 'Welcome to {server}!');
-          setDescription(emb.description || 'Hey {user}, welcome to the server! Make sure to check out the rules.');
-          setColor(emb.color || '#ffffff');
-          setImageUrl(emb.image_url || '');
-          setThumbnailUrl(emb.thumbnail_url || '{user.avatar}');
-          setFooterText(emb.footer_text || 'Member #{server.count}');
-
-          setOriginal({
-            enabled: Boolean(cfg.enabled),
-            channelId: cfg.channel_id || null,
-            isEmbed: true,
-            title: emb.title || 'Welcome to {server}!',
-            description: emb.description || 'Hey {user}, welcome to the server! Make sure to check out the rules.',
-            color: emb.color || '#ffffff',
-            imageUrl: emb.image_url || '',
-            thumbnailUrl: emb.thumbnail_url || '{user.avatar}',
-            footerText: emb.footer_text || 'Member #{server.count}',
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load welcome config:', err);
-      } finally {
-        setLoading(false);
-      }
+      setOriginal({
+        enabled: Boolean(cfg.enabled),
+        channelId: cfg.channel_id || null,
+        isEmbed: true,
+        title: emb.title || 'Welcome to {server}!',
+        description: emb.description || 'Hey {user}, welcome to the server! Make sure to check out the rules.',
+        color: emb.color || '#ffffff',
+        imageUrl: emb.image_url || '',
+        thumbnailUrl: emb.thumbnail_url || '{user.avatar}',
+        footerText: emb.footer_text || 'Member #{server.count}',
+      });
     }
-    loadData();
-  }, [guildId]);
+  }, [config]);
 
   const hasChanges =
     original &&
@@ -151,33 +132,36 @@ export default function WelcomeEmbedPage() {
     setSaveSuccess(false);
 
     try {
+      const payload = {
+        is_embed: isEmbed,
+        plain_content: description,
+        config: {
+          enabled,
+          channel_id: channelId,
+        },
+        embed: {
+          title,
+          description,
+          color,
+          image_url: imageUrl || null,
+          thumbnail_url: thumbnailUrl || null,
+          footer_text: footerText || null,
+        },
+      };
+
       const res = await fetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           module: 'welcome',
-          data: {
-            is_embed: isEmbed,
-            plain_content: description,
-            config: {
-              enabled,
-              channel_id: channelId,
-            },
-            embed: {
-              title,
-              description,
-              color,
-              image_url: imageUrl || null,
-              thumbnail_url: thumbnailUrl || null,
-              footer_text: footerText || null,
-            },
-          },
+          data: payload,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save settings');
 
+      updateConfigLocally('welcome', payload);
       setSaveSuccess(true);
       setOriginal({
         enabled,
@@ -205,10 +189,6 @@ export default function WelcomeEmbedPage() {
   const insertEmoji = (emojiCode: string) => {
     setDescription((prev) => `${prev} ${emojiCode}`);
   };
-
-  if (loading) {
-    return <SyncLoader title="Loading Welcome Settings" subtitle="Fetching channel configurations and embed presets..." />;
-  }
 
   const variables = [
     { label: '{user}', desc: 'Mention user' },
@@ -499,7 +479,9 @@ export default function WelcomeEmbedPage() {
             imageUrl={imageUrl}
             thumbnailUrl={thumbnailUrl}
             footerText={footerText}
-            serverName={guildName}
+            serverName={guild?.name || 'Discord Server'}
+            botName={bot?.name || 'Hawk'}
+            botAvatarUrl={bot?.avatarUrl}
           />
         </div>
       </div>
