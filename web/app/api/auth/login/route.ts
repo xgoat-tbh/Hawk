@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { isAuthorizedUser, createToken, isBotOwner, isBotAdmin, COOKIE_NAME } from '@/lib/auth';
 
 const BOT_TOKEN = process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
-const ADMIN_PASSCODE = process.env.DASHBOARD_PASSCODE || process.env.ADMIN_KEY || process.env.JWT_SECRET || '';
+const ADMIN_PASSCODE = process.env.DASHBOARD_PASSCODE || process.env.ADMIN_KEY || '';
 
 // In-memory rate limiting map for login attempts: ip -> { count, lastAttempt }
 const loginAttempts = new Map<string, { count: number; lockUntil: number }>();
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid User ID format. Discord Snowflake IDs are 17-20 digits.' }, { status: 400 });
     }
 
-    // Require passcode if ADMIN_PASSCODE is configured or in production
+    // Require passcode if DASHBOARD_PASSCODE or ADMIN_KEY is configured
     if (ADMIN_PASSCODE) {
       if (!passcode || passcode !== ADMIN_PASSCODE) {
         const count = (attemptInfo?.count || 0) + 1;
@@ -45,14 +45,6 @@ export async function POST(req: NextRequest) {
           { status: 401 }
         );
       }
-    }
-
-    const authorized = await isAuthorizedUser(cleanId);
-    if (!authorized) {
-      return NextResponse.json(
-        { error: 'Access Denied: Your Discord User ID is not authorized to access this private dashboard.' },
-        { status: 403 }
-      );
     }
 
     // Reset failed attempts upon successful authentication
@@ -97,7 +89,7 @@ export async function POST(req: NextRequest) {
 
     res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: isHttps || process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',

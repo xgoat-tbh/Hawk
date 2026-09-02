@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
 
   res.cookies.set(COOKIE_NAME, sessionToken, {
     httpOnly: true,
-    secure: isHttps || process.env.NODE_ENV === 'production',
+    secure: isHttps,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',

@@ -4,13 +4,7 @@ import { cookies } from 'next/headers';
 import { db } from './db';
 import { fetchGuildDetails, fetchGuildMember, fetchGuildRoles } from './discord';
 
-// Ensure a strong random secret if none is configured in environment
-const globalAuth = globalThis as unknown as { __hawk_jwt_secret?: string };
-if (!process.env.JWT_SECRET && !globalAuth.__hawk_jwt_secret) {
-  globalAuth.__hawk_jwt_secret = crypto.randomBytes(48).toString('hex');
-}
-
-const JWT_SECRET = process.env.JWT_SECRET || globalAuth.__hawk_jwt_secret || 'hawk-production-secret-override';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.BOT_TOKEN || 'hawk-production-secret-override-2026';
 export const COOKIE_NAME = 'hawk_session';
 
 export interface UserSession {
