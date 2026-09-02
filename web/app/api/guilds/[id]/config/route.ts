@@ -15,13 +15,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     switch (module) {
       case 'general': {
         const { prefix, log_channel_id, audit_channel_id, bot_commander_role_id } = data;
+
+        // 1. Update guild_config
         await db`
-          INSERT INTO guild_config (guild_id, prefix, log_channel_id, audit_channel_id, bot_commander_role_id)
-          VALUES (${guildId}, ${prefix || '!'}, ${log_channel_id || null}, ${audit_channel_id || null}, ${bot_commander_role_id || null})
+          INSERT INTO guild_config (guild_id, prefix, log_channel_id)
+          VALUES (${guildId}, ${prefix || '!'}, ${log_channel_id || null})
           ON CONFLICT (guild_id)
           DO UPDATE SET
             prefix = EXCLUDED.prefix,
             log_channel_id = EXCLUDED.log_channel_id,
+            updated_at = NOW()
+        `;
+
+        // 2. Update economy_config for commander role and audit channel
+        await db`
+          INSERT INTO economy_config (guild_id, audit_channel_id, bot_commander_role_id)
+          VALUES (${guildId}, ${audit_channel_id || null}, ${bot_commander_role_id || null})
+          ON CONFLICT (guild_id)
+          DO UPDATE SET
             audit_channel_id = EXCLUDED.audit_channel_id,
             bot_commander_role_id = EXCLUDED.bot_commander_role_id,
             updated_at = NOW()
@@ -103,99 +114,67 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       case 'welcome': {
         const { config, embed } = data;
-        await db.begin(async (tx) => {
-          await tx`
-            INSERT INTO welcome_config (guild_id, channel_id, enabled)
-            VALUES (${guildId}, ${config.channel_id || null}, ${Boolean(config.enabled)})
-            ON CONFLICT (guild_id)
-            DO UPDATE SET
-              channel_id = EXCLUDED.channel_id,
-              enabled = EXCLUDED.enabled,
-              updated_at = NOW()
-          `;
 
-          await tx`
-            INSERT INTO welcome_embeds (
-              guild_id,
-              title,
-              description,
-              color,
-              image_url,
-              thumbnail_url,
-              footer_text
-            )
-            VALUES (
-              ${guildId},
-              ${embed.title || null},
-              ${embed.description || null},
-              ${embed.color || '#5865F2'},
-              ${embed.image_url || null},
-              ${embed.thumbnail_url || null},
-              ${embed.footer_text || null}
-            )
-            ON CONFLICT (guild_id)
-            DO UPDATE SET
-              title = EXCLUDED.title,
-              description = EXCLUDED.description,
-              color = EXCLUDED.color,
-              image_url = EXCLUDED.image_url,
-              thumbnail_url = EXCLUDED.thumbnail_url,
-              footer_text = EXCLUDED.footer_text,
-              updated_at = NOW()
-          `;
-        });
+        // Convert hex color to integer for Discord embed compatibility
+        let embedColorInt = 5793266;
+        if (embed.color) {
+          const hex = embed.color.replace('#', '');
+          const parsed = parseInt(hex, 16);
+          if (!isNaN(parsed)) embedColorInt = parsed;
+        }
+
+        const greetPayloadObj = {
+          embeds: [
+            {
+              title: embed.title || 'Welcome to {server}!',
+              description: embed.description || 'Hey {user}, welcome! Check out the rules.',
+              color: embedColorInt,
+              image: embed.image_url ? { url: embed.image_url } : undefined,
+              thumbnail: embed.thumbnail_url ? { url: embed.thumbnail_url } : undefined,
+              footer: embed.footer_text ? { text: embed.footer_text } : undefined,
+            },
+          ],
+        };
+
+        const channelId = config.enabled ? config.channel_id : null;
+        const payloadStr = JSON.stringify(greetPayloadObj);
+
+        await db`
+          INSERT INTO welcome_configs (guild_id, greet_channel_id, greet_payload)
+          VALUES (${guildId}, ${channelId}, ${payloadStr})
+          ON CONFLICT (guild_id)
+          DO UPDATE SET
+            greet_channel_id = EXCLUDED.greet_channel_id,
+            greet_payload = EXCLUDED.greet_payload,
+            updated_at = NOW()
+        `;
         break;
       }
 
       case 'community': {
         const { suggestion, confession } = data;
-        await db.begin(async (tx) => {
-          if (suggestion) {
-            await tx`
-              INSERT INTO suggestion_config (
-                guild_id,
-                submission_channel_id,
-                review_channel_id,
-                approved_channel_id,
-                denied_channel_id
-              )
-              VALUES (
-                ${guildId},
-                ${suggestion.submission_channel_id || null},
-                ${suggestion.review_channel_id || null},
-                ${suggestion.approved_channel_id || null},
-                ${suggestion.denied_channel_id || null}
-              )
-              ON CONFLICT (guild_id)
-              DO UPDATE SET
-                submission_channel_id = EXCLUDED.submission_channel_id,
-                review_channel_id = EXCLUDED.review_channel_id,
-                approved_channel_id = EXCLUDED.approved_channel_id,
-                denied_channel_id = EXCLUDED.denied_channel_id,
-                updated_at = NOW()
-            `;
-          }
+        if (suggestion?.submission_channel_id) {
+          await db`
+            INSERT INTO suggestion_configs (guild_id, channel_id)
+            VALUES (${guildId}, ${suggestion.submission_channel_id})
+            ON CONFLICT (guild_id)
+            DO UPDATE SET
+              channel_id = EXCLUDED.channel_id,
+              updated_at = NOW()
+          `;
+        }
 
-          if (confession) {
-            await tx`
-              INSERT INTO confession_config (
-                guild_id,
-                submission_channel_id,
-                log_channel_id
-              )
-              VALUES (
-                ${guildId},
-                ${confession.submission_channel_id || null},
-                ${confession.log_channel_id || null}
-              )
-              ON CONFLICT (guild_id)
-              DO UPDATE SET
-                submission_channel_id = EXCLUDED.submission_channel_id,
-                log_channel_id = EXCLUDED.log_channel_id,
-                updated_at = NOW()
-            `;
-          }
-        });
+        if (confession?.submission_channel_id) {
+          await db`
+            INSERT INTO confession_configs (guild_id, channel_id, log_channel_id)
+            VALUES (${guildId}, ${confession.submission_channel_id}, ${confession.log_channel_id || null})
+            ON CONFLICT (guild_id)
+            DO UPDATE SET
+              channel_id = EXCLUDED.channel_id,
+              log_channel_id = EXCLUDED.log_channel_id,
+              updated_at = NOW()
+          `;
+        }
         break;
       }
 
