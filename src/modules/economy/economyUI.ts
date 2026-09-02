@@ -88,3 +88,8 @@ export function buildLeaderboardPayload(
   });
 }
 
+// Backwards compatibility aliases
+export const buildBalanceEmbed = buildBalancePayload;
+export const buildLeaderboardEmbed = buildLeaderboardPayload;
+
+

@@ -1,5 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, stat, rm } from 'node:fs/promises';
+import path, { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { ModuleManifest } from '../../types/module.js';
 import { consoleLog } from '../logging/ConsoleLogger.js';
@@ -27,6 +27,17 @@ export async function loadModuleManifests(modulesDir: string, enabledModules?: s
     const modulePath = join(modulesDir, dir);
     const dirStat = await stat(modulePath).catch(() => null);
     if (!dirStat?.isDirectory()) continue;
+
+    // If running in dist/ and src/ exists, verify that the module folder exists in src/
+    if (modulePath.includes(`${path.sep}dist${path.sep}`) || modulePath.includes('/dist/')) {
+      const srcDir = modulePath.replace(/([/\\])dist([/\\])/, '$1src$2');
+      const srcDirExists = await stat(srcDir).then(s => s.isDirectory()).catch(() => false);
+      if (!srcDirExists) {
+        // Orphaned module directory from a deleted module (e.g. casino)
+        await rm(modulePath, { recursive: true, force: true }).catch(() => {});
+        continue;
+      }
+    }
 
     // Check for _module.ts or _module.js
     const manifestTs = join(modulePath, '_module.ts');

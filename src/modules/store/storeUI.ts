@@ -105,4 +105,10 @@ export function buildInventoryPayload(
   });
 }
 
+// Backwards compatibility aliases
+export const buildInventoryEmbed = buildInventoryPayload;
+export const buildStoreEmbed = buildStorePayload;
+export const buildItemInfoEmbed = buildItemInfoPayload;
+
+
 

@@ -1,5 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, stat, unlink } from 'node:fs/promises';
+import path, { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { CommandDefinition } from '../../types/command.js';
 import { registerCommand } from './CommandRegistry.js';
@@ -41,6 +41,8 @@ export async function loadCommands(modulesDir: string, enabledModules?: string[]
       if (
         file.startsWith('_') ||
         cleanName.endsWith('UI') ||
+        cleanName.endsWith('Utils') ||
+        cleanName.endsWith('Util') ||
         cleanName.endsWith('Handler') ||
         cleanName.endsWith('Manager') ||
         cleanName.endsWith('Evaluator') ||
@@ -60,6 +62,17 @@ export async function loadCommands(modulesDir: string, enabledModules?: string[]
       }
 
       const filePath = join(modulePath, file);
+
+      // If running from dist/ and src/ exists, verify that the corresponding .ts source still exists
+      if (filePath.includes(`${path.sep}dist${path.sep}`) || filePath.includes('/dist/')) {
+        const srcPath = filePath.replace(/([/\\])dist([/\\])/, '$1src$2').replace(/\.js$/, '.ts');
+        const srcExists = await stat(srcPath).then(s => s.isFile()).catch(() => false);
+        if (!srcExists) {
+          // Orphaned compiled file from a deleted command - clean it up and skip
+          await unlink(filePath).catch(() => {});
+          continue;
+        }
+      }
       try {
         const fileUrl = pathToFileURL(filePath).href;
         const imported = (await import(fileUrl)) as { default?: CommandDefinition | CommandDefinition[] };
