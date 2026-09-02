@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Shield, LogOut, LayoutDashboard, Menu } from 'lucide-react';
+import { Shield, LogOut, LayoutDashboard, Menu, Search } from 'lucide-react';
 
 interface NavbarProps {
   user?: {
@@ -11,16 +11,24 @@ interface NavbarProps {
     id: string;
   } | null;
   onMobileMenuToggle?: () => void;
+  onOpenCommandPalette?: () => void;
   guildName?: string;
+  botStatus?: 'operational' | 'warning' | 'degraded';
 }
 
-export function Navbar({ user, onMobileMenuToggle, guildName }: NavbarProps) {
+export function Navbar({
+  user,
+  onMobileMenuToggle,
+  onOpenCommandPalette,
+  guildName,
+  botStatus: _botStatus = 'operational',
+}: NavbarProps) {
   const avatarUrl = user?.avatar
     ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
     : 'https://cdn.discordapp.com/embed/avatars/0.png';
 
   return (
-    <header className="h-14 border-b border-white/[0.07] bg-[#070709]/85 backdrop-blur-xl sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between">
+    <header className="h-14 border-b border-white/[0.07] bg-[#070709]/90 backdrop-blur-xl sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between shrink-0 select-none">
       <div className="flex items-center gap-3 md:gap-4">
         {onMobileMenuToggle && (
           <button
@@ -41,7 +49,7 @@ export function Navbar({ user, onMobileMenuToggle, guildName }: NavbarProps) {
               Hawk
             </span>
             <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.06]">
-              Dashboard
+              Ops
             </span>
           </div>
         </Link>
@@ -50,11 +58,28 @@ export function Navbar({ user, onMobileMenuToggle, guildName }: NavbarProps) {
           <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-white/[0.08] text-xs">
             <span className="text-white/30">/</span>
             <span className="text-white/80 font-medium truncate max-w-[180px]">{guildName}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-1" title="Bot Connected" />
           </div>
         )}
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Command Palette Trigger */}
+        {onOpenCommandPalette && (
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.07] text-white/40 hover:text-white text-xs transition-colors"
+            title="Open Command Palette (Ctrl+K)"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-sans">Quick Search...</span>
+            <kbd className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/[0.06] border border-white/[0.08] text-white/50 ml-1">
+              ⌘K
+            </kbd>
+          </button>
+        )}
+
         {user && (
           <div className="flex items-center gap-2.5">
             <Link

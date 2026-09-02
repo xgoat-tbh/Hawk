@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAuthorizedUser, createToken, isBotOwner, isBotAdmin, COOKIE_NAME } from '@/lib/auth';
+import { createToken, isBotOwner, isBotAdmin, COOKIE_NAME } from '@/lib/auth';
 
 const BOT_TOKEN = process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
 const ADMIN_PASSCODE = process.env.DASHBOARD_PASSCODE || process.env.ADMIN_KEY || '';

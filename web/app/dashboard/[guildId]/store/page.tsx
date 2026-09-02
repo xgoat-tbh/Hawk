@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useGuildData } from '@/context/GuildContext';
-import { ShoppingBag, Plus, Trash2, Tag, Loader2, Shield, AlertCircle } from 'lucide-react';
+import { ShoppingBag, Plus, Trash2, Loader2, Shield, AlertCircle } from 'lucide-react';
 
 export default function StoreSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -90,140 +91,146 @@ export default function StoreSettingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left: Add Item Form (5 cols) */}
-        <div className="lg:col-span-5 glass-card p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Plus className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Create Store Item</h3>
-              <p className="text-[11px] text-white/40">Add items or role purchases to the server shop.</p>
-            </div>
-          </div>
+      {addError && (
+        <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{addError}</span>
+        </div>
+      )}
 
-          {addError && (
-            <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{addError}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleAddItem} className="space-y-3 pt-1">
-            <div className="space-y-1">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Item Name</label>
-              <input
-                type="text"
-                required
-                maxLength={100}
-                value={itemName}
-                onChange={(e) => setItemName(e.target.value)}
-                placeholder="e.g. VIP Role, Custom Color"
-                className="glass-input font-sans text-xs"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Price ({currencySymbol})</label>
-              <input
-                type="number"
-                required
-                min={1}
-                value={itemPrice}
-                onChange={(e) => setItemPrice(parseInt(e.target.value, 10) || 1)}
-                className="glass-input font-mono text-xs"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Description (Optional)</label>
-              <input
-                type="text"
-                maxLength={255}
-                value={itemDesc}
-                onChange={(e) => setItemDesc(e.target.value)}
-                placeholder="e.g. Unlocks access to exclusive channels"
-                className="glass-input font-sans text-xs"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Granted Discord Role (Optional)</label>
-              <RoleSelect
-                roles={roles}
-                value={itemRoleId}
-                onChange={setItemRoleId}
-                placeholder="Select role to grant on buy..."
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isAdding}
-              className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
-            >
-              {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              <span>Add to Shop</span>
-            </button>
-          </form>
+      {/* Add Item Form Bar */}
+      <form
+        onSubmit={handleAddItem}
+        className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
+      >
+        <div className="sm:col-span-3 space-y-1">
+          <label className="text-[10px] font-mono uppercase text-white/40">Item Name</label>
+          <input
+            type="text"
+            required
+            maxLength={100}
+            placeholder="VIP Role, Custom Color"
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+            className="glass-input font-sans text-xs"
+          />
         </div>
 
-        {/* Right: Existing Items List (7 cols) */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
-              Active Catalog Items ({items.length})
-            </span>
-          </div>
+        <div className="sm:col-span-2 space-y-1">
+          <label className="text-[10px] font-mono uppercase text-white/40">Price ({currencySymbol})</label>
+          <input
+            type="number"
+            required
+            min={1}
+            value={itemPrice}
+            onChange={(e) => setItemPrice(parseInt(e.target.value, 10) || 1)}
+            className="glass-input font-mono text-xs"
+          />
+        </div>
 
-          {items.length === 0 ? (
-            <div className="glass-card p-10 text-center text-xs text-white/30">
-              No store items configured yet. Use the form on the left to add your first item.
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {items.map((item: any) => {
-                const grantedRole = roles.find((r) => r.id === item.inventory_role_id);
-                return (
-                  <div
-                    key={item.item_id}
-                    className="glass-card p-4 flex items-center justify-between gap-4 group"
-                  >
-                    <div className="space-y-1 overflow-hidden">
-                      <div className="flex items-center gap-2">
-                        <Tag className="w-3.5 h-3.5 text-white/50 shrink-0" />
-                        <span className="font-medium text-xs text-white truncate">{item.name}</span>
-                        <span className="font-mono text-xs text-white/80 bg-white/[0.04] border border-white/[0.08] px-2 py-0.5 rounded">
+        <div className="sm:col-span-3 space-y-1">
+          <label className="text-[10px] font-mono uppercase text-white/40">Description (Optional)</label>
+          <input
+            type="text"
+            maxLength={255}
+            placeholder="Access to VIP perks"
+            value={itemDesc}
+            onChange={(e) => setItemDesc(e.target.value)}
+            className="glass-input font-sans text-xs"
+          />
+        </div>
+
+        <div className="sm:col-span-3 space-y-1">
+          <label className="text-[10px] font-mono uppercase text-white/40">Grant Role (Optional)</label>
+          <RoleSelect
+            roles={roles}
+            value={itemRoleId}
+            onChange={setItemRoleId}
+            placeholder="Select role..."
+          />
+        </div>
+
+        <div className="sm:col-span-1">
+          <button
+            type="submit"
+            disabled={isAdding}
+            className="btn-primary w-full py-2 flex items-center justify-center gap-1 text-xs shrink-0"
+          >
+            {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </form>
+
+      {/* Store Items Data Table (with Independent Internal Scroll) */}
+      <div className="space-y-2">
+        <SectionHeader
+          title={`Active Catalog Items (${items.length})`}
+          description="Members can purchase these items using the !buy <item_id> command in chat."
+        />
+
+        <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-[#08080a]">
+          <div className="max-h-[55vh] overflow-y-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 z-10 bg-[#0d0d10] border-b border-white/[0.08] text-[10px] font-mono uppercase tracking-wider text-white/40">
+                <tr>
+                  <th className="py-3 px-4">Item ID</th>
+                  <th className="py-3 px-4">Item Name & Description</th>
+                  <th className="py-3 px-4">Price</th>
+                  <th className="py-3 px-4">Granted Discord Role</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-white/30 text-xs">
+                      No store items configured yet. Use the form above to add items to the shop.
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((item: any) => {
+                    const grantedRole = roles.find((r) => r.id === item.inventory_role_id);
+                    return (
+                      <tr key={item.item_id} className="hover:bg-white/[0.015] transition-colors">
+                        <td className="py-3 px-4 font-mono text-white/50">
+                          #{item.item_id}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-white">{item.name}</div>
+                          {item.description && (
+                            <div className="text-[11px] text-white/40 truncate max-w-sm">{item.description}</div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-medium text-white">
                           {currencySymbol}{item.price.toLocaleString()}
-                        </span>
-                      </div>
-
-                      {item.description && (
-                        <p className="text-[11px] text-white/40 truncate">{item.description}</p>
-                      )}
-
-                      {grantedRole && (
-                        <div className="flex items-center gap-1.5 text-[10px] text-white/60 pt-0.5">
-                          <Shield className="w-3 h-3 text-white/40" />
-                          <span>Grants @{grantedRole.name}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteItem(item.item_id)}
-                      className="btn-outline-danger p-2 shrink-0"
-                      title="Delete item"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {grantedRole ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-white/80 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
+                              <Shield className="w-3 h-3 text-white/40" />
+                              <span>@{grantedRole.name}</span>
+                            </span>
+                          ) : (
+                            <span className="text-white/20 font-mono text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteItem(item.item_id)}
+                            className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/[0.05] transition-colors"
+                            title="Delete item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

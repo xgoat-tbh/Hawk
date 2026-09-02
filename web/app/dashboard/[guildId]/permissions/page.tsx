@@ -1,375 +1,419 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { ChannelSelect } from '@/components/ChannelSelect';
-import { RoleSelect } from '@/components/RoleSelect';
+import React, { useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useGuildData } from '@/context/GuildContext';
-import { Lock, Plus, Trash2, Shield, EyeOff, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { PermissionMatrix } from '@/components/Permissions/PermissionMatrix';
+import { CommandAclDrawer } from '@/components/Permissions/CommandAclDrawer';
+import { RolePoliciesTable } from '@/components/Permissions/RolePoliciesTable';
+import { UserOverridesList } from '@/components/Permissions/UserOverridesList';
+import { AccessPreviewer } from '@/components/Permissions/AccessPreviewer';
+import { AuditLogTable } from '@/components/Permissions/AuditLogTable';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import {
+  Shield,
+  Lock,
+  Command,
+  Users,
+  User,
+  History,
+  Eye,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
+import {
+  PermissionProfile,
+  RolePolicy,
+  UserOverride,
+  CommandAcl,
+  DEFAULT_PRESET_PROFILES,
+} from '@/lib/permissions';
 
-export default function PermissionsSettingsPage() {
+export default function PermissionsMasterPage() {
   const { guildId } = useParams() as { guildId: string };
-  const { channels, roles, config, refreshData } = useGuildData();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'access';
 
-  const permits = config?.permits || [];
-  const ignored = config?.ignoredEntities || [];
+  const { roles } = useGuildData();
 
-  // Permit Form
-  const [permitCommand, setPermitCommand] = useState('');
-  const [permitRoleId, setPermitRoleId] = useState<string | null>(null);
-  const [isAddingPermit, setIsAddingPermit] = useState(false);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [profiles, setProfiles] = useState<PermissionProfile[]>(DEFAULT_PRESET_PROFILES);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('administrator');
+  const [rolePolicies, setRolePolicies] = useState<RolePolicy[]>([]);
+  const [userOverrides, setUserOverrides] = useState<UserOverride[]>([]);
+  const [commandAcls, setCommandAcls] = useState<CommandAcl[]>([]);
+  const [selectedCommandForAcl, setSelectedCommandForAcl] = useState<CommandAcl | null>(null);
 
-  // Ignore Form
-  const [ignoreType, setIgnoreType] = useState<'channel' | 'role'>('channel');
-  const [ignoreChannelId, setIgnoreChannelId] = useState<string | null>(null);
-  const [ignoreRoleId, setIgnoreRoleId] = useState<string | null>(null);
-  const [isAddingIgnore, setIsAddingIgnore] = useState(false);
+  const [commandSearch, setCommandSearch] = useState('');
+  const [commandFilter, setCommandFilter] = useState<'ALL' | 'OVERRIDDEN' | 'CRITICAL'>('ALL');
 
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleAddPermit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!permitCommand.trim() || !permitRoleId) {
-      setActionError('Please specify command name and role for permit.');
-      return;
+  // Fetch live permissions bundle
+  useEffect(() => {
+    async function loadPermissions() {
+      try {
+        const res = await fetch(`/api/guilds/${guildId}/permissions`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.profiles) setProfiles(data.profiles);
+          if (data.rolePolicies) setRolePolicies(data.rolePolicies);
+          if (data.userOverrides) setUserOverrides(data.userOverrides);
+          if (data.commandAcls) setCommandAcls(data.commandAcls);
+        }
+      } catch (err) {
+        console.error('Failed to load permissions:', err);
+      }
     }
+    loadPermissions();
+  }, [guildId]);
 
-    setIsAddingPermit(true);
-    setActionError(null);
-    setActionSuccess(null);
-
+  const handleSaveProfiles = async (updatedProfiles: PermissionProfile[]) => {
     try {
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      setProfiles(updatedProfiles);
+      await fetch(`/api/guilds/${guildId}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_profiles', data: { profiles: updatedProfiles } }),
+      });
+      setStatusMessage('Access profiles saved successfully.');
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error saving profiles');
+    }
+  };
+
+  const handleSaveRolePolicies = async (updated: RolePolicy[]) => {
+    try {
+      setRolePolicies(updated);
+      await fetch(`/api/guilds/${guildId}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_role_policies', data: { rolePolicies: updated } }),
+      });
+      setStatusMessage('Role policies updated.');
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error updating role policies');
+    }
+  };
+
+  const handleSaveUserOverrides = async (updated: UserOverride[]) => {
+    try {
+      setUserOverrides(updated);
+      await fetch(`/api/guilds/${guildId}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'save_user_overrides', data: { userOverrides: updated } }),
+      });
+      setStatusMessage('User overrides updated.');
+      setTimeout(() => setStatusMessage(null), 3000);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error updating user overrides');
+    }
+  };
+
+  const handleSaveCommandAcl = async (updated: CommandAcl) => {
+    try {
+      await fetch(`/api/guilds/${guildId}/permissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          module: 'permit_add',
+          action: 'save_command_acl',
           data: {
-            command_name: permitCommand.trim().toLowerCase(),
-            role_id: permitRoleId,
+            command: updated.command,
+            roleOverrides: updated.roleOverrides,
+            userOverrides: updated.userOverrides,
           },
         }),
       });
-
-      if (!res.ok) throw new Error('Failed to grant permit');
-
-      setPermitCommand('');
-      setPermitRoleId(null);
-      setActionSuccess('Command permit granted.');
-      await refreshData();
+      setCommandAcls((prev) =>
+        prev.map((c) => (c.command === updated.command ? updated : c))
+      );
+      setStatusMessage(`Command permit updated for !${updated.command}`);
+      setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      setActionError(err.message || 'Error granting permit');
-    } finally {
-      setIsAddingPermit(false);
+      setErrorMessage(err.message || 'Error updating command ACL');
     }
   };
 
-  const handleDeletePermit = async (commandName: string, roleId: string) => {
-    try {
-      await fetch(`/api/guilds/${guildId}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          module: 'permit_delete',
-          data: { command_name: commandName, role_id: roleId },
-        }),
-      });
-      await refreshData();
-    } catch (err) {
-      console.error('Failed to delete permit:', err);
+  const activeProfile =
+    profiles.find((p) => p.id === selectedProfileId) || profiles[0] || DEFAULT_PRESET_PROFILES[0];
+
+  const filteredCommands = commandAcls.filter((c) => {
+    const matchesSearch =
+      c.command.toLowerCase().includes(commandSearch.toLowerCase()) ||
+      c.description.toLowerCase().includes(commandSearch.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (commandFilter === 'OVERRIDDEN') {
+      return (c.roleOverrides?.length || 0) > 0 || (c.userOverrides?.length || 0) > 0;
     }
-  };
-
-  const handleAddIgnore = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const entityId = ignoreType === 'channel' ? ignoreChannelId : ignoreRoleId;
-    if (!entityId) {
-      setActionError(`Please select a ${ignoreType} to ignore.`);
-      return;
+    if (commandFilter === 'CRITICAL') {
+      return c.dangerLevel === 'CRITICAL' || c.dangerLevel === 'HIGH';
     }
-
-    setIsAddingIgnore(true);
-    setActionError(null);
-    setActionSuccess(null);
-
-    try {
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          module: 'ignore_add',
-          data: {
-            entity_type: ignoreType,
-            entity_id: entityId,
-          },
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to add ignore rule');
-
-      setIgnoreChannelId(null);
-      setIgnoreRoleId(null);
-      setActionSuccess(`${ignoreType === 'channel' ? 'Channel' : 'Role'} added to bot ignore list.`);
-      await refreshData();
-    } catch (err: any) {
-      setActionError(err.message || 'Error adding ignore rule');
-    } finally {
-      setIsAddingIgnore(false);
-    }
-  };
-
-  const handleDeleteIgnore = async (entityType: string, entityId: string) => {
-    try {
-      await fetch(`/api/guilds/${guildId}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          module: 'ignore_delete',
-          data: { entity_type: entityType, entity_id: entityId },
-        }),
-      });
-      await refreshData();
-    } catch (err) {
-      console.error('Failed to remove ignore rule:', err);
-    }
-  };
+    return true;
+  });
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
         <div>
           <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
             <Lock className="w-4 h-4 text-white/80" />
-            <span>Permissions & Ignore Rules</span>
+            <span>Permissions & Access Rules</span>
           </h1>
           <p className="text-xs text-white/40 mt-0.5">
-            Configure granular command permit overrides and global channel/role ignore rules.
+            Configure dashboard access profiles, Discord command ACL overrides, role policies, and audit logs.
           </p>
         </div>
       </div>
 
-      {actionSuccess && (
+      {statusMessage && (
         <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
-          <CheckCircle2 className="w-4 h-4 text-white" />
-          <span>{actionSuccess}</span>
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{statusMessage}</span>
         </div>
       )}
-      {actionError && (
+      {errorMessage && (
         <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
           <AlertCircle className="w-4 h-4 text-red-400" />
-          <span>{actionError}</span>
+          <span>{errorMessage}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Command Permits */}
-        <div className="space-y-4">
-          <div className="glass-card p-5 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-                <Shield className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-medium text-xs text-white uppercase tracking-wider">Grant Command Permit</h3>
-                <p className="text-[11px] text-white/40">Allow specific roles to execute protected commands.</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleAddPermit} className="space-y-3 pt-1">
-              <div className="space-y-1">
-                <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Command Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. ban, kick, clear, additem"
-                  value={permitCommand}
-                  onChange={(e) => setPermitCommand(e.target.value)}
-                  className="glass-input font-mono text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Authorized Role</label>
-                <RoleSelect
-                  roles={roles}
-                  value={permitRoleId}
-                  onChange={setPermitRoleId}
-                  placeholder="Select authorized role..."
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isAddingPermit}
-                className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
-              >
-                {isAddingPermit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                <span>Grant Permit</span>
-              </button>
-            </form>
-          </div>
-
-          {/* Active Permits List */}
-          <div className="space-y-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
-              Active Command Permits ({permits.length})
-            </span>
-
-            {permits.length === 0 ? (
-              <div className="glass-card p-6 text-center text-xs text-white/30">
-                No custom command permits configured.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {permits.map((p: any) => {
-                  const targetRole = roles.find((r) => r.id === p.role_id);
-                  return (
-                    <div
-                      key={`${p.command_name}-${p.role_id}`}
-                      className="glass-card p-3.5 flex items-center justify-between gap-3 group"
-                    >
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="font-mono text-xs text-white bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">
-                          !{p.command_name}
-                        </span>
-                        <span className="text-xs text-white/60 truncate">
-                          @{targetRole?.name || `Role ${p.role_id}`}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePermit(p.command_name, p.role_id)}
-                        className="btn-outline-danger p-1.5 shrink-0"
-                        title="Revoke permit"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Ignored Entities */}
-        <div className="space-y-4">
-          <div className="glass-card p-5 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-                <EyeOff className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="font-medium text-xs text-white uppercase tracking-wider">Add Ignore Rule</h3>
-                <p className="text-[11px] text-white/40">Completely silence the bot in specific channels or for roles.</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleAddIgnore} className="space-y-3 pt-1">
-              <div className="flex items-center gap-2 bg-[#050507] p-1 rounded-lg border border-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => setIgnoreType('channel')}
-                  className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${
-                    ignoreType === 'channel' ? 'bg-white text-black' : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  Ignore Channel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIgnoreType('role')}
-                  className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${
-                    ignoreType === 'role' ? 'bg-white text-black' : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  Ignore Role
-                </button>
-              </div>
-
-              {ignoreType === 'channel' ? (
-                <div className="space-y-1">
-                  <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Channel to Ignore</label>
-                  <ChannelSelect
-                    channels={channels}
-                    value={ignoreChannelId}
-                    onChange={setIgnoreChannelId}
-                    placeholder="Select text channel..."
-                    allowedTypes={[0, 5]}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Role to Ignore</label>
-                  <RoleSelect
-                    roles={roles}
-                    value={ignoreRoleId}
-                    onChange={setIgnoreRoleId}
-                    placeholder="Select role to silence..."
-                  />
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isAddingIgnore}
-                className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
-              >
-                {isAddingIgnore ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                <span>Add to Ignore List</span>
-              </button>
-            </form>
-          </div>
-
-          {/* Active Ignore Rules List */}
-          <div className="space-y-2">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
-              Active Ignore Rules ({ignored.length})
-            </span>
-
-            {ignored.length === 0 ? (
-              <div className="glass-card p-6 text-center text-xs text-white/30">
-                No channels or roles are currently ignored.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {ignored.map((item: any) => {
-                  const targetChannel = channels.find((c) => c.id === item.entity_id);
-                  const targetRole = roles.find((r) => r.id === item.entity_id);
-                  return (
-                    <div
-                      key={`${item.entity_type}-${item.entity_id}`}
-                      className="glass-card p-3.5 flex items-center justify-between gap-3 group"
-                    >
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-white/40 bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06]">
-                          {item.entity_type}
-                        </span>
-                        <span className="text-xs text-white truncate">
-                          {item.entity_type === 'channel'
-                            ? `#${targetChannel?.name || `Channel ${item.entity_id}`}`
-                            : `@${targetRole?.name || `Role ${item.entity_id}`}`}
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteIgnore(item.entity_type, item.entity_id)}
-                        className="btn-outline-danger p-1.5 shrink-0"
-                        title="Remove ignore rule"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Tabs Navigation */}
+      <div className="flex items-center gap-1 border-b border-white/[0.08] overflow-x-auto pb-px">
+        {[
+          { id: 'access', label: 'Dashboard Access', icon: Shield },
+          { id: 'commands', label: 'Command Permissions', icon: Command },
+          { id: 'roles', label: 'Role Policies', icon: Users },
+          { id: 'users', label: 'User Overrides', icon: User },
+          { id: 'preview', label: 'Access Preview', icon: Eye },
+          { id: 'audit', label: 'Audit Log', icon: History },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+                isActive
+                  ? 'border-white text-white font-semibold'
+                  : 'border-transparent text-white/50 hover:text-white hover:border-white/20'
+              }`}
+            >
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-white/40'}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* TAB 1: Dashboard Access & Permission Matrix */}
+      {activeTab === 'access' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Profiles List (4 cols) */}
+            <div className="lg:col-span-4 space-y-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
+                Permission Profiles ({profiles.length})
+              </span>
+
+              <div className="space-y-1.5 max-h-[60vh] overflow-y-auto pr-1">
+                {profiles.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelectedProfileId(p.id)}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      selectedProfileId === p.id
+                        ? 'bg-white/[0.08] border-white/30 text-white shadow-sm'
+                        : 'bg-[#08080a] border-white/[0.06] text-white/70 hover:border-white/20 hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-white">{p.name}</span>
+                      {p.isPreset && (
+                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/[0.04] text-white/40 border border-white/[0.06]">
+                          Preset
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-white/40 mt-1 line-clamp-2 leading-relaxed">
+                      {p.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Matrix View (8 cols) */}
+            <div className="lg:col-span-8 space-y-4">
+              <div className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-white tracking-tight">{activeProfile.name}</h3>
+                  <p className="text-xs text-white/40 mt-0.5">{activeProfile.description}</p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={activeProfile.isPreset ? 'Preset Profile' : 'Custom'} variant="info" />
+                </div>
+              </div>
+
+              <PermissionMatrix
+                profile={activeProfile}
+                onChange={(updated) => {
+                  const updatedProfiles = profiles.map((p) => (p.id === updated.id ? updated : p));
+                  handleSaveProfiles(updatedProfiles);
+                }}
+                disabled={activeProfile.id === 'administrator'}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: Command Permissions & ACLs */}
+      {activeTab === 'commands' && (
+        <div className="space-y-4">
+          <div className="p-3.5 rounded-xl bg-[#08080a] border border-white/[0.08] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+              <input
+                type="text"
+                placeholder="Search commands or descriptions..."
+                value={commandSearch}
+                onChange={(e) => setCommandSearch(e.target.value)}
+                className="glass-input pl-8 text-xs font-sans"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={commandFilter}
+                onChange={(e) => setCommandFilter(e.target.value as any)}
+                className="glass-input text-xs font-sans w-36"
+              >
+                <option value="ALL" className="bg-[#0a0a0c] text-white">All Commands</option>
+                <option value="OVERRIDDEN" className="bg-[#0a0a0c] text-white">Has Overrides</option>
+                <option value="CRITICAL" className="bg-[#0a0a0c] text-white">High/Critical Risk</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Commands Table (Internal Scroll) */}
+          <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-[#08080a]">
+            <div className="max-h-[55vh] overflow-y-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 z-10 bg-[#0d0d10] border-b border-white/[0.08] text-[10px] font-mono uppercase tracking-wider text-white/40">
+                  <tr>
+                    <th className="py-3 px-4">Command</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Default Profile</th>
+                    <th className="py-3 px-4">Overrides</th>
+                    <th className="py-3 px-4 text-right">Risk Level</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {filteredCommands.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-white/30 text-xs">
+                        No commands matching search criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCommands.map((cmd) => {
+                      const overrideCount = (cmd.roleOverrides?.length || 0) + (cmd.userOverrides?.length || 0);
+                      return (
+                        <tr
+                          key={cmd.command}
+                          onClick={() => setSelectedCommandForAcl(cmd)}
+                          className="hover:bg-white/[0.02] cursor-pointer transition-colors"
+                        >
+                          <td className="py-3 px-4 font-mono font-medium text-white">
+                            !{cmd.command}
+                          </td>
+                          <td className="py-3 px-4 text-white/60 capitalize">
+                            {cmd.category}
+                          </td>
+                          <td className="py-3 px-4 text-white/80 capitalize">
+                            {cmd.defaultRoleProfile}
+                          </td>
+                          <td className="py-3 px-4">
+                            {overrideCount > 0 ? (
+                              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                                {overrideCount} custom {overrideCount === 1 ? 'override' : 'overrides'}
+                              </span>
+                            ) : (
+                              <span className="text-white/30 font-mono text-xs">0 overrides</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <StatusBadge
+                              status={cmd.dangerLevel}
+                              variant={
+                                cmd.dangerLevel === 'CRITICAL' || cmd.dangerLevel === 'HIGH'
+                                  ? 'danger'
+                                  : cmd.dangerLevel === 'MEDIUM'
+                                  ? 'warning'
+                                  : 'neutral'
+                              }
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <CommandAclDrawer
+            command={selectedCommandForAcl}
+            isOpen={Boolean(selectedCommandForAcl)}
+            onClose={() => setSelectedCommandForAcl(null)}
+            roles={roles}
+            onSave={handleSaveCommandAcl}
+          />
+        </div>
+      )}
+
+      {/* TAB 3: Role Policies */}
+      {activeTab === 'roles' && (
+        <RolePoliciesTable
+          policies={rolePolicies}
+          profiles={profiles}
+          roles={roles}
+          onSavePolicies={handleSaveRolePolicies}
+        />
+      )}
+
+      {/* TAB 4: User Overrides */}
+      {activeTab === 'users' && (
+        <UserOverridesList
+          overrides={userOverrides}
+          onSaveOverrides={handleSaveUserOverrides}
+        />
+      )}
+
+      {/* TAB 5: Access Preview Simulator */}
+      {activeTab === 'preview' && (
+        <AccessPreviewer
+          roles={roles}
+          profiles={profiles}
+          rolePolicies={rolePolicies}
+          userOverrides={userOverrides}
+        />
+      )}
+
+      {/* TAB 6: Security Audit Log */}
+      {activeTab === 'audit' && <AuditLogTable guildId={guildId} />}
     </div>
   );
 }

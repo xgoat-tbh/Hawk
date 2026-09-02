@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { cookies } from 'next/headers';
 import { db } from './db';
 import { fetchGuildDetails, fetchGuildMember, fetchGuildRoles } from './discord';

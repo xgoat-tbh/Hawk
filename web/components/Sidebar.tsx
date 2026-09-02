@@ -33,34 +33,35 @@ export function Sidebar({ guildId, guildName, guildIcon, mobileOpen, onCloseMobi
 
   const navGroups = [
     {
-      group: 'Server Core',
+      group: 'Server',
       items: [
+        { label: 'Overview', href: `/dashboard/${guildId}`, icon: Sliders },
         { label: 'General Settings', href: `/dashboard/${guildId}/general`, icon: Sliders },
         { label: 'Permissions & Rules', href: `/dashboard/${guildId}/permissions`, icon: ShieldAlert },
       ],
     },
     {
-      group: 'Economy & Rewards',
+      group: 'Economy',
       items: [
-        { label: 'Economy Config', href: `/dashboard/${guildId}/economy`, icon: Coins },
-        { label: 'Role Income', href: `/dashboard/${guildId}/income`, icon: Briefcase },
-        { label: 'Server Store', href: `/dashboard/${guildId}/store`, icon: ShoppingBag },
+        { label: 'Economy & Rewards', href: `/dashboard/${guildId}/economy`, icon: Coins },
+        { label: 'Role Salaries', href: `/dashboard/${guildId}/income`, icon: Briefcase },
+        { label: 'Store Catalog', href: `/dashboard/${guildId}/store`, icon: ShoppingBag },
       ],
     },
     {
-      group: 'Voice & Activity',
+      group: 'Voice',
       items: [
         { label: 'Private Voice (PVC)', href: `/dashboard/${guildId}/pvc`, icon: Radio },
         { label: 'Gaming LFG', href: `/dashboard/${guildId}/gaming`, icon: Gamepad2 },
       ],
     },
     {
-      group: 'Engagement',
+      group: 'Community',
       items: [
-        { label: 'Welcome Embeds', href: `/dashboard/${guildId}/welcome`, icon: Sparkles },
+        { label: 'Welcome Greetings', href: `/dashboard/${guildId}/welcome`, icon: Sparkles },
         { label: 'Community Tools', href: `/dashboard/${guildId}/community`, icon: MessageSquare },
-        { label: 'Sticky Messages', href: `/dashboard/${guildId}/sticky`, icon: Pin },
         { label: 'Media Channels', href: `/dashboard/${guildId}/media`, icon: ImageIcon },
+        { label: 'Sticky Notices', href: `/dashboard/${guildId}/sticky`, icon: Pin },
       ],
     },
   ];

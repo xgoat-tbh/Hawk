@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useGuildData } from '@/context/GuildContext';
 import { Radio, Clock, LayoutTemplate, Loader2, Plus, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -43,10 +45,8 @@ export default function PvcSettingsPage() {
       setPvcCategoryId(data.categoryId);
       setPvcJtcChannelId(data.jtcChannelId);
 
-      // Refresh channels from Discord
       await refreshData();
-
-      setAutoCreateStatus('Private Voice Category & Join-to-Create voice channel created.');
+      setAutoCreateStatus('Voice Category & Join-to-Create voice channel generated.');
       setTimeout(() => setAutoCreateStatus(null), 5000);
     } catch (err: any) {
       setAutoCreateError(err.message || 'Failed to auto-create PVC channels.');
@@ -151,7 +151,7 @@ export default function PvcSettingsPage() {
             <span>Private Voice Channels (PVC)</span>
           </h1>
           <p className="text-xs text-white/40 mt-0.5">
-            Automatic temporary voice channels with FASTag autopay, owner control panels, and rental rates.
+            Configure automated temporary voice rooms, hourly rental rates, and master control panels.
           </p>
         </div>
 
@@ -165,10 +165,9 @@ export default function PvcSettingsPage() {
         </button>
       </div>
 
-      {/* Auto Create Status Alerts */}
       {autoCreateStatus && (
         <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
-          <CheckCircle2 className="w-4 h-4 text-white" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{autoCreateStatus}</span>
         </div>
       )}
@@ -179,15 +178,15 @@ export default function PvcSettingsPage() {
         </div>
       )}
 
-      {/* 1-Click Auto Setup Card */}
-      <div className="glass-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="font-medium text-xs text-white uppercase tracking-wider flex items-center gap-1.5">
+      {/* Auto Channel Setup Banner */}
+      <div className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <h3 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-white/60" />
-            <span>1-Click Auto Channel Generator</span>
+            <span>1-Click Auto Setup</span>
           </h3>
-          <p className="text-[11px] text-white/40 mt-0.5">
-            Automatically create the dedicated Discord category and Join-to-Create voice channel.
+          <p className="text-[11px] text-white/40">
+            Automatically create the dedicated Discord category and Join-to-Create master channel.
           </p>
         </div>
 
@@ -202,101 +201,90 @@ export default function PvcSettingsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Hourly Rental Rate */}
-        <div className="glass-card p-5 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Clock className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Hourly Rental Rate</h3>
-              <p className="text-[11px] text-white/40">Cost in server currency per hour of voice channel rental.</p>
-            </div>
-          </div>
+      <div className="space-y-8">
+        {/* Voice Infrastructure */}
+        <div className="space-y-1">
+          <SectionHeader
+            title="Voice Container Routing"
+            description="Channels and categories where temporary private rooms are created."
+            icon={<LayoutTemplate className="w-4 h-4" />}
+          />
 
-          <div className="space-y-1 max-w-xs pt-1">
-            <div className="relative">
-              <input
-                type="number"
-                min={0}
-                value={pvcHourlyRate}
-                onChange={(e) => setPvcHourlyRate(parseInt(e.target.value, 10) || 0)}
-                className="glass-input font-mono text-xs pl-8"
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 font-mono text-xs">
-                {currencySymbol}
-              </span>
-            </div>
-          </div>
-        </div>
+          <div className="pt-2">
+            <SettingRow
+              label="Join-to-Create Voice Channel"
+              description="Members who connect to this voice channel will instantly be moved to a newly created private room."
+              badge="Trigger"
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={pvcJtcChannelId}
+                  onChange={setPvcJtcChannelId}
+                  placeholder="Select Join-to-Create channel..."
+                  allowedTypes={[2, 13]}
+                />
+              </div>
+            </SettingRow>
 
-        {/* Join to Create Channel */}
-        <div className="glass-card p-5 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Radio className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Join-to-Create Channel</h3>
-              <p className="text-[11px] text-white/40">Voice channel members join to automatically create a private room.</p>
-            </div>
-          </div>
+            <SettingRow
+              label="Parent Voice Category"
+              description="Discord category container where dynamic private voice rooms are placed."
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={pvcCategoryId}
+                  onChange={setPvcCategoryId}
+                  placeholder="Select Category container..."
+                  allowedTypes={[4]}
+                />
+              </div>
+            </SettingRow>
 
-          <div className="pt-1">
-            <ChannelSelect
-              channels={channels}
-              value={pvcJtcChannelId}
-              onChange={setPvcJtcChannelId}
-              placeholder="Select Join-to-Create channel..."
-              allowedTypes={[2, 13]}
-            />
-          </div>
-        </div>
-
-        {/* PVC Parent Category */}
-        <div className="glass-card p-5 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <LayoutTemplate className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Voice Category Container</h3>
-              <p className="text-[11px] text-white/40">Discord category where dynamic voice channels are created.</p>
-            </div>
-          </div>
-
-          <div className="pt-1">
-            <ChannelSelect
-              channels={channels}
-              value={pvcCategoryId}
-              onChange={setPvcCategoryId}
-              placeholder="Select Category container..."
-              allowedTypes={[4]}
-            />
+            <SettingRow
+              label="Persistent Control Panel Channel"
+              description="Text channel containing interactive button controls for room management."
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={pvcPanelChannelId}
+                  onChange={setPvcPanelChannelId}
+                  placeholder="Select Panel channel..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+            </SettingRow>
           </div>
         </div>
 
-        {/* PVC Control Panel Channel */}
-        <div className="glass-card p-5 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <LayoutTemplate className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Persistent Control Panel Channel</h3>
-              <p className="text-[11px] text-white/40">Channel containing interactive button panel for voice management.</p>
-            </div>
-          </div>
+        {/* Economy Rates */}
+        <div className="space-y-1">
+          <SectionHeader
+            title="Rental Rates & Pricing"
+            description="Economy fees for voice room ownership."
+            icon={<Clock className="w-4 h-4" />}
+          />
 
-          <div className="pt-1">
-            <ChannelSelect
-              channels={channels}
-              value={pvcPanelChannelId}
-              onChange={setPvcPanelChannelId}
-              placeholder="Select Master Panel channel..."
-              allowedTypes={[0, 5]}
-            />
+          <div className="pt-2">
+            <SettingRow
+              label="Hourly Voice Rental Rate"
+              description="Amount deducted from the voice channel owner's wallet per hour of active voice rental."
+            >
+              <div className="relative w-36">
+                <input
+                  type="number"
+                  min={0}
+                  value={pvcHourlyRate}
+                  onChange={(e) => setPvcHourlyRate(parseInt(e.target.value, 10) || 0)}
+                  className="glass-input font-mono text-xs pl-8"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-white/40">
+                  {currencySymbol}
+                </span>
+              </div>
+            </SettingRow>
           </div>
         </div>
       </div>

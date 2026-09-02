@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useGuildData } from '@/context/GuildContext';
 import { MessageSquare, Lightbulb, Lock } from 'lucide-react';
 
@@ -107,10 +109,10 @@ export default function CommunitySettingsPage() {
         <div>
           <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-white/80" />
-            <span>Community Tools</span>
+            <span>Community Feedback & Tools</span>
           </h1>
           <p className="text-xs text-white/40 mt-0.5">
-            Configure server suggestion boards, upvote workflows, and anonymous confession channels.
+            Configure server suggestion boards, voting workflows, and anonymous confession channels.
           </p>
         </div>
 
@@ -124,64 +126,73 @@ export default function CommunitySettingsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="space-y-8">
         {/* Suggestion System */}
-        <div className="glass-card p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Lightbulb className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Suggestions System</h3>
-              <p className="text-[11px] text-white/40">Automated feedback board with upvote & downvote reactions.</p>
-            </div>
-          </div>
+        <div className="space-y-1">
+          <SectionHeader
+            title="Suggestion Board"
+            description="Automated member feedback with upvote & downvote reaction buttons."
+            icon={<Lightbulb className="w-4 h-4" />}
+          />
 
-          <div className="space-y-3 pt-1">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Public Suggestions Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={sugSubmission}
-                onChange={setSugSubmission}
-                placeholder="Select suggestions channel..."
-              />
-            </div>
+          <div className="pt-2">
+            <SettingRow
+              label="Public Suggestions Channel"
+              description="Text channel where new member suggestions are formatted and posted for voting."
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={sugSubmission}
+                  onChange={setSugSubmission}
+                  placeholder="Select suggestions channel..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+            </SettingRow>
           </div>
         </div>
 
         {/* Confession System */}
-        <div className="glass-card p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Lock className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Anonymous Confessions</h3>
-              <p className="text-[11px] text-white/40">DM or modal-based anonymous confessions feed with admin audit logs.</p>
-            </div>
-          </div>
+        <div className="space-y-1">
+          <SectionHeader
+            title="Anonymous Confessions"
+            description="Modal-based anonymous confessions feed with administrative audit tracking."
+            icon={<Lock className="w-4 h-4" />}
+          />
 
-          <div className="space-y-3 pt-1">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Public Confession Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={confSubmission}
-                onChange={setConfSubmission}
-                placeholder="Select confession feed channel..."
-              />
-            </div>
+          <div className="pt-2">
+            <SettingRow
+              label="Public Confessions Feed"
+              description="Channel where approved anonymous confessions are posted publicly."
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={confSubmission}
+                  onChange={setConfSubmission}
+                  placeholder="Select confession feed..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+            </SettingRow>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Private Admin Audit Log Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={confLog}
-                onChange={setConfLog}
-                placeholder="Select admin confession log channel..."
-              />
-            </div>
+            <SettingRow
+              label="Admin Confession Audit Log"
+              description="Private staff channel recording author identity for moderation audits."
+              badge="Private Staff"
+              badgeVariant="warning"
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={confLog}
+                  onChange={setConfLog}
+                  placeholder="Select admin log channel..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+            </SettingRow>
           </div>
         </div>
       </div>

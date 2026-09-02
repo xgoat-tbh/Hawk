@@ -5,8 +5,10 @@ import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { RoleSelect } from '@/components/RoleSelect';
 import { SaveBar } from '@/components/SaveBar';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useGuildData } from '@/context/GuildContext';
-import { Sliders, Shield, Terminal, FileText } from 'lucide-react';
+import { Sliders, Terminal, FileText } from 'lucide-react';
 
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -105,7 +107,7 @@ export default function GeneralSettingsPage() {
         <div>
           <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
             <Sliders className="w-4 h-4 text-white/80" />
-            <span>General Settings</span>
+            <span>General Server Settings</span>
           </h1>
           <p className="text-xs text-white/40 mt-0.5">
             Configure bot command prefix, administrator authority role, and server audit logging channels.
@@ -122,83 +124,87 @@ export default function GeneralSettingsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5">
-        {/* Command Prefix */}
-        <div className="glass-card p-5 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Terminal className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Command Prefix</h3>
-              <p className="text-[11px] text-white/40">The symbol used before bot commands (e.g. !help, !bal, !pvc).</p>
-            </div>
-          </div>
-          <div className="max-w-xs pt-1">
-            <input
-              type="text"
-              value={prefix}
-              maxLength={5}
-              onChange={(e) => setPrefix(e.target.value)}
-              className="glass-input font-mono text-sm"
-              placeholder="!"
-            />
+      <div className="space-y-8">
+        {/* Core Settings Section */}
+        <div className="space-y-1">
+          <SectionHeader
+            title="Core Bot Configuration"
+            description="Fundamental prefix and elevated role settings."
+            icon={<Terminal className="w-4 h-4" />}
+          />
+
+          <div className="pt-2">
+            <SettingRow
+              label="Command Prefix"
+              description="The prefix symbol required before executing text commands in channels."
+              badge="Prefix"
+            >
+              <input
+                type="text"
+                value={prefix}
+                maxLength={5}
+                onChange={(e) => setPrefix(e.target.value)}
+                className="glass-input font-mono text-xs w-28 text-center"
+                placeholder="!"
+              />
+            </SettingRow>
+
+            <SettingRow
+              label="Bot Commander Role"
+              description="Members holding this role receive elevated moderation authority and bypass standard command checks."
+              badge="Elevated"
+              badgeVariant="warning"
+            >
+              <div className="w-64">
+                <RoleSelect
+                  roles={roles}
+                  value={botCommanderRoleId}
+                  onChange={setBotCommanderRoleId}
+                  placeholder="Select commander role..."
+                />
+              </div>
+            </SettingRow>
           </div>
         </div>
 
-        {/* Bot Commander Role */}
-        <div className="glass-card p-5 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Shield className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Bot Commander Role</h3>
-              <p className="text-[11px] text-white/40">Members holding this role receive elevated bot moderation and management authority.</p>
-            </div>
-          </div>
-          <div className="max-w-md pt-1">
-            <RoleSelect
-              roles={roles}
-              value={botCommanderRoleId}
-              onChange={setBotCommanderRoleId}
-              placeholder="Select commander role..."
-            />
-          </div>
-        </div>
+        {/* Logging Channels Section */}
+        <div className="space-y-1">
+          <SectionHeader
+            title="Audit & Activity Logging"
+            description="Routing channels for moderation events and economy transaction logs."
+            icon={<FileText className="w-4 h-4" />}
+          />
 
-        {/* Logging Channels */}
-        <div className="glass-card p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Audit & Event Logging Channels</h3>
-              <p className="text-[11px] text-white/40">Routing channels for bot events, moderation actions, and economy transactions.</p>
-            </div>
-          </div>
+          <div className="pt-2">
+            <SettingRow
+              label="Server Moderation Log"
+              description="Receives message purge notifications, kick/ban audit logs, and timeout reports."
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={logChannelId}
+                  onChange={setLogChannelId}
+                  placeholder="Select log channel..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+            </SettingRow>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Server Log Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={logChannelId}
-                onChange={setLogChannelId}
-                placeholder="Select log channel..."
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Economy Audit Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={auditChannelId}
-                onChange={setAuditChannelId}
-                placeholder="Select audit channel..."
-              />
-            </div>
+            <SettingRow
+              label="Economy Transaction Log"
+              description="Receives salary disbursements, shop purchase audits, and currency transfer receipts."
+            >
+              <div className="w-64">
+                <ChannelSelect
+                  channels={channels}
+                  value={auditChannelId}
+                  onChange={setAuditChannelId}
+                  placeholder="Select economy log..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+            </SettingRow>
           </div>
         </div>
       </div>

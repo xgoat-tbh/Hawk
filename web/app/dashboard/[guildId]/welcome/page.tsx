@@ -5,9 +5,11 @@ import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { EmojiPicker } from '@/components/EmojiPicker';
 import { SaveBar } from '@/components/SaveBar';
+import { SettingRow } from '@/components/ui/SettingRow';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DiscordEmbedSimulator } from '@/components/DiscordEmbedSimulator';
 import { useGuildData } from '@/context/GuildContext';
-import { Sparkles, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, Send, Loader2, CheckCircle2, AlertCircle, Layout, Palette } from 'lucide-react';
 
 export default function WelcomeEmbedPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -63,7 +65,7 @@ export default function WelcomeEmbedPage() {
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to send test message');
-      setTestStatus('Test message sent successfully to channel.');
+      setTestStatus('Test welcome message sent cleanly to channel.');
       setTimeout(() => setTestStatus(null), 5000);
     } catch (err: any) {
       setTestError(err.message || 'Failed to dispatch test message.');
@@ -207,10 +209,10 @@ export default function WelcomeEmbedPage() {
         <div>
           <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-white/80" />
-            <span>Welcome Messages & Embed Designer</span>
+            <span>Welcome Greetings & Embed Designer</span>
           </h1>
           <p className="text-xs text-white/40 mt-0.5">
-            Configure automatic greeting cards and join notifications for new members.
+            Configure automated greeting cards and join notifications for new members.
           </p>
         </div>
 
@@ -220,7 +222,7 @@ export default function WelcomeEmbedPage() {
             onClick={handleSendTest}
             disabled={isTesting || !channelId}
             className="btn-outline-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
-            title="Dispatch live test message to selected channel"
+            title="Dispatch clean test message to selected channel"
           >
             {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5 text-white/60" />}
             <span>Send Test</span>
@@ -237,10 +239,9 @@ export default function WelcomeEmbedPage() {
         </div>
       </div>
 
-      {/* Test Status Notifications */}
       {testStatus && (
         <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
-          <CheckCircle2 className="w-4 h-4 text-white" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{testStatus}</span>
         </div>
       )}
@@ -251,77 +252,89 @@ export default function WelcomeEmbedPage() {
         </div>
       )}
 
-      {/* Main 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Form Controls (7 cols) */}
-        <div className="lg:col-span-7 space-y-5">
-          {/* Card: Routing & State */}
-          <div className="glass-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-xs text-white tracking-wide uppercase">
-                  Welcome System Status
-                </h3>
-                <p className="text-[11px] text-white/40 mt-0.5">
-                  Send greetings when a member joins the server.
-                </p>
-              </div>
+      {/* Main 2-Column Split View */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Form Controls (7 cols) with Internal Scroll */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Routing & Status Section */}
+          <div className="space-y-1">
+            <SectionHeader
+              title="System Routing & Activation"
+              description="Toggle automated greetings and target channel."
+              icon={<Layout className="w-4 h-4" />}
+            />
 
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enabled}
-                  onChange={(e) => setEnabled(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
-              </label>
-            </div>
+            <div className="pt-2">
+              <SettingRow
+                label="Enable Welcome Messages"
+                description="Automatically posts greeting when a new member joins the server."
+                badge={enabled ? 'Active' : 'Disabled'}
+                badgeVariant={enabled ? 'success' : 'neutral'}
+              >
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={(e) => setEnabled(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                </label>
+              </SettingRow>
 
-            <div className="pt-3 border-t border-white/[0.06] space-y-1.5">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">
-                Destination Channel
-              </label>
-              <ChannelSelect
-                channels={channels}
-                value={channelId}
-                onChange={setChannelId}
-                placeholder="Select a welcome text channel..."
-                allowedTypes={[0, 5]}
-              />
+              <SettingRow
+                label="Destination Channel"
+                description="Text channel where new member greetings are posted."
+              >
+                <div className="w-64">
+                  <ChannelSelect
+                    channels={channels}
+                    value={channelId}
+                    onChange={setChannelId}
+                    placeholder="Select welcome channel..."
+                    allowedTypes={[0, 5]}
+                  />
+                </div>
+              </SettingRow>
+
+              <SettingRow
+                label="Message Layout Format"
+                description="Choose between rich Discord embed or plain markdown message."
+              >
+                <div className="flex items-center gap-1 bg-[#050507] p-1 rounded-lg border border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => setIsEmbed(true)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                      isEmbed ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+                    }`}
+                  >
+                    Rich Embed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEmbed(false)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                      !isEmbed ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+                    }`}
+                  >
+                    Plain Text
+                  </button>
+                </div>
+              </SettingRow>
             </div>
           </div>
 
-          {/* Card: Format & Content */}
-          <div className="glass-card p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-xs text-white tracking-wide uppercase">
-                Message Layout
-              </h3>
-              <div className="flex items-center gap-1 bg-[#050507] p-1 rounded-lg border border-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => setIsEmbed(true)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                    isEmbed ? 'bg-white text-black' : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  Rich Embed
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEmbed(false)}
-                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                    !isEmbed ? 'bg-white text-black' : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  Plain Text
-                </button>
-              </div>
-            </div>
+          {/* Content & Design Section */}
+          <div className="space-y-4">
+            <SectionHeader
+              title="Message Content & Styling"
+              description="Customize text, variables, colors, and banners."
+              icon={<Palette className="w-4 h-4" />}
+            />
 
             {/* Quick Variable Insertion Pills */}
-            <div className="space-y-1.5 pt-2">
+            <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
                   Dynamic Variables (Click to Insert)
@@ -348,7 +361,7 @@ export default function WelcomeEmbedPage() {
 
             {/* Embed Title */}
             {isEmbed && (
-              <div className="space-y-1 pt-2">
+              <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
                     Embed Title
@@ -361,12 +374,12 @@ export default function WelcomeEmbedPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Welcome to {server}!"
-                  className="glass-input"
+                  className="glass-input text-xs"
                 />
               </div>
             )}
 
-            {/* Message Body / Description */}
+            {/* Description */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
@@ -379,37 +392,35 @@ export default function WelcomeEmbedPage() {
                 maxLength={4096}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Hey {user}, welcome! Check out the rules."
-                className="glass-input font-sans leading-relaxed resize-y"
+                placeholder="Hey {user}, welcome to the server! Make sure to check out the rules."
+                className="glass-input font-sans text-xs leading-relaxed resize-y"
               />
             </div>
 
-            {/* Embed Options */}
+            {/* Embed Extra Styling */}
             {isEmbed && (
-              <div className="space-y-4 pt-2 border-t border-white/[0.06]">
-                {/* Embed Color Picker */}
-                <div className="space-y-1.5">
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
                   <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
                     Embed Accent Color
                   </label>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <input
                       type="color"
                       value={color.startsWith('#') ? color : '#ffffff'}
                       onChange={(e) => setColor(e.target.value)}
-                      className="w-8 h-8 rounded-lg bg-transparent border border-white/20 cursor-pointer p-0.5"
+                      className="w-7 h-7 rounded-lg bg-transparent border border-white/20 cursor-pointer p-0.5"
                     />
                     <input
                       type="text"
                       value={color}
                       onChange={(e) => setColor(e.target.value)}
                       placeholder="#ffffff"
-                      className="glass-input w-28 font-mono text-xs uppercase"
+                      className="glass-input w-24 font-mono text-xs uppercase"
                     />
                   </div>
                 </div>
 
-                {/* Banner & Thumbnail Image URLs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
@@ -438,7 +449,6 @@ export default function WelcomeEmbedPage() {
                   </div>
                 </div>
 
-                {/* Footer Text */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
@@ -460,7 +470,7 @@ export default function WelcomeEmbedPage() {
           </div>
         </div>
 
-        {/* Right Column: Live Discord Simulator (5 cols) */}
+        {/* Right Column: Sticky Live Discord Simulator (5 cols) */}
         <div className="lg:col-span-5 sticky top-20 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">

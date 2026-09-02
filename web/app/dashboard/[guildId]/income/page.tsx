@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useGuildData } from '@/context/GuildContext';
-import { Briefcase, Plus, Trash2, Coins, Shield, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Shield, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function IncomeRolesPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -47,7 +48,7 @@ export default function IncomeRolesPage() {
 
       setNewRoleId(null);
       setNewAmount('500');
-      setActionSuccess('Role income reward configured.');
+      setActionSuccess('Role salary assigned successfully.');
       await refreshData();
     } catch (err: any) {
       setActionError(err.message || 'Error adding income role');
@@ -88,7 +89,7 @@ export default function IncomeRolesPage() {
 
       {actionSuccess && (
         <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
-          <CheckCircle2 className="w-4 h-4 text-white" />
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span>{actionSuccess}</span>
         </div>
       )}
@@ -99,100 +100,106 @@ export default function IncomeRolesPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left: Add Income Role (5 cols) */}
-        <div className="lg:col-span-5 glass-card p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
-              <Plus className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Assign Role Salary</h3>
-              <p className="text-[11px] text-white/40">Set the payout amount granted for having a role.</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleAddRole} className="space-y-3 pt-1">
-            <div className="space-y-1">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Target Role</label>
-              <RoleSelect
-                roles={roles}
-                value={newRoleId}
-                onChange={setNewRoleId}
-                placeholder="Select role..."
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Periodic Income ({currencySymbol})</label>
-              <input
-                type="number"
-                min={1}
-                value={newAmount}
-                onChange={(e) => setNewAmount(e.target.value)}
-                className="glass-input font-mono text-xs"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isAdding}
-              className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
-            >
-              {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              <span>Save Role Salary</span>
-            </button>
-          </form>
+      {/* Assign Salary Form Bar */}
+      <form
+        onSubmit={handleAddRole}
+        className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
+      >
+        <div className="sm:col-span-6 space-y-1">
+          <label className="text-[10px] font-mono uppercase text-white/40">Target Role</label>
+          <RoleSelect
+            roles={roles}
+            value={newRoleId}
+            onChange={setNewRoleId}
+            placeholder="Select Discord role..."
+          />
         </div>
 
-        {/* Right: Existing Income Roles (7 cols) */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
-              Active Role Salaries ({incomeRoles.length})
-            </span>
+        <div className="sm:col-span-4 space-y-1">
+          <label className="text-[10px] font-mono uppercase text-white/40">Periodic Income ({currencySymbol})</label>
+          <input
+            type="number"
+            min={1}
+            value={newAmount}
+            onChange={(e) => setNewAmount(e.target.value)}
+            className="glass-input font-mono text-xs"
+          />
+        </div>
+
+        <div className="sm:col-span-2">
+          <button
+            type="submit"
+            disabled={isAdding}
+            className="btn-primary w-full py-2 flex items-center justify-center gap-1.5 text-xs shrink-0"
+          >
+            {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            <span>Assign Salary</span>
+          </button>
+        </div>
+      </form>
+
+      {/* Salaries Data Table (with Independent Internal Scroll) */}
+      <div className="space-y-2">
+        <SectionHeader
+          title={`Active Role Salaries (${incomeRoles.length})`}
+          description="Members holding these roles receive automated wallet payouts per reward cycle."
+        />
+
+        <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-[#08080a]">
+          <div className="max-h-[50vh] overflow-y-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="sticky top-0 z-10 bg-[#0d0d10] border-b border-white/[0.08] text-[10px] font-mono uppercase tracking-wider text-white/40">
+                <tr>
+                  <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Payout Amount</th>
+                  <th className="py-3 px-4">Frequency</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {incomeRoles.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-white/30 text-xs">
+                      No role salaries configured yet. Select a role and specify a payout amount above.
+                    </td>
+                  </tr>
+                ) : (
+                  incomeRoles.map((item: any) => {
+                    const targetRole = roles.find((r) => r.id === item.role_id);
+                    return (
+                      <tr key={item.role_id} className="hover:bg-white/[0.015] transition-colors">
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-white font-medium">
+                            <Shield className="w-3.5 h-3.5 text-white/40" />
+                            <span>@{targetRole?.name || `Role ${item.role_id}`}</span>
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-4 font-mono font-medium text-emerald-400">
+                          +{currencySymbol}{item.income_amount?.toLocaleString()}
+                        </td>
+
+                        <td className="py-3 px-4 text-[11px] font-mono text-white/50">
+                          Automated Cycle
+                        </td>
+
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRole(item.role_id)}
+                            className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/[0.05] transition-colors"
+                            title="Revoke salary"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-
-          {incomeRoles.length === 0 ? (
-            <div className="glass-card p-10 text-center text-xs text-white/30">
-              No role salaries configured yet. Select a role and specify a payout amount on the left.
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {incomeRoles.map((item: any) => {
-                const targetRole = roles.find((r) => r.id === item.role_id);
-                return (
-                  <div
-                    key={item.role_id}
-                    className="glass-card p-4 flex items-center justify-between gap-4 group"
-                  >
-                    <div className="space-y-1 overflow-hidden">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-3.5 h-3.5 text-white/60 shrink-0" />
-                        <span className="font-medium text-xs text-white truncate">
-                          @{targetRole?.name || `Role ${item.role_id}`}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-[11px] text-white/60 pt-0.5 font-mono">
-                        <Coins className="w-3 h-3 text-white/40" />
-                        <span>{currencySymbol}{item.income_amount?.toLocaleString()} per payout cycle</span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRole(item.role_id)}
-                      className="btn-outline-danger p-2 shrink-0"
-                      title="Delete role salary"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
     </div>
