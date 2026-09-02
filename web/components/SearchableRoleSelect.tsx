@@ -34,21 +34,24 @@ export function SearchableRoleSelect({
   );
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
         setIsOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className={`relative w-full ${isOpen ? 'z-50' : 'z-0'}`}>
       {/* Trigger Button */}
-      <div
+      <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#040406] border border-white/[0.10] rounded-xl px-3.5 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer hover:border-white/[0.20] transition-all select-none"
+        className="w-full bg-[#040406] border border-white/[0.10] rounded-xl px-3.5 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer hover:border-white/[0.20] transition-all select-none text-left"
       >
         <div className="flex items-center gap-2.5 truncate">
           {selectedRole ? (
@@ -68,8 +71,7 @@ export function SearchableRoleSelect({
 
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
           {selectedRole && (
-            <button
-              type="button"
+            <span
               onClick={(e) => {
                 e.stopPropagation();
                 onChange(null);
@@ -77,7 +79,7 @@ export function SearchableRoleSelect({
               className="p-1 rounded text-white/40 hover:text-white hover:bg-white/10 transition-colors"
             >
               <X className="w-3 h-3" />
-            </button>
+            </span>
           )}
           <ChevronDown
             className={`w-3.5 h-3.5 text-white/40 transition-transform duration-200 ${
@@ -85,72 +87,82 @@ export function SearchableRoleSelect({
             }`}
           />
         </div>
-      </div>
+      </button>
 
-      {/* Popover Menu (Unclipped High Z-Index) */}
+      {/* Popover & Backdrop */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1.5 w-full bg-[#08080a] border border-white/[0.16] rounded-xl shadow-2xl z-[100] overflow-hidden backdrop-blur-2xl">
-          {/* Search Header */}
-          <div className="p-2.5 border-b border-white/[0.08] flex items-center justify-between gap-2 bg-[#040406]">
-            <div className="flex items-center gap-2 flex-1">
-              <Search className="w-3.5 h-3.5 text-white/40 shrink-0 ml-1" />
-              <input
-                type="text"
-                autoFocus
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search roles..."
-                className="w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
-              />
-            </div>
-            <span className="text-[10px] font-mono text-white/30 px-1">
-              {filteredRoles.length} {filteredRoles.length === 1 ? 'role' : 'roles'}
-            </span>
-          </div>
+        <>
+          {/* Invisible backdrop to dismiss and isolate stacking context */}
+          <div
+            className="fixed inset-0 z-40 bg-transparent"
+            onClick={() => setIsOpen(false)}
+          />
 
-          {/* Role List */}
-          <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
-            {filteredRoles.length === 0 ? (
-              <div className="py-6 text-center text-xs text-white/30">
-                {roles.length === 0 ? 'No roles loaded from server.' : 'No matching roles found'}
+          {/* Menu */}
+          <div className="absolute top-full left-0 mt-1.5 w-full bg-[#0a0a0c] border border-white/[0.16] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden backdrop-blur-2xl">
+            {/* Search Header */}
+            <div className="p-2.5 border-b border-white/[0.08] flex items-center justify-between gap-2 bg-[#040406]">
+              <div className="flex items-center gap-2 flex-1">
+                <Search className="w-3.5 h-3.5 text-white/40 shrink-0 ml-1" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search roles..."
+                  className="w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+                />
               </div>
-            ) : (
-              filteredRoles.map((role) => {
-                const isSelected = role.id === value;
-                const roleHex = intToHex(role.color);
-                return (
-                  <div
-                    key={role.id}
-                    onClick={() => {
-                      onChange(role.id);
-                      setIsOpen(false);
-                      setSearch('');
-                    }}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-xs transition-colors ${
-                      isSelected
-                        ? 'bg-[#5865F2]/20 text-white font-semibold'
-                        : 'text-white/80 hover:bg-white/[0.06] hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: roleHex }}
-                      />
-                      <span className="truncate">@{role.name}</span>
-                    </div>
+              <span className="text-[10px] font-mono text-white/30 px-1">
+                {filteredRoles.length} {filteredRoles.length === 1 ? 'role' : 'roles'}
+              </span>
+            </div>
 
-                    {role.managed && (
-                      <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/40 font-mono">
-                        Bot
-                      </span>
-                    )}
-                  </div>
-                );
-              })
-            )}
+            {/* Role List */}
+            <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+              {filteredRoles.length === 0 ? (
+                <div className="py-6 text-center text-xs text-white/30">
+                  {roles.length === 0 ? 'No roles loaded from server.' : 'No matching roles found'}
+                </div>
+              ) : (
+                filteredRoles.map((role) => {
+                  const isSelected = role.id === value;
+                  const roleHex = intToHex(role.color);
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => {
+                        onChange(role.id);
+                        setIsOpen(false);
+                        setSearch('');
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-xs transition-colors text-left ${
+                        isSelected
+                          ? 'bg-[#5865F2]/20 text-white font-semibold'
+                          : 'text-white/80 hover:bg-white/[0.06] hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate">
+                        <div
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: roleHex }}
+                        />
+                        <span className="truncate">@{role.name}</span>
+                      </div>
+
+                      {role.managed && (
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-white/40 font-mono">
+                          Bot
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

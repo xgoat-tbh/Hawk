@@ -49,8 +49,9 @@ body {
   }
 
   .glass-card {
-    @apply bg-[#0a0a0c]/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-white/[0.14] transition-all duration-200 relative;
+    @apply bg-[#0a0a0c]/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-white/[0.14] transition-all duration-200 relative focus-within:z-30;
   }
+
 
 
   .glass-input {
