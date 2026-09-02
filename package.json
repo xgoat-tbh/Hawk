@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npm run --prefix web build",
     "postinstall": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src/",

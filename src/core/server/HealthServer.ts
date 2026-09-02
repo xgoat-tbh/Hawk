@@ -6,14 +6,16 @@ let server: http.Server | null = null;
 export function startHealthServer(): void {
   if (server) return;
 
-  const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 10000;
+  // Use HEALTH_PORT if explicitly set; otherwise default to 10000
+  // Note: Primary PORT is reserved for the Next.js Web Dashboard.
+  const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 10000;
   const host = '0.0.0.0';
 
   server = http.createServer((_req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'ok',
-      service: 'Discord Bot API Service',
+      service: 'Hawk Bot & Dashboard Service',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     }));
@@ -24,7 +26,8 @@ export function startHealthServer(): void {
   });
 
   server.on('error', (error) => {
-    consoleLog('warning', 'startup', `HTTP health server error: ${error.message}`);
+    // Port in use or non-critical
+    consoleLog('warning', 'startup', `HTTP health server notice: ${error.message}`);
   });
 }
 

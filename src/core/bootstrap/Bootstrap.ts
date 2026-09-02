@@ -21,6 +21,7 @@ import { recordDeletedMessage, recordEditedMessage } from '../../modules/moderat
 import { loadModuleManifests } from '../modules/ModuleLoader.js';
 import { interactionRouter } from '../interactions/InteractionRouter.js';
 import { startHealthServer, stopHealthServer } from '../server/HealthServer.js';
+import { startWebDashboard, stopWebDashboard } from '../web/startWeb.js';
 import { presenceManager } from '../presence/PresenceManager.js';
 import type { ModuleManifest } from '../../types/module.js';
 
@@ -100,6 +101,9 @@ export class Bootstrap {
 
       // Check and update restart state message if rebooted via command
       await this.handleRestartResume(client);
+
+      // Start unified private web dashboard
+      startWebDashboard();
 
       logEvent('info', 'startup', `Bot started: ${client.user?.tag}`, {
         commands: getCommandCount(),
@@ -304,6 +308,7 @@ export class Bootstrap {
       stopInteractionCleanup();
       stopCooldownCleanup();
       stopHealthServer();
+      stopWebDashboard();
       presenceManager.stopTicker();
       await stopWebhookLogger();
 

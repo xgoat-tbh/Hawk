@@ -18,6 +18,10 @@ import {
   deletePermitsByIds,
   removeAllPermitsForTarget,
 } from '../../core/database/repositories/permissionRepo.js';
+import {
+  grantDashboardAccess,
+  revokeDashboardAccess,
+} from '../../core/database/repositories/dashboardAccessRepo.js';
 import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import { mentionUser, mentionRole } from '../../core/utils/formatters.js';
 import { sanitize } from '../../core/utils/validators.js';
@@ -641,9 +645,29 @@ export default defineCommand({
       }
     }
 
-    // 2. Parse scope (all, module:name, or command/module name)
+    // 2. Parse scope (dashboard, all, module:name, or command/module name)
     let commandName: string | null = null;
     let moduleName: string | null = null;
+
+    if (scopeArg === 'dashboard' || scopeArg === 'dash') {
+      if (targetType !== 'user') {
+        await respond.error('Dashboard access can only be granted to specific users, not roles.');
+        return;
+      }
+
+      if (isRemoveMode) {
+        const revoked = await revokeDashboardAccess(targetId);
+        if (revoked) {
+          await respond.success(`Revoked ${targetDisplay}'s private Dashboard access.`);
+        } else {
+          await respond.info(`User ${targetDisplay} did not have active Dashboard access.`);
+        }
+      } else {
+        await grantDashboardAccess(targetId, member.id, 'Granted via Discord access command');
+        await respond.success(`Granted ${targetDisplay} private Dashboard access. They can now log in using their Discord User ID!`);
+      }
+      return;
+    }
 
     if (scopeArg === 'all' || scopeArg === '*') {
       commandName = null;
