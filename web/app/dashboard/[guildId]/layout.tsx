@@ -1,7 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-import { fetchUserGuilds } from '@/lib/discord';
+import { fetchBotGuilds } from '@/lib/discord';
 import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 
@@ -13,11 +13,11 @@ export default async function GuildDashboardLayout({
   params: Promise<{ guildId: string }>;
 }) {
   const session = await getSession();
-  if (!session) redirect('/api/auth/login');
+  if (!session) redirect('/');
 
   const { guildId } = await params;
-  const userGuilds = await fetchUserGuilds(session.accessToken);
-  const targetGuild = userGuilds.find((g) => g.id === guildId);
+  const botGuilds = await fetchBotGuilds();
+  const targetGuild = botGuilds.find((g) => g.id === guildId);
 
   if (!targetGuild) {
     redirect('/dashboard');

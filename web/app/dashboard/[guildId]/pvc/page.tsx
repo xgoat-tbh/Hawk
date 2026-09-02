@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
-import { Radio, Clock, Folder, MessageSquare, LayoutTemplate } from 'lucide-react';
+import { Radio, Clock, LayoutTemplate, Loader2, Plus, Trash2 } from 'lucide-react';
 
 export default function PvcSettingsPage() {
   const { guildId } = useParams() as { guildId: string };

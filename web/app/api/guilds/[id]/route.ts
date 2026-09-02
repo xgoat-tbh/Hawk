@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { fetchUserGuilds, fetchGuildChannels, fetchGuildRoles } from '@/lib/discord';
+import { fetchBotGuilds, fetchGuildChannels, fetchGuildRoles } from '@/lib/discord';
 import { db } from '@/lib/db';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -9,12 +9,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id: guildId } = await params;
 
-  // Validate user has Manage Guild or Admin on this guild
-  const userGuilds = await fetchUserGuilds(session.accessToken);
-  const targetGuild = userGuilds.find((g) => g.id === guildId);
+  // Validate bot is in guild
+  const botGuilds = await fetchBotGuilds();
+  const targetGuild = botGuilds.find((g) => g.id === guildId);
 
   if (!targetGuild) {
-    return NextResponse.json({ error: 'Access denied: You do not have Manage Server permissions.' }, { status: 403 });
+    return NextResponse.json({ error: 'Bot is not installed in this server.' }, { status: 404 });
   }
 
   try {

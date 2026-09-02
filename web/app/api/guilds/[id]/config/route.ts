@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { fetchUserGuilds } from '@/lib/discord';
 import { db } from '@/lib/db';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -8,12 +7,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
-  const userGuilds = await fetchUserGuilds(session.accessToken);
-  const hasAccess = userGuilds.some((g) => g.id === guildId);
-
-  if (!hasAccess) {
-    return NextResponse.json({ error: 'Access denied: You do not have Manage Server permissions.' }, { status: 403 });
-  }
 
   try {
     const body = await req.json();
