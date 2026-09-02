@@ -1,14 +1,15 @@
-import { spawn, ChildProcess } from 'node:child_process';
+import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import { consoleLog } from '../logging/ConsoleLogger.js';
 
-let webProcess: ChildProcess | null = null;
+let webServer: http.Server | null = null;
 
-export function startWebDashboard(): void {
-  if (webProcess) return;
+export async function startWebDashboard(): Promise<void> {
+  if (webServer) return;
 
-  const port = process.env.PORT || process.env.SERVER_PORT || process.env.DASHBOARD_PORT || '3000';
+  const rawPort = process.env.SERVER_PORT || process.env.PORT || process.env.DASHBOARD_PORT || '3000';
+  const port = parseInt(String(rawPort), 10) || 3000;
   const webDir = path.join(process.cwd(), 'web');
 
   if (!fs.existsSync(webDir)) {
@@ -16,67 +17,40 @@ export function startWebDashboard(): void {
     return;
   }
 
-  const isProd = process.env.NODE_ENV === 'production';
-  const nextBinLocal = path.join(webDir, 'node_modules', '.bin', process.platform === 'win32' ? 'next.cmd' : 'next');
-  const rootNextBin = path.join(process.cwd(), 'node_modules', '.bin', process.platform === 'win32' ? 'next.cmd' : 'next');
-
-  let command = 'npx';
-  let args = ['next', isProd ? 'start' : 'dev', '-p', String(port)];
-
-  if (fs.existsSync(nextBinLocal)) {
-    command = nextBinLocal;
-    args = [isProd ? 'start' : 'dev', '-p', String(port)];
-  } else if (fs.existsSync(rootNextBin)) {
-    command = rootNextBin;
-    args = [isProd ? 'start' : 'dev', '-p', String(port)];
-  }
-
-  consoleLog('info', 'dashboard', `Launching Next.js Dashboard on port ${port} (mode: ${isProd ? 'production' : 'development'})...`);
+  const isDev = process.env.NODE_ENV !== 'production';
 
   try {
-    webProcess = spawn(command, args, {
-      cwd: webDir,
-      env: {
-        ...process.env,
-        PORT: String(port),
-      },
-      shell: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+    consoleLog('info', 'dashboard', `Initializing Next.js Dashboard on port ${port} (mode: ${isDev ? 'development' : 'production'})...`);
+    
+    // Dynamically import next to support ESM & CJS runtimes seamlessly
+    const nextModule = await import('next');
+    const nextFn = (nextModule.default || nextModule) as any;
+    const app = nextFn({ dev: isDev, dir: webDir, hostname: '0.0.0.0', port });
+    const handle = app.getRequestHandler();
+
+    await app.prepare();
+
+    webServer = http.createServer((req, res) => {
+      handle(req, res);
     });
 
-    webProcess.stdout?.on('data', (data) => {
-      const lines = data.toString().split('\n');
-      for (const raw of lines) {
-        const line = raw.trim();
-        if (line && !line.includes('ready in') && !line.includes('compiled in')) {
-          consoleLog('info', 'dashboard', line);
-        } else if (line) {
-          consoleLog('info', 'dashboard', `Dashboard Ready: ${line}`);
-        }
-      }
+    webServer.listen(port, '0.0.0.0', () => {
+      consoleLog('info', 'dashboard', `Web Dashboard is online and listening on http://0.0.0.0:${port}`);
     });
 
-    webProcess.stderr?.on('data', (data) => {
-      const line = data.toString().trim();
-      if (line && !line.includes('ExperimentalWarning') && !line.includes('Warning: Next.js inferred')) {
-        consoleLog('warning', 'dashboard', line);
-      }
-    });
-
-    webProcess.on('exit', (code, signal) => {
-      consoleLog('warning', 'dashboard', `Dashboard process exited with code ${code} (${signal || 'none'})`);
-      webProcess = null;
+    webServer.on('error', (err: any) => {
+      consoleLog('warning', 'dashboard', `Dashboard server error: ${err.message}`);
     });
   } catch (error) {
-    consoleLog('error', 'dashboard', `Failed to start web dashboard process: ${error instanceof Error ? error.message : String(error)}`);
+    consoleLog('warning', 'dashboard', `Failed to initialize dashboard server: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
 export function stopWebDashboard(): void {
-  if (webProcess) {
+  if (webServer) {
     try {
-      webProcess.kill('SIGTERM');
+      webServer.close();
     } catch {}
-    webProcess = null;
+    webServer = null;
   }
 }

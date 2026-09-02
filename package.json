@@ -4,20 +4,33 @@
   "type": "module",
   "description": "Private, prefix-based, resource-optimized Discord bot",
   "main": "dist/index.js",
+  "workspaces": [
+    "web"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && npm run --prefix web build",
-    "postinstall": "tsc",
+    "build": "tsc && npm run build --prefix web",
+    "postinstall": "tsc && npm run build --prefix web",
     "start": "node dist/index.js",
     "lint": "eslint src/",
     "test": "tsx --test tests/**/*.test.ts",
     "migrate": "tsx src/core/database/migrations/runner.ts"
   },
   "dependencies": {
+    "@discordjs/rest": "^2.4.0",
+    "clsx": "^2.1.1",
+    "cookies-next": "^4.3.0",
+    "discord-api-types": "^0.37.119",
     "discord.js": "^14.18.0",
     "dotenv": "^16.5.0",
     "fuse.js": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.475.0",
+    "next": "^15.1.7",
     "postgres": "^3.4.5",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.1",
     "typescript": "^5.8.0"
   },
   "devDependencies": {

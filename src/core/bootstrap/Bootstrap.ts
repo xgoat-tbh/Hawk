@@ -103,7 +103,9 @@ export class Bootstrap {
       await this.handleRestartResume(client);
 
       // Start unified private web dashboard
-      startWebDashboard();
+      startWebDashboard().catch((err) => {
+        consoleLog('warning', 'dashboard', `Failed to start web dashboard: ${err instanceof Error ? err.message : String(err)}`);
+      });
 
       logEvent('info', 'startup', `Bot started: ${client.user?.tag}`, {
         commands: getCommandCount(),
