@@ -59,7 +59,9 @@ export async function runMigrations(): Promise<number> {
   for (const file of files) {
     if (appliedSet.has(file)) continue;
 
-    const sqlContent = await readFile(join(sqlDir, file), 'utf-8');
+    const rawSql = await readFile(join(sqlDir, file), 'utf-8');
+    const sqlContent = rawSql.replace(/^\uFEFF/, '').trim();
+    if (!sqlContent) continue;
 
     await db.begin(async (tx) => {
       await tx.unsafe(sqlContent);
