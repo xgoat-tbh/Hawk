@@ -159,27 +159,38 @@ export default function PvcSettingsPage() {
 
   return (
     <div className="space-y-8 pb-20">
-      <div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-          <Radio className="w-6 h-6 text-[#5865F2]" />
-          <span>Private Voice Channels (PVC)</span>
-        </h1>
-        <p className="text-xs text-muted mt-1 font-medium">
-          Configure Join-to-Create voice hubs, hourly rental economy fees, and interactive dashboard panels.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
+            <Radio className="w-6 h-6 text-[#5865F2]" />
+            <span>Private Voice Channels (PVC)</span>
+          </h1>
+          <p className="text-xs text-white/50 mt-1 font-medium">
+            Configure Join-to-Create voice hubs, hourly rental economy fees, and interactive dashboard panels.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || !hasChanges}
+          className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-2 self-start sm:self-auto disabled:opacity-40"
+        >
+          <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         {/* Join to Create Setup */}
-        <div className="box-card p-6 space-y-6">
+        <div className="glass-card p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 border-b-2 border-violet-500/40 flex items-center justify-center text-violet-400">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
                 <Radio className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="font-bold text-sm text-white uppercase tracking-wide">Join-to-Create Channel & Category</h3>
-                <p className="text-xs text-muted">When members join the trigger channel, a new private room is spawned.</p>
+                <p className="text-xs text-white/40">When members join the trigger channel, a new private room is spawned.</p>
               </div>
             </div>
             <button
@@ -207,7 +218,7 @@ export default function PvcSettingsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Trigger Voice Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Trigger Voice Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={pvcJtcChannelId}
@@ -218,7 +229,7 @@ export default function PvcSettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Spawn Category</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Spawn Category</label>
               <ChannelSelect
                 channels={channels}
                 value={pvcCategoryId}
@@ -231,45 +242,45 @@ export default function PvcSettingsPage() {
         </div>
 
         {/* Economy & Hourly Rate */}
-        <div className="box-card p-6 space-y-6">
+        <div className="glass-card p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 border-b-2 border-amber-500/40 flex items-center justify-center text-amber-400">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
               <Clock className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-white uppercase tracking-wide">Hourly Room Rental Fee</h3>
-              <p className="text-xs text-muted">Cost in server currency per hour to keep a PVC active (0 for free).</p>
+              <p className="text-xs text-white/40">Cost in server currency per hour to keep a PVC active (0 for free).</p>
             </div>
           </div>
 
           <div className="max-w-xs pt-2 space-y-2">
-            <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Rate Per Hour ({currencySymbol})</label>
+            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Rate Per Hour ({currencySymbol})</label>
             <input
               type="number"
               value={pvcHourlyRate}
               min={0}
               onChange={(e) => setPvcHourlyRate(parseInt(e.target.value) || 0)}
-              className="box-input font-bold"
+              className="glass-input font-bold"
               placeholder="100"
             />
           </div>
         </div>
 
         {/* Command & Control Panel Channels */}
-        <div className="box-card p-6 space-y-6">
+        <div className="glass-card p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 border-b-2 border-emerald-500/40 flex items-center justify-center text-emerald-400">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <LayoutTemplate className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-white uppercase tracking-wide">Dedicated Command & Panel Channels</h3>
-              <p className="text-xs text-muted">Channels where members execute PVC commands and access the persistent control panel.</p>
+              <p className="text-xs text-white/40">Channels where members execute PVC commands and access the persistent control panel.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">PVC Command Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">PVC Command Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={pvcCommandChannelId}
@@ -279,7 +290,7 @@ export default function PvcSettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Control Panel Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Control Panel Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={pvcPanelChannelId}
@@ -290,6 +301,7 @@ export default function PvcSettingsPage() {
           </div>
         </div>
       </div>
+
 
       <SaveBar
         hasChanges={Boolean(hasChanges)}

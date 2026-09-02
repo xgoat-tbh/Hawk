@@ -110,20 +110,20 @@ export default function StoreSettingsPage() {
           <ShoppingBag className="w-6 h-6 text-[#5865F2]" />
           <span>Server Store & Role Shop</span>
         </h1>
-        <p className="text-xs text-muted mt-1 font-medium">
+        <p className="text-xs text-white/50 mt-1 font-medium">
           Create buyable Discord roles and collectible items for members to purchase with server currency.
         </p>
       </div>
 
       {/* Add New Item Form */}
-      <form onSubmit={handleAddItem} className="box-card p-6 space-y-6">
+      <form onSubmit={handleAddItem} className="glass-card p-6 space-y-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#5865F2]/10 border border-[#5865F2]/20 border-b-2 border-[#5865F2]/40 flex items-center justify-center text-[#5865F2]">
+          <div className="w-10 h-10 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/20 flex items-center justify-center text-[#5865F2]">
             <Plus className="w-5 h-5" />
           </div>
           <div>
             <h3 className="font-bold text-sm text-white uppercase tracking-wide">Add New Store Item / Role</h3>
-            <p className="text-xs text-muted">Items with assigned roles will auto-grant the role upon Discord purchase.</p>
+            <p className="text-xs text-white/40">Items with assigned roles will auto-grant the role upon Discord purchase.</p>
           </div>
         </div>
 
@@ -131,32 +131,32 @@ export default function StoreSettingsPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Item Name</label>
+            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Item Name</label>
             <input
               type="text"
               value={itemName}
               required
               onChange={(e) => setItemName(e.target.value)}
-              className="box-input font-bold"
+              className="glass-input font-bold"
               placeholder="e.g. VIP Role, Custom Badge"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Price ({currencySymbol})</label>
+            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Price ({currencySymbol})</label>
             <input
               type="number"
               value={itemPrice}
               min={1}
               required
               onChange={(e) => setItemPrice(parseInt(e.target.value) || 1)}
-              className="box-input font-bold"
+              className="glass-input font-bold"
               placeholder="5000"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Auto-Grant Role (Optional)</label>
+            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Auto-Grant Role (Optional)</label>
             <RoleSelect
               roles={roles}
               value={itemRoleId}
@@ -166,12 +166,12 @@ export default function StoreSettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Description</label>
+            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Description</label>
             <input
               type="text"
               value={itemDesc}
               onChange={(e) => setItemDesc(e.target.value)}
-              className="box-input"
+              className="glass-input"
               placeholder="Brief perk details..."
             />
           </div>
@@ -192,13 +192,13 @@ export default function StoreSettingsPage() {
       {/* Item Catalog List */}
       <div className="space-y-4">
         <h3 className="font-black text-sm uppercase tracking-wider text-white flex items-center gap-2">
-          <Tag className="w-4 h-4 text-muted" />
+          <Tag className="w-4 h-4 text-white/40" />
           <span>Active Store Catalog ({items.length})</span>
         </h3>
 
         {items.length === 0 ? (
-          <div className="text-center py-12 box-card p-6">
-            <p className="text-xs text-muted">No items in the store yet. Use the form above to add your first role or item!</p>
+          <div className="text-center py-12 glass-card p-6">
+            <p className="text-xs text-white/40">No items in the store yet. Use the form above to add your first role or item!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
@@ -207,10 +207,10 @@ export default function StoreSettingsPage() {
               return (
                 <div
                   key={item.item_id}
-                  className="box-card p-4 flex items-center justify-between gap-4"
+                  className="glass-card p-4 flex items-center justify-between gap-4"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-[#14171f] border border-[#232733] flex items-center justify-center text-[#5865F2] font-black text-xs">
+                    <div className="w-10 h-10 rounded-xl bg-[#040406] border border-white/10 flex items-center justify-center text-[#5865F2] font-black text-xs">
                       #{item.item_id}
                     </div>
                     <div>
@@ -225,14 +225,14 @@ export default function StoreSettingsPage() {
                           </span>
                         )}
                       </div>
-                      {item.description && <p className="text-xs text-muted mt-0.5">{item.description}</p>}
+                      {item.description && <p className="text-xs text-white/40 mt-0.5">{item.description}</p>}
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleDeleteItem(item.item_id)}
                     title="Delete item"
-                    className="p-2 rounded-lg bg-[#14171f] border border-[#232733] text-muted hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 transition-all active:scale-95"
+                    className="p-2 rounded-xl bg-[#040406] border border-white/10 text-white/40 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 transition-all active:scale-95"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -242,6 +242,7 @@ export default function StoreSettingsPage() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

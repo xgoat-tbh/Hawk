@@ -198,14 +198,25 @@ export default function WelcomeEmbedPage() {
 
   return (
     <div className="space-y-8 pb-20">
-      <div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-          <Sparkles className="w-6 h-6 text-[#5865F2]" />
-          <span>Welcome Messages & Embed Builder</span>
-        </h1>
-        <p className="text-xs text-muted mt-1 font-medium">
-          Design custom greeting cards with our live visual Discord simulator.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
+            <Sparkles className="w-6 h-6 text-[#5865F2]" />
+            <span>Welcome Messages & Embed Builder</span>
+          </h1>
+          <p className="text-xs text-white/50 mt-1 font-medium">
+            Design custom greeting cards with our live visual Discord simulator.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || !hasChanges}
+          className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-2 self-start sm:self-auto disabled:opacity-40"
+        >
+          <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
+        </button>
       </div>
 
       {/* Main Grid: Form on Left, Simulator on Right */}
@@ -213,11 +224,11 @@ export default function WelcomeEmbedPage() {
         {/* Editor Form */}
         <div className="space-y-6">
           {/* Toggle & Channel */}
-          <div className="box-card p-6 space-y-6">
+          <div className="glass-card p-6 space-y-6">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-bold text-sm text-white uppercase tracking-wide">Enable Welcome Messages</h3>
-                <p className="text-xs text-muted">Automatically send a greeting card when new members join.</p>
+                <p className="text-xs text-white/40">Automatically send a greeting card when new members join.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -226,12 +237,12 @@ export default function WelcomeEmbedPage() {
                   onChange={(e) => setEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-12 h-6 bg-[#14171f] border border-[#232733] peer-focus:outline-none rounded-lg peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865F2] peer-checked:border-[#5865F2]" />
+                <div className="w-11 h-6 bg-[#040406] border border-white/20 peer-focus:outline-none rounded-lg peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865F2] peer-checked:border-[#5865F2]" />
               </label>
             </div>
 
             <div className="space-y-2 pt-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Welcome Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Welcome Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={channelId}
@@ -242,17 +253,17 @@ export default function WelcomeEmbedPage() {
           </div>
 
           {/* Embed Fields */}
-          <div className="box-card p-6 space-y-5">
+          <div className="glass-card p-6 space-y-5">
             <h3 className="font-bold text-sm text-white uppercase tracking-wide">Embed Card Configuration</h3>
 
             {/* Title */}
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Embed Title</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Embed Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="box-input font-bold"
+                className="glass-input font-bold"
                 placeholder="Welcome to {server}!"
               />
             </div>
@@ -260,26 +271,26 @@ export default function WelcomeEmbedPage() {
             {/* Description */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Embed Description</label>
+                <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Embed Description</label>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => insertTag('{user}')}
-                    className="text-[10px] px-2 py-0.5 rounded bg-[#14171f] border border-[#232733] text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
+                    className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
                   >
                     + {"{user}"}
                   </button>
                   <button
                     type="button"
                     onClick={() => insertTag('{server}')}
-                    className="text-[10px] px-2 py-0.5 rounded bg-[#14171f] border border-[#232733] text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
+                    className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
                   >
                     + {"{server}"}
                   </button>
                   <button
                     type="button"
                     onClick={() => insertTag('{server.count}')}
-                    className="text-[10px] px-2 py-0.5 rounded bg-[#14171f] border border-[#232733] text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
+                    className="text-[10px] px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
                   >
                     + {"{server.count}"}
                   </button>
@@ -289,55 +300,56 @@ export default function WelcomeEmbedPage() {
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="box-input resize-none"
+                className="glass-input resize-none"
                 placeholder="Message body..."
               />
             </div>
 
             {/* Color */}
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Accent Color</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Accent Color</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-0"
+                  className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0"
                 />
                 <input
                   type="text"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="box-input w-28 uppercase font-mono text-xs font-bold"
+                  className="glass-input w-28 uppercase font-mono text-xs font-bold"
                 />
               </div>
             </div>
 
             {/* Image Banner URL */}
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Banner Image URL</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Banner Image URL</label>
               <input
                 type="url"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="box-input"
+                className="glass-input"
                 placeholder="https://imgur.com/banner.png"
               />
             </div>
 
             {/* Footer Text */}
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Footer Text</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Footer Text</label>
               <input
                 type="text"
                 value={footerText}
                 onChange={(e) => setFooterText(e.target.value)}
-                className="box-input"
+                className="glass-input"
                 placeholder="Member #{server.count}"
               />
             </div>
           </div>
         </div>
+
 
         {/* Live Simulator Preview */}
         <div className="space-y-4 sticky top-20">

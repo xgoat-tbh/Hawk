@@ -142,32 +142,43 @@ export default function CommunitySettingsPage() {
 
   return (
     <div className="space-y-8 pb-20">
-      <div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-          <MessageSquare className="w-6 h-6 text-[#5865F2]" />
-          <span>Suggestions & Confessions</span>
-        </h1>
-        <p className="text-xs text-muted mt-1 font-medium">
-          Manage channels for anonymous confession drops and community suggestion voting.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
+            <MessageSquare className="w-6 h-6 text-[#5865F2]" />
+            <span>Suggestions & Confessions</span>
+          </h1>
+          <p className="text-xs text-white/50 mt-1 font-medium">
+            Manage channels for anonymous confession drops and community suggestion voting.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving || !hasChanges}
+          className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-2 self-start sm:self-auto disabled:opacity-40"
+        >
+          <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         {/* Suggestion System */}
-        <div className="box-card p-6 space-y-6">
+        <div className="glass-card p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 border-b-2 border-amber-500/40 flex items-center justify-center text-amber-400">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
               <Lightbulb className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-white uppercase tracking-wide">Community Suggestions Routing</h3>
-              <p className="text-xs text-muted">Set channels where suggestions are submitted, reviewed, and finalized.</p>
+              <p className="text-xs text-white/40">Set channels where suggestions are submitted, reviewed, and finalized.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Submission Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Submission Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={sugSubmission}
@@ -177,7 +188,7 @@ export default function CommunitySettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Admin Review Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Admin Review Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={sugReview}
@@ -187,7 +198,7 @@ export default function CommunitySettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Approved Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Approved Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={sugApproved}
@@ -197,7 +208,7 @@ export default function CommunitySettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Denied Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Denied Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={sugDenied}
@@ -209,20 +220,20 @@ export default function CommunitySettingsPage() {
         </div>
 
         {/* Anonymous Confessions */}
-        <div className="box-card p-6 space-y-6">
+        <div className="glass-card p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 border-b-2 border-violet-500/40 flex items-center justify-center text-violet-400">
+            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
               <Lock className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-white uppercase tracking-wide">Anonymous Confessions</h3>
-              <p className="text-xs text-muted">Route user confessions and private admin logs.</p>
+              <p className="text-xs text-white/40">Route user confessions and private admin logs.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Public Confession Feed</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Public Confession Feed</label>
               <ChannelSelect
                 channels={channels}
                 value={confSubmission}
@@ -232,7 +243,7 @@ export default function CommunitySettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Private Staff Log Channel</label>
+              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Private Staff Log Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={confLog}
@@ -243,6 +254,7 @@ export default function CommunitySettingsPage() {
           </div>
         </div>
       </div>
+
 
       <SaveBar
         hasChanges={Boolean(hasChanges)}

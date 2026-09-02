@@ -16,7 +16,7 @@ export default async function DashboardHubPage() {
   guilds.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#08090c]">
+    <div className="min-h-screen flex flex-col bg-[#000000]">
       <Navbar user={session} />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-10">
@@ -43,17 +43,17 @@ export default async function DashboardHubPage() {
             {guilds.map((guild) => (
               <div
                 key={guild.id}
-                className="glass-card p-5 flex flex-col justify-between group hover:-translate-y-1 transition-all duration-200"
+                className="glass-card p-5 flex flex-col justify-between group transition-colors duration-150"
               >
                 <div className="flex items-center gap-3.5">
                   {guild.iconUrl ? (
                     <img
                       src={guild.iconUrl}
                       alt={guild.name}
-                      className="w-12 h-12 rounded-xl border border-white/10 flex-shrink-0 object-cover"
+                      className="w-12 h-12 rounded-xl border border-white/10 shrink-0 object-cover"
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/10 text-white/70 font-bold text-sm flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-white/[0.03] border border-white/10 text-white/70 font-bold text-sm flex items-center justify-center shrink-0">
                       {guild.name.slice(0, 2).toUpperCase()}
                     </div>
                   )}
@@ -82,5 +82,6 @@ export default async function DashboardHubPage() {
         )}
       </main>
     </div>
+
   );
 }
