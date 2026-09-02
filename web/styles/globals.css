@@ -4,58 +4,72 @@
 
 @layer base {
   :root {
-    --background: 0 0% 3%;
-    --foreground: 210 20% 98%;
+    --background: 0 0% 2%;
+    --foreground: 0 0% 98%;
+  }
+
+  * {
+    border-color: rgba(255, 255, 255, 0.08);
   }
 }
 
 body {
-  background-color: #000000;
-  color: #f3f4f6;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Geist", Helvetica, Arial, sans-serif;
+  background-color: #050505;
+  color: #f5f5f7;
+  font-family: -apple-system, BlinkMacSystemFont, "Geist", "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
-  background-image: radial-gradient(circle at 50% 0%, rgba(88, 101, 242, 0.05) 0%, transparent 60%);
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
   background-size: 100% 100%;
 }
 
-/* Custom sleek scrollbar */
+/* Custom minimal scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: #050505;
 }
 ::-webkit-scrollbar-thumb {
-  background: #18191e;
+  background: #1c1c22;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #272a33;
+  background: #2e2e38;
 }
 
-/* Minimalist Glassmorphism 50/50 & Flat Outlined Buttons System (0-Shadow) */
+/* Minimalist Monochrome Glassmorphism & Micro-Interaction System */
 @layer components {
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center font-semibold text-xs tracking-wide px-4 py-2 rounded-xl bg-white text-black hover:bg-neutral-200 active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+  }
+
   .btn-outline-primary {
-    @apply relative inline-flex items-center justify-center font-semibold text-xs tracking-wide px-4 py-2 rounded-xl bg-transparent border border-[#5865F2]/70 text-[#7289da] hover:bg-[#5865F2]/10 hover:border-[#5865F2] hover:text-white active:scale-[0.98] transition-all duration-150 cursor-pointer select-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.14] text-white hover:bg-white/[0.08] hover:border-white/30 active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .btn-outline-secondary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-4 py-2 rounded-xl bg-transparent border border-white/10 text-white/70 hover:bg-white/[0.04] hover:border-white/25 hover:text-white active:scale-[0.98] transition-all duration-150 cursor-pointer select-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-4 py-2 rounded-xl bg-transparent border border-white/[0.08] text-white/70 hover:bg-white/[0.04] hover:border-white/20 hover:text-white active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .btn-outline-danger {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-xl bg-transparent border border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/80 hover:text-red-300 active:scale-[0.98] transition-all duration-150 cursor-pointer select-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-xl bg-red-500/[0.06] border border-red-500/30 text-red-400 hover:bg-red-500/15 hover:border-red-500/60 hover:text-red-300 active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .glass-card {
-    @apply bg-[#0a0a0c]/80 backdrop-blur-xl border border-white/[0.08] rounded-2xl hover:border-white/[0.14] transition-all duration-200 relative focus-within:z-30;
+    @apply bg-[#0c0c10]/80 backdrop-blur-xl border border-white/[0.07] rounded-2xl hover:border-white/[0.12] transition-all duration-200 relative focus-within:z-30;
   }
 
-
-
   .glass-input {
-    @apply w-full bg-[#040406] border border-white/[0.10] rounded-xl px-4 py-2.5 text-xs text-white placeholder:text-white/25 focus:outline-none focus:border-[#5865F2] hover:border-white/[0.18] transition-all duration-150;
+    @apply w-full bg-[#050507] border border-white/[0.09] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 hover:border-white/[0.15] transition-all duration-150;
+  }
+
+  .badge-monochrome {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-white/80;
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/[0.08] border border-red-500/30 text-xs font-medium text-red-400;
   }
 }
 

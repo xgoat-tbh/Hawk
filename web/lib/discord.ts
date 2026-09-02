@@ -209,3 +209,115 @@ export async function fetchGuildEmojis(guildId: string): Promise<DiscordEmoji[]>
     return getStaleFallback<DiscordEmoji[]>(cacheKey) || [];
   }
 }
+
+export async function fetchGuildMember(guildId: string, userId: string): Promise<{ roles: string[]; permissions?: string; user?: any } | null> {
+  const cacheKey = `member_${guildId}_${userId}`;
+  const cached = getFromCache<{ roles: string[]; permissions?: string; user?: any }>(cacheKey, 30_000);
+  if (cached) return cached;
+
+  const token = getBotToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
+      headers: { Authorization: `Bot ${token}` },
+    });
+
+    if (!res.ok) return null;
+    const member = await res.json();
+    setToCache(cacheKey, member);
+    return member;
+  } catch (error) {
+    console.error(`Error fetching member ${userId} in guild ${guildId}:`, error);
+    return null;
+  }
+}
+
+export async function fetchGuildDetails(guildId: string): Promise<{ id: string; name: string; icon: string | null; owner_id: string } | null> {
+  const cacheKey = `guild_details_${guildId}`;
+  const cached = getFromCache<{ id: string; name: string; icon: string | null; owner_id: string }>(cacheKey, 60_000);
+  if (cached) return cached;
+
+  const token = getBotToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
+      headers: { Authorization: `Bot ${token}` },
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    setToCache(cacheKey, data);
+    return data;
+  } catch (error) {
+    console.error(`Error fetching guild details for ${guildId}:`, error);
+    return null;
+  }
+}
+
+export async function exchangeOAuthCode(
+  code: string,
+  redirectUri: string,
+): Promise<{ access_token: string; token_type: string; scope: string } | null> {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) return null;
+
+  try {
+    const params = new URLSearchParams();
+    params.append('client_id', clientId);
+    params.append('client_secret', clientSecret);
+    params.append('grant_type', 'authorization_code');
+    params.append('code', code);
+    params.append('redirect_uri', redirectUri);
+
+    const res = await fetch('https://discord.com/api/v10/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.warn('Discord OAuth code exchange failed:', err);
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error('Error in exchangeOAuthCode:', error);
+    return null;
+  }
+}
+
+export async function fetchUserProfile(
+  accessToken: string,
+): Promise<{ id: string; username: string; discriminator: string; avatar: string | null; email?: string } | null> {
+  try {
+    const res = await fetch('https://discord.com/api/v10/users/@me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.error('Error in fetchUserProfile:', error);
+    return null;
+  }
+}
+
+export async function fetchUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
+  try {
+    const res = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (error) {
+    console.error('Error in fetchUserGuilds:', error);
+    return [];
+  }
+}

@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
 import { SyncLoader } from '@/components/SyncLoader';
-import { ShoppingBag, Plus, Trash2, Tag, Loader2 } from 'lucide-react';
-
+import { ShoppingBag, Plus, Trash2, Tag, Loader2, Shield, AlertCircle } from 'lucide-react';
 
 export default function StoreSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -97,150 +96,159 @@ export default function StoreSettingsPage() {
   };
 
   if (loading) {
-    return <SyncLoader title="Syncing Server Store" subtitle="Loading live Discord shop catalog, role grants, and inventory permissions..." />;
+    return <SyncLoader title="Loading Server Store" subtitle="Fetching shop items, role associations, and price listings..." />;
   }
 
-
   return (
-    <div className="space-y-8 pb-20">
-      <div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-          <ShoppingBag className="w-6 h-6 text-[#5865F2]" />
-          <span>Server Store & Role Shop</span>
-        </h1>
-        <p className="text-xs text-white/50 mt-1 font-medium">
-          Create buyable Discord roles and collectible items for members to purchase with server currency.
-        </p>
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+        <div>
+          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-white/80" />
+            <span>Server Store Catalog</span>
+          </h1>
+          <p className="text-xs text-white/40 mt-0.5">
+            Manage purchasable shop items and automatic Discord role grants for members.
+          </p>
+        </div>
       </div>
 
-      {/* Add New Item Form */}
-      <form onSubmit={handleAddItem} className="glass-card p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/20 flex items-center justify-center text-[#5865F2]">
-            <Plus className="w-5 h-5" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left: Add Item Form (5 cols) */}
+        <div className="lg:col-span-5 glass-card p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Plus className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Create Store Item</h3>
+              <p className="text-[11px] text-white/40">Add items or role purchases to the server shop.</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-sm text-white uppercase tracking-wide">Add New Store Item / Role</h3>
-            <p className="text-xs text-white/40">Items with assigned roles will auto-grant the role upon Discord purchase.</p>
-          </div>
+
+          {addError && (
+            <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{addError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAddItem} className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Item Name</label>
+              <input
+                type="text"
+                required
+                maxLength={100}
+                value={itemName}
+                onChange={(e) => setItemName(e.target.value)}
+                placeholder="e.g. VIP Role, Custom Color"
+                className="glass-input font-sans text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Price ({currencySymbol})</label>
+              <input
+                type="number"
+                required
+                min={1}
+                value={itemPrice}
+                onChange={(e) => setItemPrice(parseInt(e.target.value, 10) || 1)}
+                className="glass-input font-mono text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Description (Optional)</label>
+              <input
+                type="text"
+                maxLength={255}
+                value={itemDesc}
+                onChange={(e) => setItemDesc(e.target.value)}
+                placeholder="e.g. Unlocks access to exclusive channels"
+                className="glass-input font-sans text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Granted Discord Role (Optional)</label>
+              <RoleSelect
+                roles={roles}
+                value={itemRoleId}
+                onChange={setItemRoleId}
+                placeholder="Select role to grant on buy..."
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isAdding}
+              className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
+            >
+              {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              <span>Add to Shop</span>
+            </button>
+          </form>
         </div>
 
-        {addError && <div className="text-xs font-bold uppercase tracking-wide text-red-400 bg-red-500/10 p-3 rounded-lg border border-red-500/20">{addError}</div>}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Item Name</label>
-            <input
-              type="text"
-              value={itemName}
-              required
-              onChange={(e) => setItemName(e.target.value)}
-              className="glass-input font-bold"
-              placeholder="e.g. VIP Role, Custom Badge"
-            />
+        {/* Right: Existing Items List (7 cols) */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
+              Active Catalog Items ({items.length})
+            </span>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Price ({currencySymbol})</label>
-            <input
-              type="number"
-              value={itemPrice}
-              min={1}
-              required
-              onChange={(e) => setItemPrice(parseInt(e.target.value) || 1)}
-              className="glass-input font-bold"
-              placeholder="5000"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Auto-Grant Role (Optional)</label>
-            <RoleSelect
-              roles={roles}
-              value={itemRoleId}
-              onChange={setItemRoleId}
-              placeholder="Select role to give buyer..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Description</label>
-            <input
-              type="text"
-              value={itemDesc}
-              onChange={(e) => setItemDesc(e.target.value)}
-              className="glass-input"
-              placeholder="Brief perk details..."
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={isAdding}
-            className="btn-outline-primary text-xs px-6 py-2.5 flex items-center gap-2"
-          >
-            {isAdding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            <span>Create Item</span>
-          </button>
-        </div>
-      </form>
-
-      {/* Item Catalog List */}
-      <div className="space-y-4">
-        <h3 className="font-black text-sm uppercase tracking-wider text-white flex items-center gap-2">
-          <Tag className="w-4 h-4 text-white/40" />
-          <span>Active Store Catalog ({items.length})</span>
-        </h3>
-
-        {items.length === 0 ? (
-          <div className="text-center py-12 glass-card p-6">
-            <p className="text-xs text-white/40">No items in the store yet. Use the form above to add your first role or item!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {items.map((item) => {
-              const assignedRole = roles.find((r) => r.id === item.inventory_role_id);
-              return (
-                <div
-                  key={item.item_id}
-                  className="glass-card p-4 flex items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#040406] border border-white/10 flex items-center justify-center text-[#5865F2] font-black text-xs">
-                      #{item.item_id}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-white text-sm tracking-wide">{item.name}</span>
-                        <span className="px-2 py-0.5 rounded bg-[#5865F2]/20 text-[#5865F2] text-[10px] font-extrabold border border-[#5865F2]/30">
-                          {currencySymbol}{item.price?.toLocaleString()}
-                        </span>
-                        {assignedRole && (
-                          <span className="px-2 py-0.5 rounded bg-violet-500/20 text-violet-400 text-[10px] font-extrabold border border-violet-500/30">
-                            Grants @{assignedRole.name}
-                          </span>
-                        )}
-                      </div>
-                      {item.description && <p className="text-xs text-white/40 mt-0.5">{item.description}</p>}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleDeleteItem(item.item_id)}
-                    title="Delete item"
-                    className="p-2 rounded-xl bg-[#040406] border border-white/10 text-white/40 hover:text-red-400 hover:border-red-500/40 hover:bg-red-500/10 transition-all active:scale-95"
+          {items.length === 0 ? (
+            <div className="glass-card p-10 text-center text-xs text-white/30">
+              No store items configured yet. Use the form on the left to add your first item.
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {items.map((item) => {
+                const grantedRole = roles.find((r) => r.id === item.inventory_role_id);
+                return (
+                  <div
+                    key={item.item_id}
+                    className="glass-card p-4 flex items-center justify-between gap-4 group"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                    <div className="space-y-1 overflow-hidden">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-3.5 h-3.5 text-white/50 shrink-0" />
+                        <span className="font-medium text-xs text-white truncate">{item.name}</span>
+                        <span className="font-mono text-xs text-white/80 bg-white/[0.04] border border-white/[0.08] px-2 py-0.5 rounded">
+                          {currencySymbol}{item.price.toLocaleString()}
+                        </span>
+                      </div>
 
+                      {item.description && (
+                        <p className="text-[11px] text-white/40 truncate">{item.description}</p>
+                      )}
+
+                      {grantedRole && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-white/60 pt-0.5">
+                          <Shield className="w-3 h-3 text-white/40" />
+                          <span>Grants @{grantedRole.name}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteItem(item.item_id)}
+                      className="btn-outline-danger p-2 shrink-0"
+                      title="Delete item"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

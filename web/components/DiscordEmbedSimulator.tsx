@@ -18,25 +18,30 @@ export function DiscordEmbedSimulator({
   isEmbed = true,
   title = 'Welcome to {server}!',
   description = 'Hey {user}, welcome! Check out the rules.',
-  color = '#5865F2',
+  color = '#ffffff',
   imageUrl,
   thumbnailUrl,
   footerText = 'Member #{server.count}',
-  serverName = 'Amo India',
+  serverName = 'Discord Server',
   memberCount = 1250,
 }: DiscordEmbedSimulatorProps) {
+  const currentServer = serverName || 'Discord Server';
+
   // Replace placeholders for simulation
   const replaceTags = (text: string) => {
+    if (!text) return '';
     return text
-      .replace(/\{user\}/gi, '@Outcast')
-      .replace(/\{usermention\}/gi, '@Outcast')
-      .replace(/\{username\}/gi, 'Outcast')
-      .replace(/\{usertag\}/gi, 'Outcast#0001')
-      .replace(/\{servername\}/gi, serverName)
-      .replace(/\{server\}/gi, serverName)
-      .replace(/\{server\.name\}/gi, serverName)
+      .replace(/\{user\}/gi, '@Member')
+      .replace(/\{usermention\}/gi, '@Member')
+      .replace(/\{username\}/gi, 'Member')
+      .replace(/\{usertag\}/gi, 'Member#0001')
+      .replace(/\{servername\}/gi, currentServer)
+      .replace(/\{server\}/gi, currentServer)
+      .replace(/\{server\.name\}/gi, currentServer)
       .replace(/\{server\.count\}/gi, memberCount.toLocaleString())
-      .replace(/\{servermember\}/gi, memberCount.toLocaleString());
+      .replace(/\{servermember\}/gi, memberCount.toLocaleString())
+      .replace(/\{servercount\}/gi, memberCount.toLocaleString())
+      .replace(/\{randomuser\}/gi, '@ActiveMember');
   };
 
   const formattedTitle = replaceTags(title);
@@ -47,8 +52,7 @@ export function DiscordEmbedSimulator({
   const renderContent = (text: string) => {
     if (!text) return null;
 
-    // Tokenize by custom emojis <:name:id> or <a:name:id>, bold **text**, code `text`, and @mentions
-    const regex = /(<a?:[a-zA-Z0-9_]+:[0-9]+>|\*\*.*?\*\*|@\w+|`.*?`)/g;
+    const regex = /(<a?:[a-zA-Z0-9_]+:[0-9]+>|\*\*.*?\*\*|\*.*?\*|@\w+|#[a-zA-Z0-9_-]+|`.*?`)/g;
     const parts = text.split(regex);
 
     return parts.map((part, index) => {
@@ -73,10 +77,15 @@ export function DiscordEmbedSimulator({
 
       // 2. Bold: **text**
       if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
-        return <strong key={index} className="font-bold text-white">{part.slice(2, -2)}</strong>;
+        return <strong key={index} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
       }
 
-      // 3. Inline Code: `text`
+      // 3. Italic: *text*
+      if (part.startsWith('*') && part.endsWith('*') && part.length >= 2 && !part.startsWith('**')) {
+        return <em key={index} className="italic text-white/90">{part.slice(1, -1)}</em>;
+      }
+
+      // 4. Inline Code: `text`
       if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
         return (
           <code key={index} className="bg-[#1e1f22] px-1.5 py-0.5 rounded text-xs font-mono text-[#e0e1e5]">
@@ -85,10 +94,19 @@ export function DiscordEmbedSimulator({
         );
       }
 
-      // 4. Mention: @name
+      // 5. Mention: @name
       if (part.startsWith('@')) {
         return (
-          <span key={index} className="bg-[#5865F2]/20 text-[#c9cdfb] px-1 rounded font-medium hover:bg-[#5865F2]/40 transition-colors">
+          <span key={index} className="bg-white/10 text-white font-medium px-1 rounded hover:bg-white/20 transition-colors">
+            {part}
+          </span>
+        );
+      }
+
+      // 6. Channel: #channel
+      if (part.startsWith('#')) {
+        return (
+          <span key={index} className="bg-white/10 text-white/80 font-medium px-1 rounded hover:bg-white/20 transition-colors">
             {part}
           </span>
         );
@@ -99,14 +117,14 @@ export function DiscordEmbedSimulator({
   };
 
   return (
-    <div className="bg-[#313338] rounded-xl p-4 text-white max-w-xl font-sans text-sm border border-white/[0.06] select-none">
+    <div className="bg-[#313338] rounded-xl p-4 text-white max-w-xl font-sans text-sm border border-white/[0.08] select-none shadow-xl">
       {/* Bot Message Header */}
       <div className="flex items-start gap-3">
         {/* Bot Avatar */}
-        <div className="w-10 h-10 rounded-full bg-[#5865F2] flex items-center justify-center text-white font-black text-sm shrink-0 overflow-hidden ring-2 ring-white/10">
+        <div className="w-10 h-10 rounded-full bg-[#1e1f22] flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden ring-1 ring-white/10">
           <img
             src="https://cdn.discordapp.com/embed/avatars/0.png"
-            alt="Amo Hawk Avatar"
+            alt="Hawk Avatar"
             className="w-full h-full object-cover"
           />
         </div>
@@ -114,10 +132,10 @@ export function DiscordEmbedSimulator({
         <div className="flex-1 overflow-hidden">
           {/* Header Info */}
           <div className="flex items-center gap-1.5 leading-none">
-            <span className="font-semibold text-white text-sm hover:underline cursor-pointer">
-              Amo Hawk
+            <span className="font-medium text-white text-sm hover:underline cursor-pointer">
+              Hawk
             </span>
-            <span className="bg-[#5865F2] text-white text-[9px] font-bold px-1 py-0.5 rounded-[3px] uppercase tracking-wider flex items-center gap-0.5">
+            <span className="bg-white/20 text-white text-[9px] font-bold px-1 py-0.5 rounded-[3px] uppercase tracking-wider flex items-center gap-0.5">
               <span>✓</span>
               <span>BOT</span>
             </span>
@@ -133,12 +151,12 @@ export function DiscordEmbedSimulator({
             /* Rich Embed Container */
             <div
               className="mt-2.5 rounded-lg bg-[#2b2d31] p-4 flex gap-4 border-l-4 transition-colors max-w-lg"
-              style={{ borderLeftColor: color || '#5865F2' }}
+              style={{ borderLeftColor: color || '#ffffff' }}
             >
               <div className="flex-1 space-y-2 overflow-hidden">
                 {/* Embed Title */}
                 {formattedTitle && (
-                  <div className="font-bold text-sm text-white hover:underline cursor-pointer">
+                  <div className="font-semibold text-sm text-white hover:underline cursor-pointer">
                     {formattedTitle}
                   </div>
                 )}
@@ -167,7 +185,7 @@ export function DiscordEmbedSimulator({
                 {/* Footer */}
                 {formattedFooter && (
                   <div className="text-[11px] text-[#949ba4] pt-2 flex items-center gap-1.5 border-t border-white/[0.06] mt-3">
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#5865F2] flex items-center justify-center text-[8px] text-white font-bold">
+                    <div className="w-3.5 h-3.5 rounded-full bg-white/20 flex items-center justify-center text-[8px] text-white font-bold">
                       H
                     </div>
                     <span>{formattedFooter}</span>

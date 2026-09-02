@@ -8,7 +8,6 @@ import { SaveBar } from '@/components/SaveBar';
 import { SyncLoader } from '@/components/SyncLoader';
 import { Sliders, Shield, Terminal, FileText } from 'lucide-react';
 
-
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
 
@@ -114,20 +113,19 @@ export default function GeneralSettingsPage() {
   };
 
   if (loading) {
-    return <SyncLoader title="Syncing General Settings" subtitle="Loading Discord server roles, logging channels, and command permissions..." />;
+    return <SyncLoader title="Loading General Settings" subtitle="Fetching Discord roles, channels, and prefix settings..." />;
   }
 
-
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-            <Sliders className="w-6 h-6 text-[#5865F2]" />
+          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-white/80" />
             <span>General Settings</span>
           </h1>
-          <p className="text-xs text-white/50 mt-1 font-medium">
-            Configure core bot prefixes, administrative permissions, and server logging channels.
+          <p className="text-xs text-white/40 mt-0.5">
+            Configure bot command prefix, administrator authority role, and server audit logging channels.
           </p>
         </div>
 
@@ -135,48 +133,48 @@ export default function GeneralSettingsPage() {
           type="button"
           onClick={handleSave}
           disabled={isSaving || !hasChanges}
-          className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-2 self-start sm:self-auto disabled:opacity-40"
+          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
         >
           <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-5">
         {/* Command Prefix */}
-        <div className="glass-card p-6 space-y-4">
+        <div className="glass-card p-5 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/20 flex items-center justify-center text-[#5865F2]">
-              <Terminal className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Terminal className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Command Prefix</h3>
-              <p className="text-xs text-white/40">The character used before all bot commands (e.g. !help, !bal).</p>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Command Prefix</h3>
+              <p className="text-[11px] text-white/40">The symbol used before bot commands (e.g. !help, !bal, !pvc).</p>
             </div>
           </div>
-          <div className="max-w-xs">
+          <div className="max-w-xs pt-1">
             <input
               type="text"
               value={prefix}
               maxLength={5}
               onChange={(e) => setPrefix(e.target.value)}
-              className="glass-input font-mono text-base font-bold"
+              className="glass-input font-mono text-sm"
               placeholder="!"
             />
           </div>
         </div>
 
         {/* Bot Commander Role */}
-        <div className="glass-card p-6 space-y-4">
+        <div className="glass-card p-5 space-y-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-              <Shield className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Shield className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Bot Commander Role</h3>
-              <p className="text-xs text-white/40">Members with this role can execute administrative bot commands.</p>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Bot Commander Role</h3>
+              <p className="text-[11px] text-white/40">Members holding this role receive elevated bot moderation and management authority.</p>
             </div>
           </div>
-          <div className="max-w-md">
+          <div className="max-w-md pt-1">
             <RoleSelect
               roles={roles}
               value={botCommanderRoleId}
@@ -187,20 +185,20 @@ export default function GeneralSettingsPage() {
         </div>
 
         {/* Logging Channels */}
-        <div className="glass-card p-6 space-y-6">
+        <div className="glass-card p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <FileText className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <FileText className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Audit & Event Logging Channels</h3>
-              <p className="text-xs text-white/40">Direct bot notifications, moderation events, and economy logs.</p>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Audit & Event Logging Channels</h3>
+              <p className="text-[11px] text-white/40">Routing channels for bot events, moderation actions, and economy transactions.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Server Log Channel</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Server Log Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={logChannelId}
@@ -209,8 +207,8 @@ export default function GeneralSettingsPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Economy Audit Channel</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Economy Audit Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={auditChannelId}
@@ -221,7 +219,6 @@ export default function GeneralSettingsPage() {
           </div>
         </div>
       </div>
-
 
       <SaveBar
         hasChanges={Boolean(hasChanges)}

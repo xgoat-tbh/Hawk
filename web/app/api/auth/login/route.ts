@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAuthorizedUser, createToken } from '@/lib/auth';
+import { isAuthorizedUser, createToken, isBotOwner, isBotAdmin, COOKIE_NAME } from '@/lib/auth';
 
 const BOT_TOKEN = process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
+const ADMIN_PASSCODE = process.env.DASHBOARD_PASSCODE || process.env.ADMIN_KEY || process.env.JWT_SECRET || '';
+
+// In-memory rate limiting map for login attempts: ip -> { count, lastAttempt }
+const loginAttempts = new Map<string, { count: number; lockUntil: number }>();
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+  const now = Date.now();
+
+  const attemptInfo = loginAttempts.get(ip);
+  if (attemptInfo && attemptInfo.lockUntil > now) {
+    const remainingSec = Math.ceil((attemptInfo.lockUntil - now) / 1000);
+    return NextResponse.json(
+      { error: `Too many failed login attempts. Please wait ${remainingSec} seconds.` },
+      { status: 429 }
+    );
+  }
+
   try {
-    const { userId } = await req.json();
+    const body = await req.json();
+    const { userId, passcode } = body;
 
     if (!userId || typeof userId !== 'string') {
       return NextResponse.json({ error: 'Please provide a valid Discord User ID.' }, { status: 400 });
@@ -16,6 +33,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid User ID format. Discord Snowflake IDs are 17-20 digits.' }, { status: 400 });
     }
 
+    // Require passcode if ADMIN_PASSCODE is configured or in production
+    if (ADMIN_PASSCODE) {
+      if (!passcode || passcode !== ADMIN_PASSCODE) {
+        const count = (attemptInfo?.count || 0) + 1;
+        const lockUntil = count >= 5 ? now + 60_000 : 0; // Lock for 60s after 5 failed attempts
+        loginAttempts.set(ip, { count, lockUntil });
+
+        return NextResponse.json(
+          { error: 'Invalid authentication key / developer passcode.' },
+          { status: 401 }
+        );
+      }
+    }
+
     const authorized = await isAuthorizedUser(cleanId);
     if (!authorized) {
       return NextResponse.json(
@@ -24,7 +55,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch user details from Discord API using bot token
+    // Reset failed attempts upon successful authentication
+    loginAttempts.delete(ip);
+
+    // Fetch live user details from Discord API using bot token
     let username = `User ${cleanId}`;
     let discriminator = '0';
     let avatar: string | null = null;
@@ -50,6 +84,8 @@ export async function POST(req: NextRequest) {
       username,
       discriminator,
       avatar,
+      isBotOwner: isBotOwner(cleanId),
+      isBotAdmin: isBotAdmin(cleanId),
     });
 
     const res = NextResponse.json({
@@ -59,9 +95,9 @@ export async function POST(req: NextRequest) {
 
     const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
 
-    res.cookies.set('hawk_session', token, {
+    res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: isHttps,
+      secure: isHttps || process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',

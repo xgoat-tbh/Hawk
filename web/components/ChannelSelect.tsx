@@ -45,13 +45,13 @@ export function SearchableChannelSelect({
     switch (type) {
       case 2:
       case 13:
-        return <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
+        return <Volume2 className="w-3.5 h-3.5 text-white/50 shrink-0" />;
       case 4:
-        return <Folder className="w-3.5 h-3.5 text-amber-400 shrink-0" />;
+        return <Folder className="w-3.5 h-3.5 text-white/50 shrink-0" />;
       case 5:
-        return <Megaphone className="w-3.5 h-3.5 text-violet-400 shrink-0" />;
+        return <Megaphone className="w-3.5 h-3.5 text-white/50 shrink-0" />;
       default:
-        return <Hash className="w-3.5 h-3.5 text-[#5865F2] shrink-0" />;
+        return <Hash className="w-3.5 h-3.5 text-white/50 shrink-0" />;
     }
   };
 
@@ -61,13 +61,13 @@ export function SearchableChannelSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#040406] border border-white/[0.10] rounded-xl px-3.5 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer hover:border-white/[0.20] transition-all select-none text-left"
+        className="w-full bg-[#050507] border border-white/[0.09] rounded-xl px-3.5 py-2.5 text-xs text-white flex items-center justify-between cursor-pointer hover:border-white/[0.18] transition-all select-none text-left"
       >
         <div className="flex items-center gap-2.5 truncate">
           {selectedChannel ? (
             <>
               {getChannelIcon(selectedChannel.type)}
-              <span className="font-semibold text-white tracking-wide truncate">
+              <span className="font-medium text-white tracking-wide truncate">
                 {selectedChannel.name}
               </span>
             </>
@@ -99,16 +99,16 @@ export function SearchableChannelSelect({
       {/* Popover & Backdrop */}
       {isOpen && (
         <>
-          {/* Invisible backdrop to dismiss and isolate stacking context */}
+          {/* Invisible backdrop to dismiss */}
           <div
             className="fixed inset-0 z-40 bg-transparent"
             onClick={() => setIsOpen(false)}
           />
 
           {/* Menu */}
-          <div className="absolute top-full left-0 mt-1.5 w-full bg-[#0a0a0c] border border-white/[0.16] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden backdrop-blur-2xl">
+          <div className="absolute top-full left-0 mt-1.5 w-full bg-[#0a0a0d] border border-white/[0.12] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden backdrop-blur-2xl">
             {/* Search Header */}
-            <div className="p-2.5 border-b border-white/[0.08] flex items-center justify-between gap-2 bg-[#040406]">
+            <div className="p-2.5 border-b border-white/[0.07] flex items-center justify-between gap-2 bg-[#050507]">
               <div className="flex items-center gap-2 flex-1">
                 <Search className="w-3.5 h-3.5 text-white/40 shrink-0 ml-1" />
                 <input
@@ -126,7 +126,7 @@ export function SearchableChannelSelect({
             </div>
 
             {/* Channel List */}
-            <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+            <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5">
               {filteredChannels.length === 0 ? (
                 <div className="py-6 text-center text-xs text-white/30">
                   {channels.length === 0 ? 'No channels loaded from server.' : 'No matching channels found'}
@@ -145,8 +145,8 @@ export function SearchableChannelSelect({
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-xs transition-colors text-left ${
                         isSelected
-                          ? 'bg-[#5865F2]/20 text-white font-semibold'
-                          : 'text-white/80 hover:bg-white/[0.06] hover:text-white'
+                          ? 'bg-white/[0.08] text-white font-medium border border-white/10'
+                          : 'text-white/80 hover:bg-white/[0.04] hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">

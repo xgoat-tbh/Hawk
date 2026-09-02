@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, canManageGuild } from '@/lib/auth';
 import { fetchBotGuilds, fetchGuildChannels, fetchGuildRoles, fetchGuildEmojis } from '@/lib/discord';
 import { db } from '@/lib/db';
 
@@ -9,6 +9,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id: guildId } = await params;
 
+  // Enforce server-side authorization: user must have Manage Guild/Admin on this server or be bot owner/admin
+  const allowed = await canManageGuild(session.id, guildId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Forbidden: You are not authorized to view or configure this server.' },
+      { status: 403 }
+    );
+  }
+
   // 1. Fetch live Discord channels, roles, and custom emojis with in-memory cached rate-limit protection
   const [botGuilds, channels, roles, emojis] = await Promise.all([
     fetchBotGuilds(),
@@ -16,7 +25,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     fetchGuildRoles(guildId),
     fetchGuildEmojis(guildId),
   ]);
-
 
   const targetGuild = botGuilds.find((g) => g.id === guildId);
 
@@ -41,7 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   let welcomeEmbed: any = {
     title: 'Welcome to {server}!',
     description: 'Hey {user}, welcome to the server! Make sure to read the rules and enjoy your stay.',
-    color: '#5865F2',
+    color: '#ffffff',
     image_url: null,
     thumbnail_url: '{user.avatar}',
     footer_text: 'Member #{server.count}',
@@ -88,7 +96,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             welcomeEmbed = {
               title: emb.title || 'Welcome to {server}!',
               description: emb.description || parsed.content || '',
-              color: emb.color ? (typeof emb.color === 'number' ? '#' + emb.color.toString(16).padStart(6, '0') : emb.color) : '#5865F2',
+              color: emb.color ? (typeof emb.color === 'number' ? '#' + emb.color.toString(16).padStart(6, '0') : emb.color) : '#ffffff',
               image_url: emb.image?.url || null,
               thumbnail_url: emb.thumbnail?.url || '{user.avatar}',
               footer_text: emb.footer?.text || null,

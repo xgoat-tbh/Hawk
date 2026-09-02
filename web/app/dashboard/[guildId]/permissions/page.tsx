@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SyncLoader } from '@/components/SyncLoader';
-import { ShieldAlert, Plus, Trash2, Shield, Lock, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ShieldAlert, Plus, Trash2, Shield, EyeOff, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function PermissionsSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -15,7 +15,6 @@ export default function PermissionsSettingsPage() {
   const [roles, setRoles] = useState<any[]>([]);
 
   const [permits, setPermits] = useState<any[]>([]);
-  const [restrictions, setRestrictions] = useState<any[]>([]);
   const [ignoredEntities, setIgnoredEntities] = useState<any[]>([]);
 
   // Add Permit State
@@ -36,7 +35,6 @@ export default function PermissionsSettingsPage() {
       setChannels(data.channels || []);
       setRoles(data.roles || []);
       setPermits(data.config?.permits || []);
-      setRestrictions(data.config?.restrictions || []);
       setIgnoredEntities(data.config?.ignoredEntities || []);
     } catch (err) {
       console.error('Failed to load permissions config:', err);
@@ -104,7 +102,7 @@ export default function PermissionsSettingsPage() {
     }
   };
 
-  const handleAddIgnoreChannel = async (e: React.FormEvent) => {
+  const handleAddIgnore = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!ignoreChannelId) {
       setActionError('Please select a channel to ignore.');
@@ -133,10 +131,10 @@ export default function PermissionsSettingsPage() {
       if (!res.ok) throw new Error('Failed to ignore channel');
 
       setIgnoreChannelId(null);
-      setActionSuccess('Bot will ignore triggers in this channel.');
+      setActionSuccess('Channel added to bot ignore list.');
       await loadData();
     } catch (err: any) {
-      setActionError(err.message || 'Error adding ignore rule');
+      setActionError(err.message || 'Error ignoring channel');
     } finally {
       setIsProcessing(false);
     }
@@ -159,202 +157,212 @@ export default function PermissionsSettingsPage() {
   };
 
   if (loading) {
-    return <SyncLoader title="Syncing Security & Permissions" subtitle="Fetching command permit ACLs, channel restrictions, and ignore lists..." />;
+    return <SyncLoader title="Loading Permissions & Access Rules" subtitle="Fetching command permit overrides, channel restrictions, and ignore lists..." />;
   }
 
   return (
-    <div className="space-y-8 pb-20">
-      <div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-          <ShieldAlert className="w-6 h-6 text-[#5865F2]" />
-          <span>Permissions, Restrict & Ignore Rules</span>
-        </h1>
-        <p className="text-xs text-white/50 mt-1 font-medium">
-          Fine-tune command execution permissions, restrict commands to specific channels, and whitelist/blacklist bot responses.
-        </p>
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+        <div>
+          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-white/80" />
+            <span>Permissions & Access Control</span>
+          </h1>
+          <p className="text-xs text-white/40 mt-0.5">
+            Fine-grained command permits, channel ignore rules, and execution boundaries.
+          </p>
+        </div>
       </div>
 
       {actionSuccess && (
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
+          <CheckCircle2 className="w-4 h-4 text-white" />
           <span>{actionSuccess}</span>
         </div>
       )}
-
       {actionError && (
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
+          <AlertCircle className="w-4 h-4 text-red-400" />
           <span>{actionError}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Custom Permits */}
-        <form onSubmit={handleAddPermit} className="glass-card p-6 space-y-6">
-          <div className="flex items-center justify-between">
+      {/* Section 1: Command Permits */}
+      <div className="space-y-3">
+        <h2 className="text-xs font-mono uppercase tracking-wider text-white/50">
+          1. Custom Command Permits (ACL Overrides)
+        </h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Add Permit Form (5 cols) */}
+          <div className="lg:col-span-5 glass-card p-5 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-                <Lock className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+                <Shield className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white uppercase tracking-wide">Grant Command Permit</h3>
-                <p className="text-xs text-white/40">Allow non-admin roles to execute specific bot commands.</p>
+                <h3 className="font-medium text-xs text-white uppercase tracking-wider">Grant Command Permit</h3>
+                <p className="text-[11px] text-white/40">Grant a role permission to use a specific command.</p>
               </div>
             </div>
-            <button
-              type="submit"
-              disabled={isProcessing}
-              className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-1.5 disabled:opacity-40"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isProcessing ? 'Granting...' : 'Grant Permit'}</span>
-            </button>
+
+            <form onSubmit={handleAddPermit} className="space-y-3 pt-1">
+              <div className="space-y-1">
+                <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Target Role</label>
+                <RoleSelect
+                  roles={roles}
+                  value={permitRoleId}
+                  onChange={setPermitRoleId}
+                  placeholder="Select role..."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Command Name (Leave blank for all)</label>
+                <input
+                  type="text"
+                  maxLength={32}
+                  value={permitCommand}
+                  onChange={(e) => setPermitCommand(e.target.value)}
+                  placeholder="e.g. nuke, purge, lock"
+                  className="glass-input font-mono text-xs"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
+              >
+                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>Grant Permit</span>
+              </button>
+            </form>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Target Role</label>
-              <RoleSelect
-                roles={roles}
-                value={permitRoleId}
-                onChange={setPermitRoleId}
-                placeholder="Select role to permit..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Command Name (Optional)</label>
-              <input
-                type="text"
-                value={permitCommand}
-                onChange={(e) => setPermitCommand(e.target.value)}
-                placeholder="e.g. purge, mute, lock (leave blank for all)"
-                className="glass-input text-xs font-mono"
-              />
-            </div>
-          </div>
-        </form>
-
-        {/* Existing Permits */}
-        <div className="glass-card p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-            <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">
-                Configured Custom Permits ({permits.length})
-              </h3>
-              <p className="text-xs text-white/40">Role overrides for administrative bot actions.</p>
-            </div>
-          </div>
-
-          {permits.length === 0 ? (
-            <div className="text-center py-12 text-xs text-white/30">
-              No custom permits configured. Only server admins and bot commanders have full access.
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.06]">
-              {permits.map((item) => {
-                const targetRole = roles.find((r) => r.id === item.target_id);
+          {/* Active Permits List (7 cols) */}
+          <div className="lg:col-span-7 space-y-2.5">
+            {permits.length === 0 ? (
+              <div className="glass-card p-8 text-center text-xs text-white/30">
+                No custom permits configured. Only server Administrators and Bot Commanders have elevated access.
+              </div>
+            ) : (
+              permits.map((permit) => {
+                const targetRole = roles.find((r) => r.id === permit.target_id);
                 return (
-                  <div key={item.id} className="py-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 rounded-lg bg-violet-500/10 border border-violet-500/25 text-violet-300 font-semibold text-xs flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5" />
-                        <span>@{targetRole ? targetRole.name : item.target_id}</span>
-                      </span>
-                      <span className="text-white/20">→</span>
-                      <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-xs font-mono text-white/80">
-                        {item.command_name ? `!${item.command_name}` : 'All Commands'}
-                      </span>
+                  <div
+                    key={permit.id}
+                    className="glass-card p-4 flex items-center justify-between gap-4 group"
+                  >
+                    <div className="space-y-0.5 overflow-hidden">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3.5 h-3.5 text-white/60 shrink-0" />
+                        <span className="font-medium text-xs text-white truncate">
+                          @{targetRole?.name || `Role ${permit.target_id}`}
+                        </span>
+                        <span className="text-[10px] font-mono text-white/80 bg-white/[0.04] border border-white/[0.08] px-2 py-0.5 rounded">
+                          {permit.command_name ? `!${permit.command_name}` : 'All Commands'}
+                        </span>
+                      </div>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() => handleDeletePermit(item.id)}
-                      className="btn-outline-danger"
+                      onClick={() => handleDeletePermit(permit.id)}
+                      className="btn-outline-danger p-2 shrink-0"
+                      title="Revoke permit"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 );
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
         </div>
+      </div>
 
-        {/* Ignored Channels Form */}
-        <form onSubmit={handleAddIgnoreChannel} className="glass-card p-6 space-y-6">
-          <div className="flex items-center justify-between">
+      {/* Section 2: Ignored Channels */}
+      <div className="space-y-3 pt-4 border-t border-white/[0.06]">
+        <h2 className="text-xs font-mono uppercase tracking-wider text-white/50">
+          2. Ignored Channels (Bot Inactive Zones)
+        </h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Add Ignore Form (5 cols) */}
+          <div className="lg:col-span-5 glass-card p-5 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-                <EyeOff className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+                <EyeOff className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white uppercase tracking-wide">Ignore Channel Triggers</h3>
-                <p className="text-xs text-white/40">Completely silence the bot from responding to commands in selected channels.</p>
+                <h3 className="font-medium text-xs text-white uppercase tracking-wider">Ignore Channel</h3>
+                <p className="text-[11px] text-white/40">Bot will ignore prefix commands sent in this channel.</p>
               </div>
             </div>
-            <button
-              type="submit"
-              disabled={isProcessing}
-              className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-1.5 disabled:opacity-40"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isProcessing ? 'Adding...' : 'Ignore Channel'}</span>
-            </button>
+
+            <form onSubmit={handleAddIgnore} className="space-y-3 pt-1">
+              <div className="space-y-1">
+                <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Target Channel</label>
+                <ChannelSelect
+                  channels={channels}
+                  value={ignoreChannelId}
+                  onChange={setIgnoreChannelId}
+                  placeholder="Select channel to ignore..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isProcessing}
+                className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
+              >
+                {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>Add Channel to Ignore List</span>
+              </button>
+            </form>
           </div>
 
-          <div className="max-w-md space-y-2 pt-2">
-            <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Channel to Ignore</label>
-            <ChannelSelect
-              channels={channels}
-              value={ignoreChannelId}
-              onChange={setIgnoreChannelId}
-              placeholder="Select channel..."
-              allowedTypes={[0, 2, 5]}
-            />
-          </div>
-        </form>
-
-        {/* Existing Ignored Entities */}
-        <div className="glass-card p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-            <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">
-                Ignored Channels & Entities ({ignoredEntities.length})
-              </h3>
-              <p className="text-xs text-white/40">Hawk bot ignores all commands in these scopes.</p>
-            </div>
-          </div>
-
-          {ignoredEntities.length === 0 ? (
-            <div className="text-center py-12 text-xs text-white/30">
-              No channels ignored. The bot responds across all enabled server channels.
-            </div>
-          ) : (
-            <div className="divide-y divide-white/[0.06]">
-              {ignoredEntities.map((item) => {
+          {/* Active Ignores List (7 cols) */}
+          <div className="lg:col-span-7 space-y-2.5">
+            {ignoredEntities.length === 0 ? (
+              <div className="glass-card p-8 text-center text-xs text-white/30">
+                No channels ignored. The bot responds to commands across all channels.
+              </div>
+            ) : (
+              ignoredEntities.map((item) => {
                 const targetChannel = channels.find((c) => c.id === item.entity_id);
                 return (
-                  <div key={item.id} className="py-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/25 text-red-400 font-semibold text-xs flex items-center gap-1.5">
-                        <EyeOff className="w-3.5 h-3.5" />
-                        <span>{targetChannel ? `#${targetChannel.name}` : item.entity_id}</span>
-                      </span>
+                  <div
+                    key={item.id}
+                    className="glass-card p-4 flex items-center justify-between gap-4 group"
+                  >
+                    <div className="space-y-0.5 overflow-hidden">
+                      <div className="flex items-center gap-2">
+                        <EyeOff className="w-3.5 h-3.5 text-white/50 shrink-0" />
+                        <span className="font-medium text-xs text-white truncate">
+                          #{targetChannel?.name || `Channel ${item.entity_id}`}
+                        </span>
+                        <span className="text-[10px] font-mono text-white/40 bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded">
+                          Ignored
+                        </span>
+                      </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleDeleteIgnore(item.id)}
-                      className="btn-outline-danger"
+                      className="btn-outline-danger p-2 shrink-0"
+                      title="Remove ignore rule"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 );
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
         </div>
       </div>
     </div>

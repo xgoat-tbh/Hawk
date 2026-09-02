@@ -1,15 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-test('HELP_CATEGORIES contains 5 clean super-categories', async () => {
+test('HELP_CATEGORIES contains 7 clean super-categories', async () => {
   const { HELP_CATEGORIES } = await import('../src/modules/general/helpUI.js');
-  assert.equal(HELP_CATEGORIES.length, 5, 'Should have exactly 5 categories to prevent category clutter');
+  assert.equal(HELP_CATEGORIES.length, 7, 'Should have exactly 7 categories to prevent category clutter');
 
   const categoryIds = HELP_CATEGORIES.map(c => c.id);
   assert.ok(categoryIds.includes('moderation'));
   assert.ok(categoryIds.includes('voice'));
   assert.ok(categoryIds.includes('gaming'));
   assert.ok(categoryIds.includes('community'));
+  assert.ok(categoryIds.includes('economy'));
+  assert.ok(categoryIds.includes('pvc'));
   assert.ok(categoryIds.includes('general'));
 });
 

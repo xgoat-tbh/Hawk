@@ -1,9 +1,8 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth';
+import { getSession, canManageGuild } from '@/lib/auth';
 import { fetchBotGuilds } from '@/lib/discord';
-import { Navbar } from '@/components/Navbar';
-import { Sidebar } from '@/components/Sidebar';
+import { GuildDashboardShell } from '@/components/GuildDashboardShell';
 
 export default async function GuildDashboardLayout({
   children,
@@ -16,6 +15,13 @@ export default async function GuildDashboardLayout({
   if (!session) redirect('/');
 
   const { guildId } = await params;
+
+  // Enforce server-side authorization: user must have permissions on this guild
+  const allowed = await canManageGuild(session.id, guildId);
+  if (!allowed) {
+    redirect('/dashboard');
+  }
+
   const botGuilds = await fetchBotGuilds();
   const targetGuild = botGuilds.find((g) => g.id === guildId);
 
@@ -28,14 +34,13 @@ export default async function GuildDashboardLayout({
     : null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar user={session} />
-      <div className="flex flex-1">
-        <Sidebar guildId={guildId} guildName={targetGuild.name} guildIcon={iconUrl} />
-        <main className="flex-1 p-6 md:p-10 max-w-5xl overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </div>
+    <GuildDashboardShell
+      user={session}
+      guildId={guildId}
+      guildName={targetGuild.name}
+      guildIcon={iconUrl}
+    >
+      {children}
+    </GuildDashboardShell>
   );
 }

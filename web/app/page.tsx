@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Shield, KeyRound, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Shield, KeyRound, ArrowRight, Loader2, AlertCircle, Lock } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userId, setUserId] = useState('');
+  const [passcode, setPasscode] = useState('');
+  const [showPasskey, setShowPasskey] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(searchParams.get('error') || null);
   const [checkingSession, setCheckingSession] = useState(true);
 
-  // Check if already logged in
+  // Check if already authenticated
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -21,7 +24,7 @@ export default function LoginPage() {
           router.push('/dashboard');
           return;
         }
-      } catch (err) {
+      } catch {
         // Not authenticated
       } finally {
         setCheckingSession(false);
@@ -30,7 +33,11 @@ export default function LoginPage() {
     checkAuth();
   }, [router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleDiscordOAuth = () => {
+    window.location.href = '/api/auth/discord';
+  };
+
+  const handlePasscodeLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userId.trim()) return;
 
@@ -41,7 +48,10 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId.trim() }),
+        body: JSON.stringify({
+          userId: userId.trim(),
+          passcode: passcode.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -60,85 +70,138 @@ export default function LoginPage() {
 
   if (checkingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#08090c]">
-        <div className="w-8 h-8 rounded-full border-2 border-[#5865F2]/20 border-t-[#5865F2] animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[#050505]">
+        <div className="w-6 h-6 rounded-full border border-white/20 border-t-white animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#08090c]">
-      {/* Ambient background glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#5865F2]/5 blur-[120px] rounded-full pointer-events-none" />
-
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative bg-[#050505]">
       {/* Login Card */}
-      <div className="w-full max-w-md glass-card p-8 sm:p-10 relative z-10 transition-all duration-300">
+      <div className="w-full max-w-md glass-card p-6 sm:p-8 relative z-10 transition-all">
         {/* Logo / Header */}
         <div className="flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center mb-5 text-[#5865F2] shadow-[0_0_25px_rgba(88,101,242,0.15)] group hover:scale-105 transition-transform duration-300">
-            <Shield className="w-7 h-7" />
+          <div className="w-12 h-12 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center mb-4 text-white">
+            <Shield className="w-6 h-6" />
           </div>
 
-          <h1 className="text-xl font-bold text-white tracking-tight">Hawk Control Panel</h1>
-          <p className="text-xs text-white/40 mt-1.5 font-normal">
-            Private administrative dashboard. Enter your Discord Snowflake ID to authenticate.
+          <h1 className="text-lg font-semibold text-white tracking-tight">Hawk Control Panel</h1>
+          <p className="text-xs text-white/40 mt-1 max-w-xs">
+            Private administrative dashboard for Discord server configuration and bot orchestration.
           </p>
         </div>
 
         {/* Error Notification */}
         {error && (
-          <div className="mt-6 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2.5 text-xs text-red-400 animate-in fade-in duration-200">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div className="mt-5 p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-start gap-2.5 text-xs text-red-400 animate-in fade-in duration-200">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span className="leading-relaxed">{error}</span>
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleLogin} className="mt-6 space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold text-white/60 tracking-wide uppercase">Discord User ID</label>
-            <div className="relative">
-              <input
-                type="text"
-                required
-                autoFocus
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="e.g. 1293525264650997842"
-                className="glass-input pr-10 font-mono text-sm"
-              />
-              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30">
-                <KeyRound className="w-4 h-4" />
-              </div>
-            </div>
+        {/* Primary OAuth2 Authentication */}
+        <div className="mt-6 space-y-3">
+          <button
+            type="button"
+            onClick={handleDiscordOAuth}
+            className="btn-primary w-full py-2.5 flex items-center justify-center gap-2"
+          >
+            <span>Continue with Discord</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="flex items-center gap-3 my-4">
+            <div className="h-[1px] flex-1 bg-white/[0.08]" />
+            <span className="text-[10px] uppercase font-mono tracking-widest text-white/30">Or</span>
+            <div className="h-[1px] flex-1 bg-white/[0.08]" />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-outline-primary w-full py-2.5 flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Verifying Permissions...</span>
-              </>
-            ) : (
-              <>
-                <span>Access Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </>
-            )}
-          </button>
-        </form>
+          {!showPasskey ? (
+            <button
+              type="button"
+              onClick={() => setShowPasskey(true)}
+              className="btn-outline-secondary w-full py-2 text-xs flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-white/50" />
+              <span>Developer / Passcode Login</span>
+            </button>
+          ) : (
+            /* Developer / Passcode Form */
+            <form onSubmit={handlePasscodeLogin} className="space-y-3 pt-1 animate-in fade-in duration-150">
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/50">
+                  Discord User ID
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="e.g. 1293525264650997842"
+                  className="glass-input font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-mono uppercase tracking-wider text-white/50">
+                  Admin Passcode / Access Key
+                </label>
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    placeholder="Enter security key..."
+                    className="glass-input font-mono text-xs pr-9"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-white/30 absolute right-3 top-1/2 -translate-y-1/2" />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-outline-primary w-full py-2.5 flex items-center justify-center gap-2 mt-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Verifying Credentials...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Authenticate</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+        </div>
 
         {/* Footer Note */}
-        <div className="mt-8 pt-6 border-t border-white/[0.06] text-center">
+        <div className="mt-6 pt-4 border-t border-white/[0.06] text-center">
           <p className="text-[11px] text-white/30">
-            Access can be granted by administrators using <code className="text-[#5865F2]/80 font-mono bg-white/[0.04] px-1.5 py-0.5 rounded">!access @user dashboard</code>
+            Access can be granted by administrators using <code className="text-white/70 font-mono bg-white/[0.04] px-1.5 py-0.5 rounded">!access @user dashboard</code>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#050505]">
+          <div className="w-6 h-6 rounded-full border border-white/20 border-t-white animate-spin" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

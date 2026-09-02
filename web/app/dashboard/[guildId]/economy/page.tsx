@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { SaveBar } from '@/components/SaveBar';
 import { SyncLoader } from '@/components/SyncLoader';
-import { Coins, Flame, MessageSquareText, Radio } from 'lucide-react';
-
+import { Coins, Flame, MessageSquareText } from 'lucide-react';
 
 export default function EconomySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -122,20 +121,19 @@ export default function EconomySettingsPage() {
   };
 
   if (loading) {
-    return <SyncLoader title="Syncing Economy & Rewards" subtitle="Fetching currency balance tables, daily claim bonus values, and multiplier rules..." />;
+    return <SyncLoader title="Loading Economy Configuration" subtitle="Fetching currency balances, streak rewards, and passive payout settings..." />;
   }
 
-
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-            <Coins className="w-6 h-6 text-[#5865F2]" />
-            <span>Economy & Rewards</span>
+          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
+            <Coins className="w-4 h-4 text-white/80" />
+            <span>Economy & Daily Rewards</span>
           </h1>
-          <p className="text-xs text-white/50 mt-1 font-medium">
-            Customize currency symbols, daily streak multipliers, and passive chat earnings.
+          <p className="text-xs text-white/40 mt-0.5">
+            Configure server currency, starting wallet balances, daily streak bonuses, and passive chat income.
           </p>
         </div>
 
@@ -143,101 +141,98 @@ export default function EconomySettingsPage() {
           type="button"
           onClick={handleSave}
           disabled={isSaving || !hasChanges}
-          className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-2 self-start sm:self-auto disabled:opacity-40"
+          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
         >
           <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Core Currency */}
-        <div className="glass-card p-6 space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Currency & Base Balance */}
+        <div className="glass-card p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Coins className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Coins className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Currency & Start Balance</h3>
-              <p className="text-xs text-white/40">Define your server’s custom currency icon and initial wallet amount.</p>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Currency & Starting Balance</h3>
+              <p className="text-[11px] text-white/40">Base currency symbol and default new member cash.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Currency Symbol</label>
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Currency Symbol</label>
               <input
                 type="text"
-                value={currencySymbol}
                 maxLength={5}
+                value={currencySymbol}
                 onChange={(e) => setCurrencySymbol(e.target.value)}
-                className="glass-input font-bold"
+                className="glass-input font-mono text-xs w-24"
                 placeholder="$"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Starting Balance</label>
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Starting Wallet Balance</label>
               <input
                 type="number"
-                value={startBalance}
                 min={0}
-                onChange={(e) => setStartBalance(parseInt(e.target.value) || 0)}
-                className="glass-input font-bold"
-                placeholder="0"
+                value={startBalance}
+                onChange={(e) => setStartBalance(parseInt(e.target.value, 10) || 0)}
+                className="glass-input font-mono text-xs max-w-xs"
               />
             </div>
           </div>
         </div>
 
-        {/* Daily & Streak Multiplier */}
-        <div className="glass-card p-6 space-y-6">
+        {/* Daily Streaks */}
+        <div className="glass-card p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-              <Flame className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Flame className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Daily Streak System</h3>
-              <p className="text-xs text-white/40">Configure base daily rewards and streak multipliers for continuous claims.</p>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Daily Streaks & Rewards</h3>
+              <p className="text-[11px] text-white/40">Amount granted for executing !daily each consecutive day.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Base Daily Reward ({currencySymbol})</label>
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Base Daily Reward</label>
               <input
                 type="number"
-                value={dailyRewardAmount}
                 min={0}
-                onChange={(e) => setDailyRewardAmount(parseInt(e.target.value) || 0)}
-                className="glass-input font-bold"
-                placeholder="1000"
+                value={dailyRewardAmount}
+                onChange={(e) => setDailyRewardAmount(parseInt(e.target.value, 10) || 0)}
+                className="glass-input font-mono text-xs max-w-xs"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Streak Bonus Per Day ({currencySymbol})</label>
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Streak Multiplier Bonus (Per Day)</label>
               <input
                 type="number"
-                value={dailyStreakBonus}
                 min={0}
-                onChange={(e) => setDailyStreakBonus(parseInt(e.target.value) || 0)}
-                className="glass-input font-bold"
-                placeholder="100"
+                value={dailyStreakBonus}
+                onChange={(e) => setDailyStreakBonus(parseInt(e.target.value, 10) || 0)}
+                className="glass-input font-mono text-xs max-w-xs"
               />
             </div>
           </div>
         </div>
 
         {/* Passive Chat Income */}
-        <div className="glass-card p-6 space-y-6">
-          <div className="flex items-center justify-between gap-4">
+        <div className="glass-card p-5 space-y-4 md:col-span-2">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-                <MessageSquareText className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+                <MessageSquareText className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white uppercase tracking-wide">Passive Chat Income</h3>
-                <p className="text-xs text-white/40">Members earn small currency amounts by chatting actively (60s cooldown).</p>
+                <h3 className="font-medium text-xs text-white uppercase tracking-wider">Passive Chat Activity Income</h3>
+                <p className="text-[11px] text-white/40">Reward active members with wallet currency for regular text chat messages.</p>
               </div>
             </div>
 
@@ -248,26 +243,24 @@ export default function EconomySettingsPage() {
                 onChange={(e) => setPassiveIncome(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-[#040406] border border-white/20 peer-focus:outline-none rounded-lg peer peer-checked:after:translate-x-5 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865F2] peer-checked:border-[#5865F2]" />
+              <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
             </label>
           </div>
 
           {passiveIncome && (
-            <div className="max-w-xs pt-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Amount Per Message ({currencySymbol})</label>
+            <div className="pt-3 border-t border-white/[0.06] space-y-1 max-w-xs animate-in fade-in duration-150">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Reward Amount Per Message (1m Cooldown)</label>
               <input
                 type="number"
-                value={passiveAmount}
                 min={1}
-                onChange={(e) => setPassiveAmount(parseInt(e.target.value) || 1)}
-                className="glass-input font-bold mt-1"
-                placeholder="10"
+                value={passiveAmount}
+                onChange={(e) => setPassiveAmount(parseInt(e.target.value, 10) || 1)}
+                className="glass-input font-mono text-xs"
               />
             </div>
           )}
         </div>
       </div>
-
 
       <SaveBar
         hasChanges={Boolean(hasChanges)}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, canManageGuild } from '@/lib/auth';
 import { db } from '@/lib/db';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -13,6 +13,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
+
+  // Enforce server-side authorization check
+  const allowed = await canManageGuild(session.id, guildId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Forbidden: You do not have permissions to manage channels in this server.' },
+      { status: 403 }
+    );
+  }
+
   const token = getBotToken();
 
   if (!token) {

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { DiscordEmoji } from '@/lib/discord';
-import { Smile, Search, X } from 'lucide-react';
+import { Smile, Search } from 'lucide-react';
 
 interface EmojiPickerProps {
   emojis: DiscordEmoji[];
@@ -35,9 +35,9 @@ export function EmojiPicker({ emojis = [], onSelectEmoji, buttonLabel = 'Server 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-xs text-white/70 hover:text-white hover:bg-white/[0.08] hover:border-white/20 transition-all flex items-center gap-1.5 font-medium"
+        className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs text-white/70 hover:text-white hover:bg-white/[0.08] hover:border-white/20 transition-all flex items-center gap-1.5 font-medium"
       >
-        <Smile className="w-3.5 h-3.5 text-amber-400" />
+        <Smile className="w-3.5 h-3.5 text-white/50" />
         <span>{buttonLabel}</span>
       </button>
 
@@ -49,9 +49,9 @@ export function EmojiPicker({ emojis = [], onSelectEmoji, buttonLabel = 'Server 
             onClick={() => setIsOpen(false)}
           />
 
-          <div className="absolute right-0 top-full mt-1.5 w-80 bg-[#0a0a0c] border border-white/[0.16] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden backdrop-blur-2xl">
+          <div className="absolute right-0 top-full mt-1.5 w-80 bg-[#0a0a0d] border border-white/[0.12] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-50 overflow-hidden backdrop-blur-2xl">
             {/* Search Header */}
-            <div className="p-2.5 border-b border-white/[0.08] flex items-center justify-between gap-2 bg-[#040406]">
+            <div className="p-2.5 border-b border-white/[0.07] flex items-center justify-between gap-2 bg-[#050507]">
               <div className="flex items-center gap-2 flex-1">
                 <Search className="w-3.5 h-3.5 text-white/40 shrink-0 ml-1" />
                 <input
@@ -69,7 +69,7 @@ export function EmojiPicker({ emojis = [], onSelectEmoji, buttonLabel = 'Server 
             </div>
 
             {/* Emoji Grid */}
-            <div className="max-h-64 overflow-y-auto p-2.5 custom-scrollbar">
+            <div className="max-h-64 overflow-y-auto p-2.5">
               {filteredEmojis.length === 0 ? (
                 <div className="py-8 text-center text-xs text-white/30">
                   {emojis.length === 0 ? 'No custom emojis found in this server.' : 'No matching emojis found.'}

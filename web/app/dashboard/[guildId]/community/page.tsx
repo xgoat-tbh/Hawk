@@ -7,7 +7,6 @@ import { SaveBar } from '@/components/SaveBar';
 import { SyncLoader } from '@/components/SyncLoader';
 import { MessageSquare, Lightbulb, Lock } from 'lucide-react';
 
-
 export default function CommunitySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
 
@@ -16,9 +15,6 @@ export default function CommunitySettingsPage() {
 
   // Suggestion State
   const [sugSubmission, setSugSubmission] = useState<string | null>(null);
-  const [sugReview, setSugReview] = useState<string | null>(null);
-  const [sugApproved, setSugApproved] = useState<string | null>(null);
-  const [sugDenied, setSugDenied] = useState<string | null>(null);
 
   // Confession State
   const [confSubmission, setConfSubmission] = useState<string | null>(null);
@@ -40,18 +36,11 @@ export default function CommunitySettingsPage() {
           const conf = data.config.confession || {};
 
           setSugSubmission(sug.submission_channel_id || null);
-          setSugReview(sug.review_channel_id || null);
-          setSugApproved(sug.approved_channel_id || null);
-          setSugDenied(sug.denied_channel_id || null);
-
           setConfSubmission(conf.submission_channel_id || null);
           setConfLog(conf.log_channel_id || null);
 
           setOriginal({
             sugSubmission: sug.submission_channel_id || null,
-            sugReview: sug.review_channel_id || null,
-            sugApproved: sug.approved_channel_id || null,
-            sugDenied: sug.denied_channel_id || null,
             confSubmission: conf.submission_channel_id || null,
             confLog: conf.log_channel_id || null,
           });
@@ -69,18 +58,12 @@ export default function CommunitySettingsPage() {
   const hasChanges =
     original &&
     (sugSubmission !== original.sugSubmission ||
-      sugReview !== original.sugReview ||
-      sugApproved !== original.sugApproved ||
-      sugDenied !== original.sugDenied ||
       confSubmission !== original.confSubmission ||
       confLog !== original.confLog);
 
   const handleReset = () => {
     if (!original) return;
     setSugSubmission(original.sugSubmission);
-    setSugReview(original.sugReview);
-    setSugApproved(original.sugApproved);
-    setSugDenied(original.sugDenied);
     setConfSubmission(original.confSubmission);
     setConfLog(original.confLog);
   };
@@ -99,9 +82,6 @@ export default function CommunitySettingsPage() {
           data: {
             suggestion: {
               submission_channel_id: sugSubmission,
-              review_channel_id: sugReview,
-              approved_channel_id: sugApproved,
-              denied_channel_id: sugDenied,
             },
             confession: {
               submission_channel_id: confSubmission,
@@ -118,9 +98,6 @@ export default function CommunitySettingsPage() {
 
       setOriginal({
         sugSubmission,
-        sugReview,
-        sugApproved,
-        sugDenied,
         confSubmission,
         confLog,
       });
@@ -134,20 +111,19 @@ export default function CommunitySettingsPage() {
   };
 
   if (loading) {
-    return <SyncLoader title="Syncing Community Channels" subtitle="Connecting with Discord suggestion boxes, staff review logs, and confession routing..." />;
+    return <SyncLoader title="Loading Community Tools" subtitle="Fetching suggestion boards and confession channels..." />;
   }
 
-
   return (
-    <div className="space-y-8 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-            <MessageSquare className="w-6 h-6 text-[#5865F2]" />
-            <span>Suggestions & Confessions</span>
+          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-white/80" />
+            <span>Community Tools</span>
           </h1>
-          <p className="text-xs text-white/50 mt-1 font-medium">
-            Manage channels for anonymous confession drops and community suggestion voting.
+          <p className="text-xs text-white/40 mt-0.5">
+            Configure server suggestion boards, upvote workflows, and anonymous confession channels.
           </p>
         </div>
 
@@ -155,104 +131,73 @@ export default function CommunitySettingsPage() {
           type="button"
           onClick={handleSave}
           disabled={isSaving || !hasChanges}
-          className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-2 self-start sm:self-auto disabled:opacity-40"
+          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
         >
           <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Suggestion System */}
-        <div className="glass-card p-6 space-y-6">
+        <div className="glass-card p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <Lightbulb className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Lightbulb className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Community Suggestions Routing</h3>
-              <p className="text-xs text-white/40">Set channels where suggestions are submitted, reviewed, and finalized.</p>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Suggestions System</h3>
+              <p className="text-[11px] text-white/40">Automated feedback board with upvote & downvote reactions.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Submission Channel</label>
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Public Suggestions Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={sugSubmission}
                 onChange={setSugSubmission}
-                placeholder="Select public channel..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Admin Review Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={sugReview}
-                onChange={setSugReview}
-                placeholder="Select staff review channel..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Approved Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={sugApproved}
-                onChange={setSugApproved}
-                placeholder="Select approved channel..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Denied Channel</label>
-              <ChannelSelect
-                channels={channels}
-                value={sugDenied}
-                onChange={setSugDenied}
-                placeholder="Select denied channel..."
+                placeholder="Select suggestions channel..."
               />
             </div>
           </div>
         </div>
 
-        {/* Anonymous Confessions */}
-        <div className="glass-card p-6 space-y-6">
+        {/* Confession System */}
+        <div className="glass-card p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-              <Lock className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Lock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Anonymous Confessions</h3>
-              <p className="text-xs text-white/40">Route user confessions and private admin logs.</p>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Anonymous Confessions</h3>
+              <p className="text-[11px] text-white/40">DM or modal-based anonymous confessions feed with admin audit logs.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Public Confession Feed</label>
+          <div className="space-y-3 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Public Confession Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={confSubmission}
                 onChange={setConfSubmission}
-                placeholder="Select public feed channel..."
+                placeholder="Select confession feed channel..."
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Private Staff Log Channel</label>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Private Admin Audit Log Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={confLog}
                 onChange={setConfLog}
-                placeholder="Select staff log channel..."
+                placeholder="Select admin confession log channel..."
               />
             </div>
           </div>
         </div>
       </div>
-
 
       <SaveBar
         hasChanges={Boolean(hasChanges)}

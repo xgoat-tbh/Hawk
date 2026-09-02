@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, canManageGuild } from '@/lib/auth';
+import { fetchGuildChannels, fetchGuildDetails } from '@/lib/discord';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -7,57 +8,96 @@ function getBotToken(): string {
   return process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
 }
 
+// In-memory rate limiting map: guildId:userId -> lastTestTimestamp
+const testMessageRateLimits = new Map<string, number>();
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { id: _guildId } = await params;
-  const token = getBotToken();
+  const { id: guildId } = await params;
 
+  // 1. Enforce server-side authorization check
+  const allowed = await canManageGuild(session.id, guildId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Forbidden: You do not have permissions to dispatch test messages to this server.' },
+      { status: 403 }
+    );
+  }
+
+  // 2. Rate limiting (1 test per 5s per user/guild)
+  const rateLimitKey = `${guildId}:${session.id}`;
+  const now = Date.now();
+  const lastTest = testMessageRateLimits.get(rateLimitKey) || 0;
+  if (now - lastTest < 5000) {
+    const remaining = Math.ceil((5000 - (now - lastTest)) / 1000);
+    return NextResponse.json(
+      { error: `Please wait ${remaining}s before sending another test message.` },
+      { status: 429 }
+    );
+  }
+
+  const token = getBotToken();
   if (!token) {
     return NextResponse.json({ error: 'Bot token not configured on server.' }, { status: 500 });
   }
 
   try {
-    const { channelId, embed, is_embed } = await req.json();
+    const { channelId, embed = {}, is_embed } = await req.json();
 
-    if (!channelId) {
-      return NextResponse.json({ error: 'Please select a welcome channel first.' }, { status: 400 });
+    if (!channelId || typeof channelId !== 'string' || !/^\d{17,20}$/.test(channelId.trim())) {
+      return NextResponse.json({ error: 'Please select a valid welcome text channel.' }, { status: 400 });
     }
 
+    const cleanChannelId = channelId.trim();
+
+    // 3. Verify channel belongs to this specific guild (prevent cross-guild channel message injection)
+    const guildChannels = await fetchGuildChannels(guildId);
+    const validChannel = guildChannels.find((c) => c.id === cleanChannelId);
+    if (!validChannel) {
+      return NextResponse.json(
+        { error: 'The specified channel does not exist in this server.' },
+        { status: 400 }
+      );
+    }
+
+    testMessageRateLimits.set(rateLimitKey, now);
+
+    // Fetch guild details for name substitution
+    const guildDetails = await fetchGuildDetails(guildId);
+    const serverName = guildDetails?.name || 'Discord Server';
+
     // Format fields with placeholder preview values
-    const title = (embed.title || 'Welcome to {server}!')
-      .replace(/\{user\}/gi, session.username)
-      .replace(/\{usermention\}/gi, `<@${session.id}>`)
-      .replace(/\{username\}/gi, session.username)
-      .replace(/\{server\}/gi, 'Server')
-      .replace(/\{servername\}/gi, 'Server');
+    const replacePlaceholders = (text: string) => {
+      return (text || '')
+        .replace(/\{user\}/gi, `<@${session.id}>`)
+        .replace(/\{username\}/gi, session.username)
+        .replace(/\{usermention\}/gi, `<@${session.id}>`)
+        .replace(/\{usertag\}/gi, session.username)
+        .replace(/\{server\}/gi, serverName)
+        .replace(/\{servername\}/gi, serverName)
+        .replace(/\{server\.name\}/gi, serverName)
+        .replace(/\{server\.count\}/gi, '1,234')
+        .replace(/\{servermember\}/gi, '1,234')
+        .replace(/\{randomuser\}/gi, `<@${session.id}>`);
+    };
 
-    const description = (embed.description || 'Welcome {user} to {server}!')
-      .replace(/\{user\}/gi, `<@${session.id}>`)
-      .replace(/\{usermention\}/gi, `<@${session.id}>`)
-      .replace(/\{username\}/gi, session.username)
-      .replace(/\{usertag\}/gi, session.username)
-      .replace(/\{server\}/gi, 'Server')
-      .replace(/\{servername\}/gi, 'Server')
-      .replace(/\{server\.count\}/gi, '1,234')
-      .replace(/\{servermember\}/gi, '1,234');
+    const title = replacePlaceholders(embed.title || 'Welcome to {server}!');
+    const description = replacePlaceholders(embed.description || 'Hey {user}, welcome to the server! Make sure to read the rules.');
+    const footer = embed.footer_text ? replacePlaceholders(embed.footer_text) : null;
 
-    const footer = (embed.footer_text || 'Member #{server.count}')
-      .replace(/\{server\.count\}/gi, '1,234')
-      .replace(/\{servermember\}/gi, '1,234')
-      .replace(/\{user\}/gi, session.username);
-
-    // If Plain Text (No Embed)
+    // Plain Text Mode (No Embed)
     if (is_embed === false) {
-      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      const res = await fetch(`https://discord.com/api/v10/channels/${cleanChannelId}/messages`, {
         method: 'POST',
         headers: {
           Authorization: `Bot ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: description,
+          content: `👋 **Welcome System Test** (Triggered by <@${session.id}> via Web Dashboard)\n\n${description}`,
+          allowed_mentions: { parse: [] }, // Prevent accidental mass pings
         }),
       });
 
@@ -73,23 +113,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // Rich Embed Mode
-    let colorInt = 0x5865f2;
+    let colorInt = 0x2b2d31;
     if (embed.color) {
-      const cleanHex = embed.color.replace('#', '');
+      const cleanHex = String(embed.color).replace('#', '');
       const parsed = parseInt(cleanHex, 16);
       if (!isNaN(parsed)) colorInt = parsed;
     }
 
     const discordEmbed: any = {
-      title,
-      description,
+      title: title.slice(0, 256),
+      description: description.slice(0, 4096),
       color: colorInt,
-      footer: { text: footer },
       timestamp: new Date().toISOString(),
     };
 
-    if (embed.image_url && embed.image_url.startsWith('http')) {
-      discordEmbed.image = { url: embed.image_url };
+    if (footer) {
+      discordEmbed.footer = { text: footer.slice(0, 2048) };
+    }
+
+    if (embed.image_url && typeof embed.image_url === 'string' && embed.image_url.startsWith('http')) {
+      discordEmbed.image = { url: embed.image_url.trim() };
     }
 
     if (embed.thumbnail_url) {
@@ -98,13 +141,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           discordEmbed.thumbnail = {
             url: `https://cdn.discordapp.com/avatars/${session.id}/${session.avatar}.png?size=128`,
           };
+        } else {
+          discordEmbed.thumbnail = { url: 'https://cdn.discordapp.com/embed/avatars/0.png' };
         }
-      } else if (embed.thumbnail_url.startsWith('http')) {
-        discordEmbed.thumbnail = { url: embed.thumbnail_url };
+      } else if (typeof embed.thumbnail_url === 'string' && embed.thumbnail_url.startsWith('http')) {
+        discordEmbed.thumbnail = { url: embed.thumbnail_url.trim() };
       }
     }
 
-    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    const res = await fetch(`https://discord.com/api/v10/channels/${cleanChannelId}/messages`, {
       method: 'POST',
       headers: {
         Authorization: `Bot ${token}`,
@@ -113,6 +158,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       body: JSON.stringify({
         content: `👋 **Welcome System Live Test** (Triggered by <@${session.id}> via Web Dashboard)`,
         embeds: [discordEmbed],
+        allowed_mentions: { parse: [] }, // Prevent accidental mass pings
       }),
     });
 

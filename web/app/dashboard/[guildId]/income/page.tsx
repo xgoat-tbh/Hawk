@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
 import { SyncLoader } from '@/components/SyncLoader';
-import { Briefcase, Plus, Trash2, Coins, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Coins, Shield, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function IncomeRolesPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -92,61 +92,52 @@ export default function IncomeRolesPage() {
   };
 
   if (loading) {
-    return <SyncLoader title="Syncing Role Income Multipliers" subtitle="Fetching automatic periodic rewards mapped to server roles..." />;
+    return <SyncLoader title="Loading Role Salaries" subtitle="Fetching periodic income assignments mapped to Discord roles..." />;
   }
 
   return (
-    <div className="space-y-8 pb-20">
-      <div>
-        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
-          <Briefcase className="w-6 h-6 text-[#5865F2]" />
-          <span>Role Income & Salaries</span>
-        </h1>
-        <p className="text-xs text-white/50 mt-1 font-medium">
-          Automatically award periodic salary payouts to server members holding specific booster, VIP, or staff roles.
-        </p>
+    <div className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+        <div>
+          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-white/80" />
+            <span>Role Income & Salaries</span>
+          </h1>
+          <p className="text-xs text-white/40 mt-0.5">
+            Configure periodic wage payouts granted automatically to members holding specific roles.
+          </p>
+        </div>
       </div>
 
       {actionSuccess && (
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
+          <CheckCircle2 className="w-4 h-4 text-white" />
           <span>{actionSuccess}</span>
         </div>
       )}
-
       {actionError && (
-        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
+          <AlertCircle className="w-4 h-4 text-red-400" />
           <span>{actionError}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6">
-        {/* Add Form */}
-        <form onSubmit={handleAddRole} className="glass-card p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <Plus className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-white uppercase tracking-wide">Assign Income Role</h3>
-                <p className="text-xs text-white/40">Set the periodic payout amount for this role.</p>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left: Add Income Role (5 cols) */}
+        <div className="lg:col-span-5 glass-card p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <Plus className="w-4 h-4" />
             </div>
-            <button
-              type="submit"
-              disabled={isAdding}
-              className="btn-outline-primary text-xs py-2 px-4 flex items-center gap-1.5 disabled:opacity-40"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isAdding ? 'Adding...' : 'Assign Role'}</span>
-            </button>
+            <div>
+              <h3 className="font-medium text-xs text-white uppercase tracking-wider">Assign Role Salary</h3>
+              <p className="text-[11px] text-white/40">Set the payout amount granted for having a role.</p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Target Role</label>
+          <form onSubmit={handleAddRole} className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Target Role</label>
               <RoleSelect
                 roles={roles}
                 value={newRoleId}
@@ -155,56 +146,68 @@ export default function IncomeRolesPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Salary Payout ({currencySymbol})</label>
+            <div className="space-y-1">
+              <label className="text-[11px] font-mono text-white/50 uppercase tracking-wider">Periodic Income ({currencySymbol})</label>
               <input
                 type="number"
+                min={1}
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
-                placeholder="500"
                 className="glass-input font-mono text-xs"
               />
             </div>
-          </div>
-        </form>
 
-        {/* Existing Income Roles */}
-        <div className="glass-card p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-            <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">
-                Configured Income Roles ({incomeRoles.length})
-              </h3>
-              <p className="text-xs text-white/40">Members holding these roles receive automated income deposits.</p>
-            </div>
+            <button
+              type="submit"
+              disabled={isAdding}
+              className="btn-primary w-full py-2 flex items-center justify-center gap-2 mt-2"
+            >
+              {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+              <span>Save Role Salary</span>
+            </button>
+          </form>
+        </div>
+
+        {/* Right: Existing Income Roles (7 cols) */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
+              Active Role Salaries ({incomeRoles.length})
+            </span>
           </div>
 
           {incomeRoles.length === 0 ? (
-            <div className="text-center py-12 text-xs text-white/30">
-              No income roles assigned yet. Use the form above or Discord <code className="text-[#5865F2] font-mono">!incomeadd</code>.
+            <div className="glass-card p-10 text-center text-xs text-white/30">
+              No role salaries configured yet. Select a role and specify a payout amount on the left.
             </div>
           ) : (
-            <div className="divide-y divide-white/[0.06]">
+            <div className="space-y-2.5">
               {incomeRoles.map((item) => {
                 const targetRole = roles.find((r) => r.id === item.role_id);
                 return (
-                  <div key={item.role_id} className="py-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="px-2.5 py-1 rounded-lg bg-violet-500/10 border border-violet-500/25 text-violet-300 font-semibold text-xs flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5" />
-                        <span>@{targetRole ? targetRole.name : item.role_id}</span>
-                      </span>
-                      <span className="text-white/20">→</span>
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 font-mono font-bold text-xs flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5" />
-                        <span>+{item.income_amount} {currencySymbol}</span>
-                      </span>
+                  <div
+                    key={item.role_id}
+                    className="glass-card p-4 flex items-center justify-between gap-4 group"
+                  >
+                    <div className="space-y-1 overflow-hidden">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-3.5 h-3.5 text-white/60 shrink-0" />
+                        <span className="font-medium text-xs text-white truncate">
+                          @{targetRole?.name || `Role ${item.role_id}`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[11px] text-white/60 pt-0.5 font-mono">
+                        <Coins className="w-3 h-3 text-white/40" />
+                        <span>{currencySymbol}{item.income_amount?.toLocaleString()} per payout cycle</span>
+                      </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleDeleteRole(item.role_id)}
-                      className="btn-outline-danger"
+                      className="btn-outline-danger p-2 shrink-0"
+                      title="Delete role salary"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

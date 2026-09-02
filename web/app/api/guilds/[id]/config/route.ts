@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, canManageGuild } from '@/lib/auth';
 import { db } from '@/lib/db';
+
+const SNOWFLAKE_REGEX = /^\d{17,20}$/;
+
+function cleanSnowflake(id: unknown): string | null {
+  if (typeof id !== 'string') return null;
+  const clean = id.trim();
+  return SNOWFLAKE_REGEX.test(clean) ? clean : null;
+}
+
+function cleanString(str: unknown, maxLen = 2000): string {
+  if (typeof str !== 'string') return '';
+  return str.trim().slice(0, maxLen);
+}
+
+function cleanInt(val: unknown, min = 0, max = 1_000_000_000, fallback = 0): number {
+  const parsed = Number(val);
+  if (isNaN(parsed) || !isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(parsed)));
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -8,13 +27,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id: guildId } = await params;
 
+  // Enforce server-side authorization check
+  const allowed = await canManageGuild(session.id, guildId);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Forbidden: You do not have permissions to modify this server configuration.' },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await req.json();
     const { module, data } = body;
+    if (!module || !data || typeof data !== 'object') {
+      return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
+    }
 
     switch (module) {
       case 'general': {
-        const { prefix, log_channel_id, audit_channel_id, bot_commander_role_id } = data;
+        const prefix = cleanString(data.prefix, 5) || '!';
+        const log_channel_id = cleanSnowflake(data.log_channel_id);
+        const audit_channel_id = cleanSnowflake(data.audit_channel_id);
+        const bot_commander_role_id = cleanSnowflake(data.bot_commander_role_id);
 
         await db`
           INSERT INTO guild_config (guild_id, prefix, log_channel_id)
@@ -39,14 +73,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       case 'economy': {
-        const {
-          currency_symbol,
-          start_balance,
-          daily_reward_amount,
-          daily_streak_bonus,
-          passive_income,
-          passive_amount,
-        } = data;
+        const currency_symbol = cleanString(data.currency_symbol, 5) || '$';
+        const start_balance = cleanInt(data.start_balance, 0, 1_000_000_000, 0);
+        const daily_reward_amount = cleanInt(data.daily_reward_amount, 0, 1_000_000_000, 1000);
+        const daily_streak_bonus = cleanInt(data.daily_streak_bonus, 0, 1_000_000_000, 100);
+        const passive_income = Boolean(data.passive_income);
+        const passive_amount = cleanInt(data.passive_amount, 1, 1_000_000, 10);
+
         await db`
           INSERT INTO economy_config (
             guild_id,
@@ -59,12 +92,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           )
           VALUES (
             ${guildId},
-            ${currency_symbol || '$'},
-            ${Number(start_balance) || 0},
-            ${Number(daily_reward_amount) || 1000},
-            ${Number(daily_streak_bonus) || 100},
-            ${Boolean(passive_income)},
-            ${Number(passive_amount) || 10}
+            ${currency_symbol},
+            ${start_balance},
+            ${daily_reward_amount},
+            ${daily_streak_bonus},
+            ${passive_income},
+            ${passive_amount}
           )
           ON CONFLICT (guild_id)
           DO UPDATE SET
@@ -80,7 +113,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       case 'pvc': {
-        const { pvc_hourly_rate, pvc_jtc_channel_id, pvc_category_id, pvc_command_channel_id, pvc_panel_channel_id } = data;
+        const pvc_hourly_rate = cleanInt(data.pvc_hourly_rate, 0, 1_000_000, 100);
+        const pvc_jtc_channel_id = cleanSnowflake(data.pvc_jtc_channel_id);
+        const pvc_category_id = cleanSnowflake(data.pvc_category_id);
+        const pvc_command_channel_id = cleanSnowflake(data.pvc_command_channel_id);
+        const pvc_panel_channel_id = cleanSnowflake(data.pvc_panel_channel_id);
+
         await db`
           INSERT INTO economy_config (
             guild_id,
@@ -92,11 +130,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           )
           VALUES (
             ${guildId},
-            ${Number(pvc_hourly_rate) || 100},
-            ${pvc_jtc_channel_id || null},
-            ${pvc_category_id || null},
-            ${pvc_command_channel_id || null},
-            ${pvc_panel_channel_id || null}
+            ${pvc_hourly_rate},
+            ${pvc_jtc_channel_id},
+            ${pvc_category_id},
+            ${pvc_command_channel_id},
+            ${pvc_panel_channel_id}
           )
           ON CONFLICT (guild_id)
           DO UPDATE SET
@@ -111,29 +149,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       case 'welcome': {
-        const { config, embed } = data;
+        const { config = {}, embed = {} } = data;
 
-        let embedColorInt = 5793266;
-        if (embed.color) {
+        let embedColorInt = 0x2b2d31;
+        if (embed.color && typeof embed.color === 'string') {
           const hex = embed.color.replace('#', '');
           const parsed = parseInt(hex, 16);
           if (!isNaN(parsed)) embedColorInt = parsed;
         }
 
+        const title = cleanString(embed.title, 256) || 'Welcome to {server}!';
+        const description = cleanString(embed.description, 4096) || 'Hey {user}, welcome! Check out the rules.';
+        const footer_text = cleanString(embed.footer_text, 2048) || null;
+        const image_url = embed.image_url && typeof embed.image_url === 'string' && embed.image_url.startsWith('http') ? embed.image_url.trim() : null;
+        const thumbnail_url = embed.thumbnail_url && typeof embed.thumbnail_url === 'string' ? embed.thumbnail_url.trim() : null;
+
         const greetPayloadObj = {
           embeds: [
             {
-              title: embed.title || 'Welcome to {server}!',
-              description: embed.description || 'Hey {user}, welcome! Check out the rules.',
+              title,
+              description,
               color: embedColorInt,
-              image: embed.image_url ? { url: embed.image_url } : undefined,
-              thumbnail: embed.thumbnail_url ? { url: embed.thumbnail_url } : undefined,
-              footer: embed.footer_text ? { text: embed.footer_text } : undefined,
+              image: image_url ? { url: image_url } : undefined,
+              thumbnail: thumbnail_url ? { url: thumbnail_url } : undefined,
+              footer: footer_text ? { text: footer_text } : undefined,
             },
           ],
         };
 
-        const channelId = config.enabled ? config.channel_id : null;
+        const channelId = config.enabled ? cleanSnowflake(config.channel_id) : null;
         const payloadStr = JSON.stringify(greetPayloadObj);
 
         await db`
@@ -150,10 +194,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       case 'community': {
         const { suggestion, confession } = data;
-        if (suggestion?.submission_channel_id) {
+        const sugChannel = cleanSnowflake(suggestion?.submission_channel_id);
+        if (sugChannel) {
           await db`
             INSERT INTO suggestion_configs (guild_id, channel_id)
-            VALUES (${guildId}, ${suggestion.submission_channel_id})
+            VALUES (${guildId}, ${sugChannel})
             ON CONFLICT (guild_id)
             DO UPDATE SET
               channel_id = EXCLUDED.channel_id,
@@ -161,10 +206,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           `;
         }
 
-        if (confession?.submission_channel_id) {
+        const confChannel = cleanSnowflake(confession?.submission_channel_id);
+        const confLog = cleanSnowflake(confession?.log_channel_id);
+        if (confChannel) {
           await db`
             INSERT INTO confession_configs (guild_id, channel_id, log_channel_id)
-            VALUES (${guildId}, ${confession.submission_channel_id}, ${confession.log_channel_id || null})
+            VALUES (${guildId}, ${confChannel}, ${confLog || null})
             ON CONFLICT (guild_id)
             DO UPDATE SET
               channel_id = EXCLUDED.channel_id,
@@ -177,30 +224,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       // Store items
       case 'add_store_item': {
-        const { name, price, description, inventory_role_id } = data;
+        const name = cleanString(data.name, 100);
+        const price = cleanInt(data.price, 1, 1_000_000_000, 100);
+        const description = cleanString(data.description, 255) || null;
+        const inventory_role_id = cleanSnowflake(data.inventory_role_id);
+
+        if (!name) {
+          return NextResponse.json({ error: 'Item name is required.' }, { status: 400 });
+        }
+
         const [last] = await db`SELECT COALESCE(MAX(item_id), 0) + 1 AS next_id FROM store_items WHERE guild_id = ${guildId}`;
         const nextId = last.next_id;
 
         await db`
           INSERT INTO store_items (guild_id, item_id, name, price, description, inventory_role_id)
-          VALUES (${guildId}, ${nextId}, ${name}, ${Number(price)}, ${description || null}, ${inventory_role_id || null})
+          VALUES (${guildId}, ${nextId}, ${name}, ${price}, ${description}, ${inventory_role_id})
         `;
         break;
       }
 
       case 'delete_store_item': {
-        const { item_id } = data;
-        await db`DELETE FROM store_items WHERE guild_id = ${guildId} AND item_id = ${Number(item_id)}`;
+        const item_id = cleanInt(data.item_id);
+        await db`DELETE FROM store_items WHERE guild_id = ${guildId} AND item_id = ${item_id}`;
         break;
       }
 
       // Gaming LFG Triggers
       case 'gaming_add_ping': {
-        const { identifier, game_name, role_id, vc_id, cooldown_seconds } = data;
-        const lowerId = String(identifier).trim().toLowerCase();
+        const identifier = cleanString(data.identifier, 32).toLowerCase();
+        const game_name = cleanString(data.game_name, 64);
+        const role_id = cleanSnowflake(data.role_id);
+        const vc_id = cleanSnowflake(data.vc_id);
+        const cooldown_seconds = cleanInt(data.cooldown_seconds, 10, 86400, 1200);
+
+        if (!identifier || !game_name || !role_id || !vc_id) {
+          return NextResponse.json({ error: 'All trigger fields are required.' }, { status: 400 });
+        }
+
         await db`
           INSERT INTO game_pings (guild_id, identifier, game_name, role_id, vc_id, cooldown_seconds)
-          VALUES (${guildId}, ${lowerId}, ${game_name}, ${role_id}, ${vc_id}, ${Number(cooldown_seconds) || 1200})
+          VALUES (${guildId}, ${identifier}, ${game_name}, ${role_id}, ${vc_id}, ${cooldown_seconds})
           ON CONFLICT (guild_id, identifier)
           DO UPDATE SET
             game_name = EXCLUDED.game_name,
@@ -213,14 +276,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       case 'gaming_delete_ping': {
-        const { identifier } = data;
-        const lowerId = String(identifier).trim().toLowerCase();
-        await db`DELETE FROM game_pings WHERE guild_id = ${guildId} AND identifier = ${lowerId}`;
+        const identifier = cleanString(data.identifier, 32).toLowerCase();
+        await db`DELETE FROM game_pings WHERE guild_id = ${guildId} AND identifier = ${identifier}`;
         break;
       }
 
       case 'gaming_set_test_channel': {
-        const { channel_id } = data;
+        const channel_id = cleanSnowflake(data.channel_id);
         if (channel_id) {
           await db`
             INSERT INTO game_guild_configs (guild_id, test_channel_id)
@@ -236,10 +298,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       // Income Roles
       case 'income_add_role': {
-        const { role_id, income_amount } = data;
+        const role_id = cleanSnowflake(data.role_id);
+        const income_amount = cleanInt(data.income_amount, 1, 1_000_000_000, 100);
+        if (!role_id) {
+          return NextResponse.json({ error: 'Role is required.' }, { status: 400 });
+        }
+
         await db`
           INSERT INTO income_roles (guild_id, role_id, income_amount)
-          VALUES (${guildId}, ${role_id}, ${Number(income_amount) || 0})
+          VALUES (${guildId}, ${role_id}, ${income_amount})
           ON CONFLICT (guild_id, role_id)
           DO UPDATE SET income_amount = EXCLUDED.income_amount
         `;
@@ -247,14 +314,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       case 'income_delete_role': {
-        const { role_id } = data;
-        await db`DELETE FROM income_roles WHERE guild_id = ${guildId} AND role_id = ${role_id}`;
+        const role_id = cleanSnowflake(data.role_id);
+        if (role_id) {
+          await db`DELETE FROM income_roles WHERE guild_id = ${guildId} AND role_id = ${role_id}`;
+        }
         break;
       }
 
       // Sticky Messages
       case 'sticky_add': {
-        const { channel_id, content } = data;
+        const channel_id = cleanSnowflake(data.channel_id);
+        const content = cleanString(data.content, 4000);
+        if (!channel_id || !content) {
+          return NextResponse.json({ error: 'Channel and content are required.' }, { status: 400 });
+        }
+
         await db`
           INSERT INTO sticky_messages (guild_id, channel_id, message_id, content)
           VALUES (${guildId}, ${channel_id}, '0', ${content})
@@ -265,33 +339,39 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       case 'sticky_delete': {
-        const { channel_id } = data;
-        await db`DELETE FROM sticky_messages WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
+        const channel_id = cleanSnowflake(data.channel_id);
+        if (channel_id) {
+          await db`DELETE FROM sticky_messages WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
+        }
         break;
       }
 
       // Media Channels
       case 'media_add': {
-        const { channel_id } = data;
-        await db`
-          INSERT INTO media_channels (guild_id, channel_id)
-          VALUES (${guildId}, ${channel_id})
-          ON CONFLICT (guild_id, channel_id) DO NOTHING
-        `;
+        const channel_id = cleanSnowflake(data.channel_id);
+        if (channel_id) {
+          await db`
+            INSERT INTO media_channels (guild_id, channel_id)
+            VALUES (${guildId}, ${channel_id})
+            ON CONFLICT (guild_id, channel_id) DO NOTHING
+          `;
+        }
         break;
       }
 
       case 'media_delete': {
-        const { channel_id } = data;
-        await db`DELETE FROM media_channels WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
+        const channel_id = cleanSnowflake(data.channel_id);
+        if (channel_id) {
+          await db`DELETE FROM media_channels WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
+        }
         break;
       }
 
       case 'media_set_autothread': {
-        const { auto_thread } = data;
+        const auto_thread = Boolean(data.auto_thread);
         await db`
           INSERT INTO media_guild_configs (guild_id, auto_thread)
-          VALUES (${guildId}, ${Boolean(auto_thread)})
+          VALUES (${guildId}, ${auto_thread})
           ON CONFLICT (guild_id)
           DO UPDATE SET auto_thread = EXCLUDED.auto_thread, updated_at = NOW()
         `;
@@ -300,35 +380,56 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       // Custom Permits
       case 'permit_add': {
-        const { target_type, target_id, command_name, module_name } = data;
+        const target_type = data.target_type === 'role' ? 'role' : 'user';
+        const target_id = cleanSnowflake(data.target_id);
+        const command_name = cleanString(data.command_name, 32).toLowerCase() || null;
+        const module_name = cleanString(data.module_name, 32).toLowerCase() || null;
+
+        if (!target_id) {
+          return NextResponse.json({ error: 'Target ID is required.' }, { status: 400 });
+        }
+
         await db`
           INSERT INTO permits (guild_id, target_type, target_id, command_name, module_name)
-          VALUES (${guildId}, ${target_type}, ${target_id}, ${command_name || null}, ${module_name || null})
+          VALUES (${guildId}, ${target_type}, ${target_id}, ${command_name}, ${module_name})
           ON CONFLICT (guild_id, target_type, target_id, command_name, module_name) DO NOTHING
         `;
         break;
       }
 
       case 'permit_delete': {
-        const { id } = data;
-        await db`DELETE FROM permits WHERE guild_id = ${guildId} AND id = ${Number(id)}`;
+        const id = cleanInt(data.id);
+        if (id) {
+          await db`DELETE FROM permits WHERE guild_id = ${guildId} AND id = ${id}`;
+        }
         break;
       }
 
       // Restrictions
       case 'restrict_add': {
-        const { command_name, module_name, target_type, target_id, location_type, location_id, effect } = data;
+        const { target_type, target_id, location_type, location_id, effect } = data;
+        const command_name = cleanString(data.command_name, 32).toLowerCase() || null;
+        const module_name = cleanString(data.module_name, 32).toLowerCase();
+        const cleanTargetId = cleanSnowflake(target_id);
+        const cleanLocId = cleanSnowflake(location_id);
+        const cleanEffect = effect === 'deny' ? 'deny' : 'allow';
+        const cleanLocType = location_type === 'category' ? 'category' : 'channel';
+
+        if (!cleanLocId) {
+          return NextResponse.json({ error: 'Location ID is required.' }, { status: 400 });
+        }
+
         await db`
           INSERT INTO restrictions (guild_id, command_name, module_name, target_type, target_id, location_type, location_id, effect)
           VALUES (
             ${guildId},
-            ${command_name || null},
-            ${module_name},
-            ${target_type || null},
-            ${target_id || null},
-            ${location_type},
-            ${location_id},
-            ${effect || 'allow'}
+            ${command_name},
+            ${module_name || 'general'},
+            ${target_type === 'user' ? 'user' : target_type === 'role' ? 'role' : null},
+            ${cleanTargetId},
+            ${cleanLocType},
+            ${cleanLocId},
+            ${cleanEffect}
           )
           ON CONFLICT (guild_id, command_name, module_name, target_type, target_id, location_type, location_id) DO NOTHING
         `;
@@ -336,25 +437,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       case 'restrict_delete': {
-        const { id } = data;
-        await db`DELETE FROM restrictions WHERE guild_id = ${guildId} AND id = ${Number(id)}`;
+        const id = cleanInt(data.id);
+        if (id) {
+          await db`DELETE FROM restrictions WHERE guild_id = ${guildId} AND id = ${id}`;
+        }
         break;
       }
 
       // Ignored Entities
       case 'ignore_add': {
         const { entity_type, entity_id, scope_type, scope_id } = data;
+        const cleanEntityId = cleanSnowflake(entity_id);
+        const cleanEntityType = ['user', 'role', 'channel', 'category'].includes(entity_type) ? entity_type : 'channel';
+
+        if (!cleanEntityId) {
+          return NextResponse.json({ error: 'Entity ID is required.' }, { status: 400 });
+        }
+
         await db`
           INSERT INTO ignored_entities (guild_id, entity_type, entity_id, scope_type, scope_id)
-          VALUES (${guildId}, ${entity_type}, ${entity_id}, ${scope_type || null}, ${scope_id || null})
+          VALUES (${guildId}, ${cleanEntityType}, ${cleanEntityId}, ${scope_type || null}, ${scope_id || null})
           ON CONFLICT (guild_id, entity_type, entity_id, scope_type, scope_id) DO NOTHING
         `;
         break;
       }
 
       case 'ignore_delete': {
-        const { id } = data;
-        await db`DELETE FROM ignored_entities WHERE guild_id = ${guildId} AND id = ${Number(id)}`;
+        const id = cleanInt(data.id);
+        if (id) {
+          await db`DELETE FROM ignored_entities WHERE guild_id = ${guildId} AND id = ${id}`;
+        }
         break;
       }
 
