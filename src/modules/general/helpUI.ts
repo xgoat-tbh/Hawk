@@ -46,8 +46,8 @@ export const HELP_CATEGORIES: HelpCategory[] = [
   {
     id: 'economy',
     name: 'Economy & Income',
-    description: 'Currency system, banking, income, casino games, and server store',
-    modules: ['economy', 'income', 'casino', 'store'],
+    description: 'Currency system, banking, income, and server store',
+    modules: ['economy', 'income', 'store'],
   },
   {
     id: 'pvc',
