@@ -118,7 +118,7 @@ export async function handleWelcomeModal(interaction: ModalSubmitInteraction): P
 export async function handleMemberJoin(member: GuildMember): Promise<void> {
   if (!member.guild) return;
   const config = await getWelcomeConfig(member.guild.id);
-  if (!config?.greetChannelId || !config.greetPayload) return;
+  if (!config?.greetChannelId || !config.greetPayload || config.greetEnabled === false) return;
 
   const textChannel = (await member.guild.channels.fetch(config.greetChannelId).catch(() => null)) as GuildTextBasedChannel | null;
   if (!textChannel) return;

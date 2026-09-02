@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, canManageGuild } from '@/lib/auth';
 import { fetchBotGuilds, fetchGuildChannels, fetchGuildRoles, fetchGuildEmojis, fetchBotProfile } from '@/lib/discord';
-import { db } from '@/lib/db';
+import { db, ensureDatabaseSchema } from '@/lib/db';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -17,6 +17,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       { status: 403 }
     );
   }
+
+  await ensureDatabaseSchema();
 
   // 1. Fetch live Discord channels, roles, emojis, and bot profile with in-memory cached rate-limit protection
   const [botGuilds, channels, roles, emojis, botProfile] = await Promise.all([
@@ -87,11 +89,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (rows[0]) {
       const row = rows[0];
       welcomeConfig.channel_id = row.greet_channel_id || null;
-      welcomeConfig.enabled = Boolean(row.greet_channel_id);
+      welcomeConfig.enabled = row.greet_enabled !== undefined ? Boolean(row.greet_enabled) : Boolean(row.greet_channel_id);
 
       if (row.greet_payload) {
         try {
           const parsed = JSON.parse(row.greet_payload);
+          if (parsed.channel_id && !welcomeConfig.channel_id) {
+            welcomeConfig.channel_id = parsed.channel_id;
+          }
+          if (parsed.enabled !== undefined && row.greet_enabled === undefined) {
+            welcomeConfig.enabled = Boolean(parsed.enabled);
+          }
           const emb = Array.isArray(parsed.embeds) ? parsed.embeds[0] : parsed.embed;
           if (emb) {
             welcomeEmbed = {

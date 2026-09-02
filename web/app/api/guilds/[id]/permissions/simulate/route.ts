@@ -9,7 +9,7 @@ import {
   resolveEffectiveCommandAccess,
   SimulationResponse,
 } from '@/lib/permissions';
-import { getGuildPermissions } from '../route';
+import { fetchGuildPermissions } from '../route';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -46,8 +46,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       console.warn('DB permits simulation fallback:', err);
     }
 
-    // 3. Fetch guild permissions state (profiles, rolePolicies, userOverrides, commandAcls)
-    const permsState = getGuildPermissions(guildId);
+    // 3. Fetch guild permissions state (profiles, rolePolicies, userOverrides, commandAcls) directly from PostgreSQL
+    const permsState = await fetchGuildPermissions(guildId);
 
     const userRoleIds = targetType === 'role' && targetId ? [targetId] : [];
     const userId = targetType === 'user' ? targetId : 'simulated_user';

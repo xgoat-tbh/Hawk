@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, canManageGuild } from '@/lib/auth';
-import { db } from '@/lib/db';
+import { db, ensureDatabaseSchema } from '@/lib/db';
 import { sendChannelMessage, deleteChannelMessage } from '@/lib/discord';
 
 const SNOWFLAKE_REGEX = /^\d{17,20}$/;
@@ -28,14 +28,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id: guildId } = await params;
 
-  // Enforce server-side authorization check
+  // Server-side authorization check
   const allowed = await canManageGuild(session.id, guildId);
   if (!allowed) {
     return NextResponse.json(
-      { error: 'Forbidden: You do not have permissions to modify this server configuration.' },
+      { error: 'Forbidden: You are not authorized to configure this server.' },
       { status: 403 }
     );
   }
+
+  await ensureDatabaseSchema();
 
   try {
     const body = await req.json();
@@ -206,16 +208,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ],
         };
 
-        const channelId = config.enabled ? cleanSnowflake(config.channel_id) : null;
-        const payloadStr = JSON.stringify(greetPayloadObj);
+        const channelId = cleanSnowflake(config.channel_id);
+        const enabled = Boolean(config.enabled);
+        const greetPayloadObjWithMeta = {
+          ...greetPayloadObj,
+          channel_id: channelId,
+          enabled,
+          is_embed: Boolean(data.is_embed),
+        };
+        const payloadStr = JSON.stringify(greetPayloadObjWithMeta);
 
         await db`
-          INSERT INTO welcome_configs (guild_id, greet_channel_id, greet_payload)
-          VALUES (${guildId}, ${channelId}, ${payloadStr})
+          INSERT INTO welcome_configs (guild_id, greet_channel_id, greet_payload, greet_enabled)
+          VALUES (${guildId}, ${channelId}, ${payloadStr}, ${enabled})
           ON CONFLICT (guild_id)
           DO UPDATE SET
             greet_channel_id = EXCLUDED.greet_channel_id,
             greet_payload = EXCLUDED.greet_payload,
+            greet_enabled = EXCLUDED.greet_enabled,
             updated_at = NOW()
         `;
 
@@ -223,7 +233,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           is_embed: Boolean(data.is_embed),
           plain_content: description,
           config: {
-            enabled: Boolean(config.enabled && channelId),
+            enabled: enabled && Boolean(channelId),
             channel_id: channelId,
           },
           embed: {

@@ -71,8 +71,10 @@ function mapWelcomeRow(row: Record<string, unknown>): WelcomeConfig {
     guildId: row.guild_id as string,
     greetChannelId: (row.greet_channel_id as string) ?? null,
     greetPayload: (row.greet_payload as string) ?? null,
+    greetEnabled: row.greet_enabled !== undefined ? Boolean(row.greet_enabled) : Boolean(row.greet_channel_id),
     leaveChannelId: (row.leave_channel_id as string) ?? null,
     leavePayload: (row.leave_payload as string) ?? null,
+    leaveEnabled: row.leave_enabled !== undefined ? Boolean(row.leave_enabled) : Boolean(row.leave_channel_id),
     createdAt: row.created_at as Date,
     updatedAt: row.updated_at as Date,
   };
