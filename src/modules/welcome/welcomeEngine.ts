@@ -134,11 +134,10 @@ export function renderWelcomePayload(rawPayload: string, ctx: VariableContext): 
 
 export const WELCOME_VARIABLES_GUIDE =
   '**Available Variables:**\n' +
-  '• `{username}` — Member username\n' +
-  '• `{usermention}` — Member mention\n' +
-  '• `{usertag}` — Member tag/name\n' +
-  '• `{useravatar}` — Member avatar URL\n' +
-  '• `{servername}` — Server name\n' +
-  '• `{servermember}` — Human member count (excluding bots)\n' +
-  '• `{serveravatar}` — Server icon URL\n' +
+  '• `{user}` / `{usermention}` — Member mention\n' +
+  '• `{username}` / `{usertag}` — Member username\n' +
+  '• `{user.avatar}` / `{useravatar}` — Member avatar URL\n' +
+  '• `{server}` / `{servername}` / `{server.name}` — Server name\n' +
+  '• `{servermember}` / `{server.count}` / `{servercount}` — Human member count\n' +
+  '• `{server.icon}` / `{serveravatar}` / `{server.avatar}` — Server icon URL\n' +
   '• `{randomuser}` — Random human member mention';

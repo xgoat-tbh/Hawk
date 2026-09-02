@@ -1,7 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { substituteVariables, renderWelcomePayload } from '../src/modules/welcome/welcomeEngine.js';
+import welcomeCommand from '../src/modules/welcome/welcome.js';
+import { substituteVariables, renderWelcomePayload, WELCOME_VARIABLES_GUIDE } from '../src/modules/welcome/welcomeEngine.js';
+import { buildWelcomeConfigPanel } from '../src/modules/welcome/welcomeUI.js';
 import type { VariableContext } from '../src/types/welcome.js';
+
+test('welcome command structure, aliases, and permissions', () => {
+  assert.equal(welcomeCommand.name, 'welcome');
+  assert.equal(welcomeCommand.module, 'welcome');
+  assert.ok(welcomeCommand.aliases?.includes('greet'));
+  assert.ok(welcomeCommand.aliases?.includes('greeting'));
+  assert.ok(welcomeCommand.aliases?.includes('greetings'));
+  assert.ok(welcomeCommand.aliases?.includes('leave'));
+  assert.ok(welcomeCommand.aliases?.includes('farewell'));
+  assert.ok(welcomeCommand.permissions.length > 0);
+});
 
 test('substituteVariables replaces all alias tokens accurately', () => {
   const ctx: VariableContext = {
@@ -52,4 +65,20 @@ test('renderWelcomePayload processes rich JSON embeds with variable substitution
   assert.ok(rendered.embeds && rendered.embeds.length > 0);
   assert.equal(rendered.embeds[0].title, 'Welcome to Test Server!');
   assert.equal(rendered.embeds[0].description, 'Hey <@111222333>, welcome! Total members: 42');
+});
+
+test('buildWelcomeConfigPanel generates valid interactive action rows', () => {
+  const greetPanel = buildWelcomeConfigPanel('greet');
+  assert.ok(greetPanel.components);
+  assert.ok(greetPanel.components.length > 0);
+
+  const leavePanel = buildWelcomeConfigPanel('leave');
+  assert.ok(leavePanel.components);
+  assert.ok(leavePanel.components.length > 0);
+});
+
+test('WELCOME_VARIABLES_GUIDE contains essential token documentation', () => {
+  assert.ok(WELCOME_VARIABLES_GUIDE.includes('{user}'));
+  assert.ok(WELCOME_VARIABLES_GUIDE.includes('{server}'));
+  assert.ok(WELCOME_VARIABLES_GUIDE.includes('{servermember}'));
 });

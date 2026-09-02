@@ -12,7 +12,7 @@ import {
   Zap,
   Users,
   Sliders,
-  Sparkles,
+  Pin,
   Coins,
   Radio,
   Lock,
@@ -32,21 +32,6 @@ export default function GuildOverviewPage() {
 
   // Diagnostic health checks
   const healthChecks = [
-    {
-      id: 'welcome',
-      name: 'Welcome Channel',
-      status: !config?.welcome?.config?.enabled
-        ? 'optional'
-        : channelMap.has(config.welcome.config.channel_id)
-        ? 'healthy'
-        : 'stale',
-      message: !config?.welcome?.config?.enabled
-        ? 'Disabled (Optional)'
-        : channelMap.has(config.welcome.config.channel_id)
-        ? 'Valid Discord channel connected'
-        : 'Configured welcome channel was deleted or is missing',
-      fixPath: `/dashboard/${guildId}/welcome`,
-    },
     {
       id: 'pvc',
       name: 'Join-To-Create Voice Channel',
@@ -82,7 +67,6 @@ export default function GuildOverviewPage() {
   const staleIssues = healthChecks.filter((h) => h.status === 'stale');
 
   const activeModules = [
-    { name: 'Welcome Greetings', active: Boolean(config?.welcome?.config?.enabled), path: `/dashboard/${guildId}/welcome` },
     { name: 'Private Voice (PVC)', active: Boolean(config?.economy?.pvc_jtc_channel_id), path: `/dashboard/${guildId}/pvc` },
     { name: 'Passive Chat Income', active: Boolean(config?.economy?.passive_income), path: `/dashboard/${guildId}/economy` },
     { name: 'Media-Only Channels', active: (config?.mediaChannels || []).length > 0, path: `/dashboard/${guildId}/media` },
@@ -250,12 +234,12 @@ export default function GuildOverviewPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Link
-            href={`/dashboard/${guildId}/welcome`}
+            href={`/dashboard/${guildId}/sticky`}
             className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] hover:border-[#3e434a] space-y-1 group transition-colors"
           >
-            <Sparkles className="w-4 h-4 text-[#a9adb2] group-hover:text-[#f1f2f3]" />
-            <div className="text-xs font-medium text-[#f1f2f3]">Welcome Embed</div>
-            <div className="text-[11px] text-[#7e8389]">Design live greeting cards</div>
+            <Pin className="w-4 h-4 text-[#a9adb2] group-hover:text-[#f1f2f3]" />
+            <div className="text-xs font-medium text-[#f1f2f3]">Sticky Notices</div>
+            <div className="text-[11px] text-[#7e8389]">Persistent channel messages</div>
           </Link>
 
           <Link

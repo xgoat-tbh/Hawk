@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Command, Sliders, Sparkles, Coins, Radio, ShoppingBag, Gamepad2, Briefcase, MessageSquare, Image, Pin, Lock, ArrowRight } from 'lucide-react';
+import { Search, Command, Sliders, Coins, Radio, ShoppingBag, Gamepad2, Briefcase, MessageSquare, Image, Pin, Lock, ArrowRight } from 'lucide-react';
 import { BOT_COMMAND_CATALOG } from '@/lib/commands';
 import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
 import { animateModalOpen, animateModalClose } from '@/lib/animations';
@@ -34,7 +34,6 @@ export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps
     { label: 'Server Overview', path: `/dashboard/${guildId}`, icon: Sliders, category: 'Navigation' },
     { label: 'General Settings', path: `/dashboard/${guildId}/general`, icon: Sliders, category: 'Navigation' },
     { label: 'Permissions & Rules', path: `/dashboard/${guildId}/permissions`, icon: Lock, category: 'Navigation' },
-    { label: 'Welcome & Embed Designer', path: `/dashboard/${guildId}/welcome`, icon: Sparkles, category: 'Navigation' },
     { label: 'Economy & Rewards', path: `/dashboard/${guildId}/economy`, icon: Coins, category: 'Navigation' },
     { label: 'Private Voice Channels', path: `/dashboard/${guildId}/pvc`, icon: Radio, category: 'Navigation' },
     { label: 'Store Catalog', path: `/dashboard/${guildId}/store`, icon: ShoppingBag, category: 'Navigation' },

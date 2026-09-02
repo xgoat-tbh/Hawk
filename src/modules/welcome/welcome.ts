@@ -21,57 +21,93 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 
 export default defineCommand({
   name: 'welcome',
+  aliases: ['greet', 'greeting', 'greetings', 'leave', 'farewell'],
   module: 'welcome',
   description: 'Manage welcome greetings and leave messages configuration.',
   usage: 'welcome <greet|leave> <channel|message|remove|showvars|test> [args...]',
   examples: [
     'welcome greet channel #welcome',
+    'greet channel #welcome',
     'welcome greet message',
+    'greet message',
     'welcome greet test',
+    'greet test',
     'welcome leave channel #goodbye',
-    'welcome leave test',
+    'leave test',
   ],
   permissions: [PermissionsBitField.Flags.ManageGuild],
   botPermissions: [PermissionsBitField.Flags.SendMessages],
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { parsed, respond } = ctx;
+    const { parsed, respond, channel } = ctx;
+    const cmdName = (parsed.aliasUsed || parsed.commandName || 'welcome').toLowerCase();
 
-    if (parsed.args.length < 2) {
+    // Support both direct alias syntax (!greet channel #welcome) and full syntax (!welcome greet channel #welcome)
+    let effectiveArgs = [...parsed.args];
+    if (cmdName === 'greet' || cmdName === 'greeting' || cmdName === 'greetings') {
+      if (effectiveArgs.length === 0 || (effectiveArgs[0] !== 'greet' && effectiveArgs[0] !== 'leave')) {
+        effectiveArgs = ['greet', ...effectiveArgs];
+      }
+    } else if (cmdName === 'leave' || cmdName === 'farewell') {
+      if (effectiveArgs.length === 0 || (effectiveArgs[0] !== 'greet' && effectiveArgs[0] !== 'leave')) {
+        effectiveArgs = ['leave', ...effectiveArgs];
+      }
+    }
+
+    if (effectiveArgs.length === 0) {
+      const panel = buildWelcomeConfigPanel('greet');
+      await (channel as GuildTextBasedChannel).send(panel);
+      return;
+    }
+
+    const typeArg = effectiveArgs[0].toLowerCase();
+    if (typeArg !== 'greet' && typeArg !== 'leave') {
+      if (typeArg === 'showvars' || typeArg === 'vars' || typeArg === 'variables') {
+        await respond.info(WELCOME_VARIABLES_GUIDE);
+        return;
+      }
       await respond.error(`Usage: \`${parsed.prefix}welcome <greet|leave> <channel|message|remove|showvars|test> [args...]\``);
       return;
     }
 
-    const typeArg = parsed.args[0].toLowerCase();
-    if (typeArg !== 'greet' && typeArg !== 'leave') {
-      await respond.error('First argument must be `greet` or `leave`.');
+    const isGreet = typeArg === 'greet';
+
+    if (effectiveArgs.length < 2) {
+      const panel = buildWelcomeConfigPanel(isGreet ? 'greet' : 'leave');
+      await (channel as GuildTextBasedChannel).send(panel);
       return;
     }
 
-    const isGreet = typeArg === 'greet';
-    const action = parsed.args[1].toLowerCase();
-    const actionArgs = parsed.args.slice(2);
+    const action = effectiveArgs[1].toLowerCase();
+    const actionArgs = effectiveArgs.slice(2);
 
     switch (action) {
       case 'channel':
+      case 'setchannel':
         await handleChannel(ctx, isGreet, actionArgs);
         break;
 
       case 'message':
+      case 'setmessage':
+      case 'panel':
         await handleMessageConfig(ctx, isGreet);
         break;
 
       case 'remove':
+      case 'disable':
+      case 'clear':
         await handleRemove(ctx, isGreet);
         break;
 
       case 'showvars':
       case 'vars':
+      case 'variables':
         await respond.info(WELCOME_VARIABLES_GUIDE);
         break;
 
       case 'test':
+      case 'preview':
         await handleTest(ctx, isGreet);
         break;
 

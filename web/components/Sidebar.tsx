@@ -8,7 +8,6 @@ import {
   Coins,
   Radio,
   Gamepad2,
-  Sparkles,
   MessageSquare,
   ChevronLeft,
   ShoppingBag,
@@ -59,7 +58,6 @@ export function Sidebar({ guildId, guildName, guildIcon, mobileOpen, onCloseMobi
     {
       group: 'Community',
       items: [
-        { label: 'Welcome Greetings', href: `/dashboard/${guildId}/welcome`, icon: Sparkles },
         { label: 'Community Tools', href: `/dashboard/${guildId}/community`, icon: MessageSquare },
         { label: 'Media Channels', href: `/dashboard/${guildId}/media`, icon: ImageIcon },
         { label: 'Sticky Notices', href: `/dashboard/${guildId}/sticky`, icon: Pin },
