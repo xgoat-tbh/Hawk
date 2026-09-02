@@ -2,13 +2,16 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { RoleSelect } from '@/components/RoleSelect';
+import { RolePicker } from '@/components/ui/RolePicker';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
+import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { Briefcase, Plus, Trash2, Shield, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function IncomeRolesPage() {
   const { guildId } = useParams() as { guildId: string };
+  const containerRef = usePageEntrance();
   const { roles, config, refreshData } = useGuildData();
 
   const incomeRoles = config?.incomeRoles || [];
@@ -74,28 +77,28 @@ export default function IncomeRolesPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+    <div ref={containerRef} className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-white/80" />
+          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
+            <Briefcase className="w-4 h-4 text-[#a9adb2]" />
             <span>Role Income & Salaries</span>
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-xs text-[#7e8389] mt-0.5">
             Configure periodic wage payouts granted automatically to members holding specific roles.
           </p>
         </div>
       </div>
 
       {actionSuccess && (
-        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="p-3 rounded-md bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
+          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
-          <AlertCircle className="w-4 h-4 text-red-400" />
+        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
+          <AlertCircle className="w-4 h-4 text-critical shrink-0" />
           <span>{actionError}</span>
         </div>
       )}
@@ -103,11 +106,11 @@ export default function IncomeRolesPage() {
       {/* Assign Salary Form Bar */}
       <form
         onSubmit={handleAddRole}
-        className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
+        className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
       >
         <div className="sm:col-span-6 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Target Role</label>
-          <RoleSelect
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Target Role</label>
+          <RolePicker
             roles={roles}
             value={newRoleId}
             onChange={setNewRoleId}
@@ -116,7 +119,7 @@ export default function IncomeRolesPage() {
         </div>
 
         <div className="sm:col-span-4 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Periodic Income ({currencySymbol})</label>
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Periodic Income ({currencySymbol})</label>
           <input
             type="number"
             min={1}
@@ -138,28 +141,28 @@ export default function IncomeRolesPage() {
         </div>
       </form>
 
-      {/* Salaries Data Table (with Independent Internal Scroll) */}
-      <div className="space-y-2">
+      {/* Salaries Data Table with HawkScrollArea */}
+      <div className="space-y-2" data-animate-section>
         <SectionHeader
           title={`Active Role Salaries (${incomeRoles.length})`}
           description="Members holding these roles receive automated wallet payouts per reward cycle."
         />
 
-        <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-[#08080a]">
-          <div className="max-h-[50vh] overflow-y-auto">
+        <div className="border border-[#24272b] rounded-md overflow-hidden bg-[#0d0e10]">
+          <HawkScrollArea maxHeight="50vh">
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 z-10 bg-[#0d0d10] border-b border-white/[0.08] text-[10px] font-mono uppercase tracking-wider text-white/40">
+              <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
                 <tr>
-                  <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4">Payout Amount</th>
-                  <th className="py-3 px-4">Frequency</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-2.5 px-4">Role</th>
+                  <th className="py-2.5 px-4">Payout Amount</th>
+                  <th className="py-2.5 px-4">Frequency</th>
+                  <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-[#1c1f23]">
                 {incomeRoles.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-white/30 text-xs">
+                    <td colSpan={4} className="py-8 text-center text-[#7e8389] text-xs">
                       No role salaries configured yet. Select a role and specify a payout amount above.
                     </td>
                   </tr>
@@ -167,27 +170,27 @@ export default function IncomeRolesPage() {
                   incomeRoles.map((item: any) => {
                     const targetRole = roles.find((r) => r.id === item.role_id);
                     return (
-                      <tr key={item.role_id} className="hover:bg-white/[0.015] transition-colors">
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1.5 text-xs text-white font-medium">
-                            <Shield className="w-3.5 h-3.5 text-white/40" />
+                      <tr key={item.role_id} className="hover:bg-[#121417]/50 transition-colors">
+                        <td className="py-2.5 px-4">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-[#f1f2f3] font-medium">
+                            <Shield className="w-3.5 h-3.5 text-[#7e8389]" />
                             <span>@{targetRole?.name || `Role ${item.role_id}`}</span>
                           </span>
                         </td>
 
-                        <td className="py-3 px-4 font-mono font-medium text-emerald-400">
+                        <td className="py-2.5 px-4 font-mono font-medium text-success-text">
                           +{currencySymbol}{item.income_amount?.toLocaleString()}
                         </td>
 
-                        <td className="py-3 px-4 text-[11px] font-mono text-white/50">
+                        <td className="py-2.5 px-4 text-[11px] font-mono text-[#7e8389]">
                           Automated Cycle
                         </td>
 
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-2.5 px-4 text-right">
                           <button
                             type="button"
                             onClick={() => handleDeleteRole(item.role_id)}
-                            className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/[0.05] transition-colors"
+                            className="p-1.5 rounded-md text-[#7e8389] hover:text-critical-text hover:bg-critical-soft transition-colors"
                             title="Revoke salary"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -199,7 +202,7 @@ export default function IncomeRolesPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </HawkScrollArea>
         </div>
       </div>
     </div>

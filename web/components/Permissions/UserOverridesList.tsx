@@ -2,6 +2,9 @@
 
 import React, { useState } from 'react';
 import { UserOverride, MODULE_DEFINITIONS, ActionType } from '@/lib/permissions';
+import { UserPicker } from '@/components/ui/UserPicker';
+import { HawkSelect } from '@/components/ui/HawkSelect';
+import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
 import { Plus, Trash2, User } from 'lucide-react';
 
 interface UserOverridesListProps {
@@ -16,6 +19,17 @@ export function UserOverridesList({ overrides, onSaveOverrides }: UserOverridesL
   const [action, setAction] = useState<ActionType>('manage');
   const [effect, setEffect] = useState<'ALLOW' | 'DENY'>('ALLOW');
   const [isAdding, setIsAdding] = useState(false);
+
+  const moduleOptions = MODULE_DEFINITIONS.map((m) => ({
+    value: m.module,
+    label: m.label,
+  }));
+
+  const actionOptions = [
+    { value: 'view', label: 'View' },
+    { value: 'manage', label: 'Manage' },
+    { value: 'delete', label: 'Delete' },
+  ];
 
   const handleAddOverride = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,66 +70,48 @@ export function UserOverridesList({ overrides, onSaveOverrides }: UserOverridesL
       {/* Create User Override Form */}
       <form
         onSubmit={handleAddOverride}
-        className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
+        className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
       >
-        <div className="sm:col-span-3 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Discord User ID</label>
-          <input
-            type="text"
-            required
-            placeholder="1293525264650997842"
+        <div className="sm:col-span-4 space-y-1">
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Discord User</label>
+          <UserPicker
             value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            className="glass-input font-mono text-xs"
-          />
-        </div>
-
-        <div className="sm:col-span-2 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">User Label</label>
-          <input
-            type="text"
-            placeholder="Alex"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            className="glass-input font-sans text-xs"
+            onChange={(id, name) => {
+              setUserId(id);
+              if (name) setUserName(name);
+            }}
+            placeholder="Select or paste User ID..."
           />
         </div>
 
         <div className="sm:col-span-3 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Target Module</label>
-          <select
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Target Module</label>
+          <HawkSelect
+            options={moduleOptions}
             value={moduleKey}
-            onChange={(e) => setModuleKey(e.target.value)}
-            className="glass-input font-sans text-xs"
-          >
-            {MODULE_DEFINITIONS.map((m) => (
-              <option key={m.module} value={m.module} className="bg-[#0a0a0c] text-white">
-                {m.label}
-              </option>
-            ))}
-          </select>
+            onChange={setModuleKey}
+            placeholder="Select module..."
+          />
         </div>
 
         <div className="sm:col-span-2 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Action</label>
-          <select
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Action</label>
+          <HawkSelect
+            options={actionOptions}
             value={action}
-            onChange={(e) => setAction(e.target.value as ActionType)}
-            className="glass-input font-sans text-xs"
-          >
-            <option value="view" className="bg-[#0a0a0c] text-white">View</option>
-            <option value="manage" className="bg-[#0a0a0c] text-white">Manage</option>
-            <option value="delete" className="bg-[#0a0a0c] text-white">Delete</option>
-          </select>
+            onChange={(val) => setAction(val as ActionType)}
+            placeholder="Select action..."
+            searchable={false}
+          />
         </div>
 
-        <div className="sm:col-span-2 flex items-center gap-2">
-          <div className="flex bg-[#050507] p-0.5 rounded-lg border border-white/[0.08] flex-1">
+        <div className="sm:col-span-3 flex items-center gap-2">
+          <div className="flex bg-[#0a0b0d] p-0.5 rounded-md border border-[#24272b] flex-1">
             <button
               type="button"
               onClick={() => setEffect('ALLOW')}
-              className={`flex-1 py-1 rounded text-[10px] font-mono font-semibold transition-colors ${
-                effect === 'ALLOW' ? 'bg-emerald-500 text-black' : 'text-white/40'
+              className={`flex-1 py-1.5 rounded text-[10px] font-mono font-semibold transition-colors ${
+                effect === 'ALLOW' ? 'bg-success text-black' : 'text-[#7e8389]'
               }`}
             >
               ALLOW
@@ -123,8 +119,8 @@ export function UserOverridesList({ overrides, onSaveOverrides }: UserOverridesL
             <button
               type="button"
               onClick={() => setEffect('DENY')}
-              className={`flex-1 py-1 rounded text-[10px] font-mono font-semibold transition-colors ${
-                effect === 'DENY' ? 'bg-red-500 text-white' : 'text-white/40'
+              className={`flex-1 py-1.5 rounded text-[10px] font-mono font-semibold transition-colors ${
+                effect === 'DENY' ? 'bg-critical text-white' : 'text-[#7e8389]'
               }`}
             >
               DENY
@@ -133,7 +129,7 @@ export function UserOverridesList({ overrides, onSaveOverrides }: UserOverridesL
 
           <button
             type="submit"
-            disabled={isAdding}
+            disabled={isAdding || !userId.trim()}
             className="btn-primary py-2 px-3 text-xs shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -141,66 +137,66 @@ export function UserOverridesList({ overrides, onSaveOverrides }: UserOverridesL
         </div>
       </form>
 
-      {/* Overrides Table (Internal Scroll) */}
-      <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-[#08080a]">
-        <div className="max-h-[50vh] overflow-y-auto">
+      {/* Overrides Table with HawkScrollArea */}
+      <div className="border border-[#24272b] rounded-md overflow-hidden bg-[#0d0e10]">
+        <HawkScrollArea maxHeight="45vh">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 z-10 bg-[#0d0d10] border-b border-white/[0.08] text-[10px] font-mono uppercase tracking-wider text-white/40">
+            <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
               <tr>
-                <th className="py-3 px-4">User</th>
-                <th className="py-3 px-4">Module Scope</th>
-                <th className="py-3 px-4">Action</th>
-                <th className="py-3 px-4">Override Effect</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-2.5 px-4">User</th>
+                <th className="py-2.5 px-4">Module Scope</th>
+                <th className="py-2.5 px-4">Action</th>
+                <th className="py-2.5 px-4">Override Effect</th>
+                <th className="py-2.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody className="divide-y divide-[#1c1f23]">
               {overrides.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-white/30 text-xs">
+                  <td colSpan={5} className="py-8 text-center text-[#7e8389] text-xs">
                     No individual user overrides configured. Permissions follow role policies.
                   </td>
                 </tr>
               ) : (
                 overrides.map((o, idx) => (
-                  <tr key={`${o.userId}-${o.module}-${o.action}`} className="hover:bg-white/[0.015] transition-colors">
-                    <td className="py-3 px-4">
+                  <tr key={`${o.userId}-${o.module}-${o.action}`} className="hover:bg-[#121417]/50 transition-colors">
+                    <td className="py-2.5 px-4">
                       <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-white/50" />
+                        <User className="w-3.5 h-3.5 text-[#7e8389]" />
                         <div>
-                          <div className="font-medium text-white">{o.userName}</div>
-                          <div className="text-[10px] font-mono text-white/30">{o.userId}</div>
+                          <div className="font-medium text-[#f1f2f3]">{o.userName}</div>
+                          <div className="text-[10px] font-mono text-[#7e8389]">{o.userId}</div>
                         </div>
                       </div>
                     </td>
 
-                    <td className="py-3 px-4">
-                      <span className="font-mono text-white capitalize">{o.module}</span>
+                    <td className="py-2.5 px-4">
+                      <span className="font-mono text-[#f1f2f3] capitalize">{o.module}</span>
                     </td>
 
-                    <td className="py-3 px-4">
-                      <span className="text-[10px] font-mono uppercase text-white/70 bg-white/[0.04] px-1.5 py-0.5 rounded">
+                    <td className="py-2.5 px-4">
+                      <span className="text-[10px] font-mono uppercase text-[#d5d7da] bg-[#17191c] px-1.5 py-0.5 rounded border border-[#24272b]">
                         {o.action}
                       </span>
                     </td>
 
-                    <td className="py-3 px-4">
+                    <td className="py-2.5 px-4">
                       <span
                         className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${
                           o.effect === 'ALLOW'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            ? 'bg-success-soft text-success-text border-success-border'
+                            : 'bg-critical-soft text-critical-text border-critical-border'
                         }`}
                       >
                         {o.effect}
                       </span>
                     </td>
 
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-2.5 px-4 text-right">
                       <button
                         type="button"
                         onClick={() => handleRemoveOverride(idx)}
-                        className="p-1.5 rounded-lg text-white/30 hover:text-red-400 transition-colors"
+                        className="p-1.5 rounded-md text-[#7e8389] hover:text-critical-text hover:bg-critical-soft transition-colors"
                         title="Delete override"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -211,7 +207,7 @@ export function UserOverridesList({ overrides, onSaveOverrides }: UserOverridesL
               )}
             </tbody>
           </table>
-        </div>
+        </HawkScrollArea>
       </div>
     </div>
   );

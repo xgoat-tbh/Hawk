@@ -31,24 +31,24 @@ export function SaveBar({ hasChanges, isSaving, onSave, onReset, error, success 
   if (!hasChanges && !isSaving && !error && !success) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4 animate-in fade-in slide-in-from-bottom-5 duration-200">
-      <div className="bg-[#0b0b0e]/90 border border-white/[0.12] rounded-2xl p-3 flex items-center justify-between gap-4 backdrop-blur-2xl shadow-2xl">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4 animate-in fade-in slide-in-from-bottom-3 duration-150">
+      <div className="bg-[#0d0e10]/95 border border-[#2b2f34] rounded-lg p-3 flex items-center justify-between gap-4 backdrop-blur-2xl shadow-popover-soft">
         <div className="flex items-center gap-2.5 text-xs">
           {error ? (
             <>
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span className="text-red-400 font-medium">{error}</span>
+              <AlertCircle className="w-4 h-4 text-critical shrink-0" />
+              <span className="text-critical-text font-medium">{error}</span>
             </>
           ) : success ? (
             <>
-              <Check className="w-4 h-4 text-white shrink-0" />
-              <span className="text-white font-medium">Changes saved successfully</span>
+              <Check className="w-4 h-4 text-success shrink-0" />
+              <span className="text-success-text font-medium">Changes saved successfully</span>
             </>
           ) : (
             <>
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <span className="text-white/90 font-medium">Unsaved changes</span>
-              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-white/40 bg-white/[0.04] border border-white/[0.08] rounded">
+              <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
+              <span className="text-[#f1f2f3] font-medium">Careful — you have unsaved changes</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-[#7e8389] bg-[#17191c] border border-[#24272b] rounded-sm">
                 Ctrl+S
               </kbd>
             </>

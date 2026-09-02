@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Command, Sliders, Sparkles, Coins, Radio, ShoppingBag, Gamepad2, Briefcase, MessageSquare, Image, Pin, Lock, ArrowRight } from 'lucide-react';
 import { BOT_COMMAND_CATALOG } from '@/lib/commands';
+import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
+import { animateModalOpen, animateModalClose } from '@/lib/animations';
 
 interface CommandPaletteProps {
   guildId: string;
@@ -23,6 +25,10 @@ export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const navigationItems: PaletteItem[] = [
     { label: 'Server Overview', path: `/dashboard/${guildId}`, icon: Sliders, category: 'Navigation' },
@@ -56,11 +62,24 @@ export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps
           (item.subLabel && item.subLabel.toLowerCase().includes(query.toLowerCase())) ||
           item.category.toLowerCase().includes(query.toLowerCase())
       )
-    : allItems.slice(0, 8);
+    : allItems.slice(0, 10);
 
   useEffect(() => {
     setSelectedIndex(0);
   }, [query]);
+
+  useEffect(() => {
+    if (isOpen) {
+      animateModalOpen(containerRef.current, backdropRef.current);
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    animateModalClose(containerRef.current, backdropRef.current, onClose);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -77,16 +96,17 @@ export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps
         const selected = filtered[selectedIndex];
         if (selected) {
           router.push(selected.path);
-          onClose();
+          handleClose();
         }
       } else if (e.key === 'Escape') {
-        onClose();
+        e.preventDefault();
+        handleClose();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, filtered, selectedIndex, router, onClose]);
+  }, [isOpen, filtered, selectedIndex, router]);
 
   if (!isOpen) return null;
 
@@ -94,32 +114,36 @@ export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
       {/* Backdrop */}
       <div
-        onClick={onClose}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
+        ref={backdropRef}
+        onClick={handleClose}
+        className="fixed inset-0 bg-black/75 backdrop-blur-sm"
       />
 
       {/* Palette Container */}
-      <div className="relative z-10 w-full max-w-xl bg-[#0a0a0c] border border-white/[0.12] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh] animate-in zoom-in-95 duration-150">
+      <div
+        ref={containerRef}
+        className="relative z-10 w-full max-w-xl bg-[#0d0e10] border border-[#2b2f34] rounded-lg shadow-popover-soft overflow-hidden flex flex-col max-h-[70vh]"
+      >
         {/* Search Input Bar */}
-        <div className="p-4 border-b border-white/[0.08] flex items-center gap-3 bg-[#08080a]">
-          <Search className="w-4 h-4 text-white/50 shrink-0" />
+        <div className="p-3.5 border-b border-[#1c1f23] flex items-center gap-3 bg-[#08090a]">
+          <Search className="w-4 h-4 text-[#7e8389] shrink-0" />
           <input
+            ref={inputRef}
             type="text"
-            autoFocus
-            placeholder="Type a command, page, or search setting..."
+            placeholder="Search commands, pages, settings, or tools..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-white placeholder-white/30 focus:outline-none"
+            className="w-full bg-transparent text-xs text-[#f1f2f3] placeholder:text-[#7e8389] focus:outline-none"
           />
-          <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-[10px] font-mono text-white/40">
+          <kbd className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-[#17191c] border border-[#24272b] text-[10px] font-mono text-[#7e8389]">
             ESC
           </kbd>
         </div>
 
-        {/* Results List (Internal Scroll Container) */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-transparent">
+        {/* Results List (Internal Scroll Container with HawkScrollArea) */}
+        <HawkScrollArea className="flex-1 p-2 space-y-1">
           {filtered.length === 0 ? (
-            <div className="p-8 text-center text-xs text-white/30">
+            <div className="p-8 text-center text-xs text-[#7e8389]">
               No matching commands or navigation pages found.
             </div>
           ) : (
@@ -132,45 +156,47 @@ export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps
                   key={`${item.label}-${idx}`}
                   onClick={() => {
                     router.push(item.path);
-                    onClose();
+                    handleClose();
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-white/[0.06] text-white' : 'text-white/70 hover:bg-white/[0.02]'
+                  className={`p-2.5 rounded-md flex items-center justify-between gap-3 cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-[#17191c] text-[#f1f2f3] border border-[#2b2f34]'
+                      : 'text-[#d5d7da] hover:bg-[#121417] border border-transparent'
                   }`}
                 >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shrink-0">
-                      <Icon className="w-3.5 h-3.5 text-white/70" />
+                  <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="w-6 h-6 rounded bg-[#17191c] border border-[#24272b] flex items-center justify-center shrink-0">
+                      <Icon className="w-3 h-3 text-[#a9adb2]" />
                     </div>
                     <div className="overflow-hidden space-y-0.5">
-                      <div className="text-xs font-medium text-white truncate">{item.label}</div>
+                      <div className="text-xs font-medium text-[#f1f2f3] truncate">{item.label}</div>
                       {item.subLabel && (
-                        <div className="text-[10px] font-mono text-white/40 truncate">{item.subLabel}</div>
+                        <div className="text-[10px] font-mono text-[#7e8389] truncate">{item.subLabel}</div>
                       )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/[0.04] text-white/40 border border-white/[0.06]">
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#121417] text-[#7e8389] border border-[#24272b]">
                       {item.category}
                     </span>
-                    {isSelected && <ArrowRight className="w-3.5 h-3.5 text-white" />}
+                    {isSelected && <ArrowRight className="w-3.5 h-3.5 text-[#f1f2f3]" />}
                   </div>
                 </div>
               );
             })
           )}
-        </div>
+        </HawkScrollArea>
 
         {/* Palette Footer */}
-        <div className="px-4 py-2.5 border-t border-white/[0.06] bg-[#070709] flex items-center justify-between text-[11px] font-mono text-white/30">
+        <div className="px-4 py-2 border-t border-[#1c1f23] bg-[#08090a] flex items-center justify-between text-[10px] font-mono text-[#7e8389]">
           <div className="flex items-center gap-3">
             <span>↑↓ Navigate</span>
             <span>↵ Select</span>
             <span>ESC Close</span>
           </div>
-          <span>Hawk Control Palette</span>
+          <span>Hawk Ops Console</span>
         </div>
       </div>
     </div>

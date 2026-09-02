@@ -22,38 +22,38 @@ export function StatusBadge({
       case 'operational':
       case 'success':
         return {
-          bg: 'bg-emerald-500/10',
-          text: 'text-emerald-400',
-          border: 'border-emerald-500/20',
-          dotBg: 'bg-emerald-400',
+          bg: 'bg-success-soft',
+          text: 'text-success-text',
+          border: 'border-success-border',
+          dotBg: 'bg-success',
         };
       case 'warning':
         return {
-          bg: 'bg-amber-500/10',
-          text: 'text-amber-400',
-          border: 'border-amber-500/20',
-          dotBg: 'bg-amber-400',
+          bg: 'bg-warning-soft',
+          text: 'text-warning-text',
+          border: 'border-warning-border',
+          dotBg: 'bg-warning',
         };
       case 'danger':
         return {
-          bg: 'bg-red-500/10',
-          text: 'text-red-400',
-          border: 'border-red-500/20',
-          dotBg: 'bg-red-400',
+          bg: 'bg-critical-soft',
+          text: 'text-critical-text',
+          border: 'border-critical-border',
+          dotBg: 'bg-critical',
         };
       case 'info':
         return {
-          bg: 'bg-sky-500/10',
-          text: 'text-sky-400',
-          border: 'border-sky-500/20',
-          dotBg: 'bg-sky-400',
+          bg: 'bg-info-soft',
+          text: 'text-info-text',
+          border: 'border-info-border',
+          dotBg: 'bg-info',
         };
       default:
         return {
-          bg: 'bg-white/[0.04]',
-          text: 'text-white/60',
-          border: 'border-white/[0.08]',
-          dotBg: 'bg-white/40',
+          bg: 'bg-[#17191c]',
+          text: 'text-[#a9adb2]',
+          border: 'border-[#24272b]',
+          dotBg: 'bg-[#7e8389]',
         };
     }
   };

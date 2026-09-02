@@ -6,11 +6,13 @@ import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { Radio, Clock, LayoutTemplate, Loader2, Plus, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function PvcSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const containerRef = usePageEntrance();
   const { channels, config, updateConfigLocally, refreshData } = useGuildData();
 
   // Form State
@@ -143,14 +145,14 @@ export default function PvcSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+    <div ref={containerRef} className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
-            <Radio className="w-4 h-4 text-white/80" />
+          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
+            <Radio className="w-4 h-4 text-[#a9adb2]" />
             <span>Private Voice Channels (PVC)</span>
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-xs text-[#7e8389] mt-0.5">
             Configure automated temporary voice rooms, hourly rental rates, and master control panels.
           </p>
         </div>
@@ -166,26 +168,26 @@ export default function PvcSettingsPage() {
       </div>
 
       {autoCreateStatus && (
-        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="p-3 rounded-md bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
+          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           <span>{autoCreateStatus}</span>
         </div>
       )}
       {autoCreateError && (
-        <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
-          <AlertCircle className="w-4 h-4 text-red-400" />
+        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
+          <AlertCircle className="w-4 h-4 text-critical shrink-0" />
           <span>{autoCreateError}</span>
         </div>
       )}
 
       {/* Auto Channel Setup Banner */}
-      <div className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-0.5">
-          <h3 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-white/60" />
+          <h3 className="text-xs font-semibold text-[#f1f2f3] uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#a9adb2]" />
             <span>1-Click Auto Setup</span>
           </h3>
-          <p className="text-[11px] text-white/40">
+          <p className="text-[11px] text-[#7e8389]">
             Automatically create the dedicated Discord category and Join-to-Create master channel.
           </p>
         </div>
@@ -203,7 +205,7 @@ export default function PvcSettingsPage() {
 
       <div className="space-y-8">
         {/* Voice Infrastructure */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Voice Container Routing"
             description="Channels and categories where temporary private rooms are created."
@@ -260,7 +262,7 @@ export default function PvcSettingsPage() {
         </div>
 
         {/* Economy Rates */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Rental Rates & Pricing"
             description="Economy fees for voice room ownership."
@@ -280,7 +282,7 @@ export default function PvcSettingsPage() {
                   onChange={(e) => setPvcHourlyRate(parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-white/40">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
                   {currencySymbol}
                 </span>
               </div>

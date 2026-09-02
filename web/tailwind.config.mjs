@@ -4,29 +4,76 @@ export default {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./hooks/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
-        background: "#050505",
-        surface: "#0d0d10",
-        surfaceHover: "#141418",
-        surfaceElevated: "#1a1a20",
-        border: "#222228",
-        borderHover: "#33333e",
-        foreground: "#f5f5f7",
-        muted: "#8e8e93",
-        subtle: "#48484a",
-        accent: {
-          DEFAULT: "#ffffff",
-          hover: "#e5e5ea",
+        // Soft dark neutral foundation
+        background: "#08090A",
+        surface: {
+          0: "#08090A",
+          1: "#0D0E10",
+          2: "#121417",
+          3: "#17191C",
+          4: "#1D2024",
+          5: "#25282C",
+        },
+        border: {
+          subtle: "#1C1F23",
+          DEFAULT: "#24272B",
+          strong: "#2B2F34",
+          focus: "#3E434A",
+        },
+        text: {
+          primary: "#F1F2F3",
+          secondary: "#D5D7DA",
+          tertiary: "#A9ADB2",
+          muted: "#7E8389",
+        },
+        // Restrained semantic accents
+        success: {
+          DEFAULT: "#22c55e",
+          soft: "rgba(34, 197, 94, 0.12)",
+          border: "rgba(34, 197, 94, 0.28)",
+          text: "#4ade80",
+        },
+        warning: {
+          DEFAULT: "#f59e0b",
+          soft: "rgba(245, 158, 11, 0.12)",
+          border: "rgba(245, 158, 11, 0.28)",
+          text: "#fbbf24",
         },
         critical: {
           DEFAULT: "#ef4444",
-          hover: "#dc2626",
-          bg: "rgba(239, 68, 68, 0.1)",
-          border: "rgba(239, 68, 68, 0.3)",
+          soft: "rgba(239, 68, 68, 0.12)",
+          border: "rgba(239, 68, 68, 0.28)",
+          text: "#f87171",
         },
+        info: {
+          DEFAULT: "#3b82f6",
+          soft: "rgba(59, 130, 246, 0.12)",
+          border: "rgba(59, 130, 246, 0.28)",
+          text: "#60a5fa",
+        },
+        feature: {
+          DEFAULT: "#8b5cf6",
+          soft: "rgba(139, 92, 246, 0.12)",
+          border: "rgba(139, 92, 246, 0.28)",
+          text: "#a78bfa",
+        },
+      },
+      borderRadius: {
+        sm: "6px",
+        md: "10px",
+        lg: "14px",
+      },
+      boxShadow: {
+        'clay-button': '0 2px 4px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08)',
+        'clay-button-pressed': '0 1px 2px rgba(0,0,0,0.5), inset 0 1px 2px rgba(0,0,0,0.4)',
+        'clay-input': 'inset 0 1px 2px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.02)',
+        'panel-soft': '0 4px 20px rgba(0,0,0,0.45)',
+        'popover-soft': '0 12px 36px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.06)',
       },
       fontFamily: {
         sans: [

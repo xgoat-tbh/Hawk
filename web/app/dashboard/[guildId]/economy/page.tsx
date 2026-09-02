@@ -5,11 +5,13 @@ import { useParams } from 'next/navigation';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { Coins, Flame, MessageSquareText } from 'lucide-react';
 
 export default function EconomySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const containerRef = usePageEntrance();
   const { config, updateConfigLocally } = useGuildData();
 
   // Form State
@@ -118,14 +120,14 @@ export default function EconomySettingsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+    <div ref={containerRef} className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
-            <Coins className="w-4 h-4 text-white/80" />
+          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
+            <Coins className="w-4 h-4 text-[#a9adb2]" />
             <span>Economy & Daily Rewards</span>
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-xs text-[#7e8389] mt-0.5">
             Configure server currency symbol, starting wallet cash, daily streaks, and passive message rewards.
           </p>
         </div>
@@ -142,7 +144,7 @@ export default function EconomySettingsPage() {
 
       <div className="space-y-8">
         {/* Currency & Base Balances */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Currency & Starting Wallets"
             description="Base currency symbol and default new member funds."
@@ -176,7 +178,7 @@ export default function EconomySettingsPage() {
                   onChange={(e) => setStartBalance(parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-white/40">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
                   {currencySymbol}
                 </span>
               </div>
@@ -185,7 +187,7 @@ export default function EconomySettingsPage() {
         </div>
 
         {/* Daily Streaks & Rewards */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Daily Streaks & Activity Rewards"
             description="Configures !daily claim amounts and consecutive day streak multipliers."
@@ -205,7 +207,7 @@ export default function EconomySettingsPage() {
                   onChange={(e) => setDailyRewardAmount(parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-white/40">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
                   {currencySymbol}
                 </span>
               </div>
@@ -223,7 +225,7 @@ export default function EconomySettingsPage() {
                   onChange={(e) => setDailyStreakBonus(parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-white/40">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
                   {currencySymbol}
                 </span>
               </div>
@@ -232,7 +234,7 @@ export default function EconomySettingsPage() {
         </div>
 
         {/* Passive Message Income */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Passive Chat Income"
             description="Automated wallet rewards for active conversation in chat channels."
@@ -253,7 +255,7 @@ export default function EconomySettingsPage() {
                   onChange={(e) => setPassiveIncome(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                <div className="w-10 h-5 bg-[#17191c] border border-[#24272b] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#f1f2f3] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success peer-checked:after:bg-black"></div>
               </label>
             </SettingRow>
 
@@ -270,7 +272,7 @@ export default function EconomySettingsPage() {
                     onChange={(e) => setPassiveAmount(parseInt(e.target.value, 10) || 1)}
                     className="glass-input font-mono text-xs pl-8"
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-white/40">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
                     {currencySymbol}
                   </span>
                 </div>

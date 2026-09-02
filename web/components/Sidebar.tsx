@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
 
 interface SidebarProps {
   guildId: string;
@@ -67,13 +68,13 @@ export function Sidebar({ guildId, guildName, guildIcon, mobileOpen, onCloseMobi
   ];
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-[#08080a] border-r border-white/[0.07]">
+    <div className="flex flex-col h-full bg-[#08090a] border-r border-[#1c1f23]">
       {/* Guild Header */}
-      <div className="p-3.5 border-b border-white/[0.07] flex items-center justify-between gap-2">
+      <div className="p-3.5 border-b border-[#1c1f23] flex items-center justify-between gap-2 bg-[#08090a]">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <Link
             href="/dashboard"
-            className="p-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] transition-colors"
+            className="p-1.5 rounded-md bg-[#121417] border border-[#24272b] text-[#7e8389] hover:text-[#f1f2f3] hover:bg-[#17191c] transition-colors"
             title="Back to Servers"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -82,31 +83,31 @@ export function Sidebar({ guildId, guildName, guildIcon, mobileOpen, onCloseMobi
             <img
               src={guildIcon}
               alt={guildName}
-              className="w-8 h-8 rounded-lg border border-white/10 shrink-0 object-cover"
+              className="w-8 h-8 rounded-md border border-[#24272b] shrink-0 object-cover"
             />
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 text-white/80 font-mono text-xs font-semibold flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-md bg-[#121417] border border-[#24272b] text-[#d5d7da] font-mono text-xs font-semibold flex items-center justify-center shrink-0">
               {guildName.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <span className="font-semibold text-xs text-white truncate tracking-wide">{guildName}</span>
+          <span className="font-semibold text-xs text-[#f1f2f3] truncate tracking-wide">{guildName}</span>
         </div>
 
         {onCloseMobile && (
           <button
             onClick={onCloseMobile}
-            className="md:hidden p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06]"
+            className="md:hidden p-1.5 rounded-md text-[#7e8389] hover:text-[#f1f2f3] hover:bg-[#121417]"
           >
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 p-2.5 space-y-4 overflow-y-auto">
+      {/* Navigation Links with HawkScrollArea */}
+      <HawkScrollArea className="flex-1 p-2.5 space-y-4">
         {navGroups.map((group) => (
           <div key={group.group} className="space-y-1">
-            <div className="px-3 py-1 text-[10px] font-mono font-medium tracking-widest uppercase text-white/30">
+            <div className="px-3 py-1 text-[10px] font-mono font-medium tracking-widest uppercase text-[#7e8389]">
               {group.group}
             </div>
             {group.items.map((item) => {
@@ -118,20 +119,20 @@ export function Sidebar({ guildId, guildName, guildIcon, mobileOpen, onCloseMobi
                   href={item.href}
                   onClick={onCloseMobile}
                   className={cn(
-                    'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium tracking-wide transition-all select-none duration-150',
+                    'flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium tracking-wide transition-all select-none duration-150',
                     isActive
-                      ? 'bg-white/[0.08] border border-white/20 text-white shadow-sm'
-                      : 'text-white/60 border border-transparent hover:text-white hover:bg-white/[0.03] hover:border-white/[0.06]'
+                      ? 'bg-[#17191c] border border-[#2b2f34] text-[#f1f2f3] shadow-sm font-semibold'
+                      : 'text-[#a9adb2] border border-transparent hover:text-[#f1f2f3] hover:bg-[#121417]'
                   )}
                 >
-                  <Icon className={cn('w-3.5 h-3.5', isActive ? 'text-white' : 'text-white/40')} />
+                  <Icon className={cn('w-3.5 h-3.5', isActive ? 'text-[#f1f2f3]' : 'text-[#7e8389]')} />
                   <span>{item.label}</span>
                 </Link>
               );
             })}
           </div>
         ))}
-      </nav>
+      </HawkScrollArea>
     </div>
   );
 

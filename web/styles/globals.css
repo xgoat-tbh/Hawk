@@ -2,74 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 2%;
-    --foreground: 0 0% 98%;
-  }
-
-  * {
-    border-color: rgba(255, 255, 255, 0.08);
-  }
+:root {
+  --background: #08090a;
+  --foreground: #f1f2f3;
+  --scroll-track: rgba(13, 14, 16, 0.6);
+  --scroll-thumb: #24272b;
+  --scroll-thumb-hover: #373b42;
+  --scroll-thumb-active: #4a4f58;
+  --scroll-width: 6px;
 }
 
 body {
-  background-color: #050505;
-  color: #f5f5f7;
+  background-color: #08090a;
+  color: #f1f2f3;
   font-family: -apple-system, BlinkMacSystemFont, "Geist", "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
-  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.015) 0%, transparent 65%);
   background-size: 100% 100%;
 }
 
-/* Custom minimal scrollbar */
+/* Custom Scrollbar System */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: #050505;
-}
-::-webkit-scrollbar-thumb {
-  background: #1c1c22;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #2e2e38;
+  width: var(--scroll-width);
+  height: var(--scroll-width);
 }
 
-/* Minimalist Monochrome Glassmorphism & Micro-Interaction System */
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--scroll-thumb-active);
+}
+
+/* Firefox Scrollbar Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+
+/* Soft Neutral & Tactile Design Tokens */
 @layer components {
+  /* Tactile Clay Buttons */
   .btn-primary {
-    @apply relative inline-flex items-center justify-center font-semibold text-xs tracking-wide px-4 py-2 rounded-xl bg-white text-black hover:bg-neutral-200 active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-md bg-[#e6e8eb] text-[#0d0e10] hover:bg-[#f1f2f3] active:translate-y-[1px] shadow-clay-button active:shadow-clay-button-pressed transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .btn-outline-primary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.14] text-white hover:bg-white/[0.08] hover:border-white/30 active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-md bg-[#121417] border border-[#24272b] text-[#f1f2f3] hover:bg-[#17191c] hover:border-[#2b2f34] active:translate-y-[1px] shadow-clay-button transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .btn-outline-secondary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-4 py-2 rounded-xl bg-transparent border border-white/[0.08] text-white/70 hover:bg-white/[0.04] hover:border-white/20 hover:text-white active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-md bg-transparent border border-[#24272b] text-[#a9adb2] hover:bg-[#121417] hover:border-[#2b2f34] hover:text-[#f1f2f3] active:translate-y-[1px] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
   }
 
   .btn-outline-danger {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-xl bg-red-500/[0.06] border border-red-500/30 text-red-400 hover:bg-red-500/15 hover:border-red-500/60 hover:text-red-300 active:scale-[0.98] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3 py-1.5 rounded-md bg-critical-soft border border-critical-border text-critical-text hover:bg-critical/20 hover:border-critical/40 active:translate-y-[1px] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+  }
+
+  /* Soft Surfaces & Panels */
+  .panel-soft {
+    @apply bg-[#0d0e10] border border-[#24272b] rounded-lg shadow-panel-soft;
   }
 
   .glass-card {
-    @apply bg-[#0c0c10]/80 backdrop-blur-xl border border-white/[0.07] rounded-2xl hover:border-white/[0.12] transition-all duration-200 relative focus-within:z-30;
+    @apply bg-[#0d0e10]/90 backdrop-blur-xl border border-[#24272b] rounded-lg hover:border-[#2b2f34] transition-all duration-200 relative focus-within:z-30;
   }
 
+  /* Tactile Input */
   .glass-input {
-    @apply w-full bg-[#050507] border border-white/[0.09] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder:text-white/25 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 hover:border-white/[0.15] transition-all duration-150;
+    @apply w-full bg-[#0a0b0d] border border-[#24272b] rounded-md px-3 py-2 text-xs text-[#f1f2f3] placeholder:text-[#7e8389] shadow-clay-input focus:outline-none focus:border-border-focus focus:ring-1 focus:ring-[#3e434a]/30 hover:border-[#2b2f34] transition-all duration-150;
   }
 
+  /* Semantic Status Badges */
   .badge-monochrome {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-xs font-medium text-white/80;
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-[#17191c] border border-[#24272b] text-[11px] font-medium text-[#d5d7da];
   }
 
   .badge-danger {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/[0.08] border border-red-500/30 text-xs font-medium text-red-400;
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-critical-soft border border-critical-border text-[11px] font-medium text-critical-text;
   }
 }
 
@@ -91,6 +112,3 @@ body {
     @apply glass-input;
   }
 }
-
-
-

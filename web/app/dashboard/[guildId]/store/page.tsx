@@ -2,13 +2,16 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { RoleSelect } from '@/components/RoleSelect';
+import { RolePicker } from '@/components/ui/RolePicker';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
+import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { ShoppingBag, Plus, Trash2, Loader2, Shield, AlertCircle } from 'lucide-react';
 
 export default function StoreSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const containerRef = usePageEntrance();
   const { roles, config, refreshData } = useGuildData();
 
   const items = config?.storeItems || [];
@@ -78,21 +81,21 @@ export default function StoreSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+    <div ref={containerRef} className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
-            <ShoppingBag className="w-4 h-4 text-white/80" />
+          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4 text-[#a9adb2]" />
             <span>Server Store Catalog</span>
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-xs text-[#7e8389] mt-0.5">
             Manage purchasable shop items and automatic Discord role grants for members.
           </p>
         </div>
       </div>
 
       {addError && (
-        <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
+        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{addError}</span>
         </div>
@@ -101,10 +104,10 @@ export default function StoreSettingsPage() {
       {/* Add Item Form Bar */}
       <form
         onSubmit={handleAddItem}
-        className="p-4 rounded-xl bg-[#08080a] border border-white/[0.08] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
+        className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] grid grid-cols-1 sm:grid-cols-12 gap-3 items-end"
       >
         <div className="sm:col-span-3 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Item Name</label>
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Item Name</label>
           <input
             type="text"
             required
@@ -117,7 +120,7 @@ export default function StoreSettingsPage() {
         </div>
 
         <div className="sm:col-span-2 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Price ({currencySymbol})</label>
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Price ({currencySymbol})</label>
           <input
             type="number"
             required
@@ -129,7 +132,7 @@ export default function StoreSettingsPage() {
         </div>
 
         <div className="sm:col-span-3 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Description (Optional)</label>
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Description (Optional)</label>
           <input
             type="text"
             maxLength={255}
@@ -141,8 +144,8 @@ export default function StoreSettingsPage() {
         </div>
 
         <div className="sm:col-span-3 space-y-1">
-          <label className="text-[10px] font-mono uppercase text-white/40">Grant Role (Optional)</label>
-          <RoleSelect
+          <label className="text-[10px] font-mono uppercase text-[#7e8389]">Grant Role (Optional)</label>
+          <RolePicker
             roles={roles}
             value={itemRoleId}
             onChange={setItemRoleId}
@@ -161,29 +164,29 @@ export default function StoreSettingsPage() {
         </div>
       </form>
 
-      {/* Store Items Data Table (with Independent Internal Scroll) */}
-      <div className="space-y-2">
+      {/* Store Items Data Table with HawkScrollArea */}
+      <div className="space-y-2" data-animate-section>
         <SectionHeader
           title={`Active Catalog Items (${items.length})`}
           description="Members can purchase these items using the !buy <item_id> command in chat."
         />
 
-        <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-[#08080a]">
-          <div className="max-h-[55vh] overflow-y-auto">
+        <div className="border border-[#24272b] rounded-md overflow-hidden bg-[#0d0e10]">
+          <HawkScrollArea maxHeight="55vh">
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 z-10 bg-[#0d0d10] border-b border-white/[0.08] text-[10px] font-mono uppercase tracking-wider text-white/40">
+              <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
                 <tr>
-                  <th className="py-3 px-4">Item ID</th>
-                  <th className="py-3 px-4">Item Name & Description</th>
-                  <th className="py-3 px-4">Price</th>
-                  <th className="py-3 px-4">Granted Discord Role</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-2.5 px-4">Item ID</th>
+                  <th className="py-2.5 px-4">Item Name & Description</th>
+                  <th className="py-2.5 px-4">Price</th>
+                  <th className="py-2.5 px-4">Granted Discord Role</th>
+                  <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-[#1c1f23]">
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-white/30 text-xs">
+                    <td colSpan={5} className="py-8 text-center text-[#7e8389] text-xs">
                       No store items configured yet. Use the form above to add items to the shop.
                     </td>
                   </tr>
@@ -191,34 +194,34 @@ export default function StoreSettingsPage() {
                   items.map((item: any) => {
                     const grantedRole = roles.find((r) => r.id === item.inventory_role_id);
                     return (
-                      <tr key={item.item_id} className="hover:bg-white/[0.015] transition-colors">
-                        <td className="py-3 px-4 font-mono text-white/50">
+                      <tr key={item.item_id} className="hover:bg-[#121417]/50 transition-colors">
+                        <td className="py-2.5 px-4 font-mono text-[#7e8389]">
                           #{item.item_id}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="font-medium text-white">{item.name}</div>
+                        <td className="py-2.5 px-4">
+                          <div className="font-medium text-[#f1f2f3]">{item.name}</div>
                           {item.description && (
-                            <div className="text-[11px] text-white/40 truncate max-w-sm">{item.description}</div>
+                            <div className="text-[11px] text-[#7e8389] truncate max-w-sm">{item.description}</div>
                           )}
                         </td>
-                        <td className="py-3 px-4 font-mono font-medium text-white">
+                        <td className="py-2.5 px-4 font-mono font-medium text-[#f1f2f3]">
                           {currencySymbol}{item.price.toLocaleString()}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-2.5 px-4">
                           {grantedRole ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] text-white/80 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.06]">
-                              <Shield className="w-3 h-3 text-white/40" />
+                            <span className="inline-flex items-center gap-1 text-[11px] text-[#d5d7da] bg-[#17191c] px-2 py-0.5 rounded border border-[#24272b]">
+                              <Shield className="w-3 h-3 text-[#7e8389]" />
                               <span>@{grantedRole.name}</span>
                             </span>
                           ) : (
-                            <span className="text-white/20 font-mono text-xs">—</span>
+                            <span className="text-[#373b42] font-mono text-xs">—</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-2.5 px-4 text-right">
                           <button
                             type="button"
                             onClick={() => handleDeleteItem(item.item_id)}
-                            className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/[0.05] transition-colors"
+                            className="p-1.5 rounded-md text-[#7e8389] hover:text-critical-text hover:bg-critical-soft transition-colors"
                             title="Delete item"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -230,7 +233,7 @@ export default function StoreSettingsPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </HawkScrollArea>
         </div>
       </div>
     </div>

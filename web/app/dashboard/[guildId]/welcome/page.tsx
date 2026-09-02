@@ -8,11 +8,13 @@ import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { DiscordEmbedSimulator } from '@/components/DiscordEmbedSimulator';
+import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { Sparkles, Send, Loader2, CheckCircle2, AlertCircle, Layout, Palette } from 'lucide-react';
 
 export default function WelcomeEmbedPage() {
   const { guildId } = useParams() as { guildId: string };
+  const containerRef = usePageEntrance();
   const { guild, bot, channels, emojis, config, updateConfigLocally } = useGuildData();
 
   // Form State
@@ -203,15 +205,15 @@ export default function WelcomeEmbedPage() {
   ];
 
   return (
-    <div className="space-y-6 pb-20">
+    <div ref={containerRef} className="space-y-6 pb-20">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-white/80" />
+          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#a9adb2]" />
             <span>Welcome Greetings & Embed Designer</span>
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-xs text-[#7e8389] mt-0.5">
             Configure automated greeting cards and join notifications for new members.
           </p>
         </div>
@@ -224,7 +226,7 @@ export default function WelcomeEmbedPage() {
             className="btn-outline-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
             title="Dispatch clean test message to selected channel"
           >
-            {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5 text-white/60" />}
+            {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5 text-[#a9adb2]" />}
             <span>Send Test</span>
           </button>
 
@@ -240,22 +242,22 @@ export default function WelcomeEmbedPage() {
       </div>
 
       {testStatus && (
-        <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center gap-2 text-xs text-white">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="p-3 rounded-md bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
+          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           <span>{testStatus}</span>
         </div>
       )}
       {testError && (
-        <div className="p-3 rounded-xl bg-red-500/[0.08] border border-red-500/20 flex items-center gap-2 text-xs text-red-400">
-          <AlertCircle className="w-4 h-4 text-red-400" />
+        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
+          <AlertCircle className="w-4 h-4 text-critical shrink-0" />
           <span>{testError}</span>
         </div>
       )}
 
       {/* Main 2-Column Split View */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Form Controls (7 cols) with Internal Scroll */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Left Column: Form Controls (7 cols) */}
+        <div className="lg:col-span-7 space-y-6" data-animate-section>
           {/* Routing & Status Section */}
           <div className="space-y-1">
             <SectionHeader
@@ -278,7 +280,7 @@ export default function WelcomeEmbedPage() {
                     onChange={(e) => setEnabled(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-10 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white peer-checked:after:bg-black"></div>
+                  <div className="w-10 h-5 bg-[#17191c] border border-[#24272b] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#f1f2f3] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success peer-checked:after:bg-black"></div>
                 </label>
               </SettingRow>
 
@@ -301,12 +303,12 @@ export default function WelcomeEmbedPage() {
                 label="Message Layout Format"
                 description="Choose between rich Discord embed or plain markdown message."
               >
-                <div className="flex items-center gap-1 bg-[#050507] p-1 rounded-lg border border-white/[0.08]">
+                <div className="flex items-center gap-1 bg-[#0a0b0d] p-0.5 rounded-md border border-[#24272b]">
                   <button
                     type="button"
                     onClick={() => setIsEmbed(true)}
                     className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                      isEmbed ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+                      isEmbed ? 'bg-[#e6e8eb] text-[#0d0e10] shadow-clay-button font-semibold' : 'text-[#7e8389] hover:text-[#f1f2f3]'
                     }`}
                   >
                     Rich Embed
@@ -315,7 +317,7 @@ export default function WelcomeEmbedPage() {
                     type="button"
                     onClick={() => setIsEmbed(false)}
                     className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                      !isEmbed ? 'bg-white text-black' : 'text-white/50 hover:text-white'
+                      !isEmbed ? 'bg-[#e6e8eb] text-[#0d0e10] shadow-clay-button font-semibold' : 'text-[#7e8389] hover:text-[#f1f2f3]'
                     }`}
                   >
                     Plain Text
@@ -336,7 +338,7 @@ export default function WelcomeEmbedPage() {
             {/* Quick Variable Insertion Pills */}
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
                   Dynamic Variables (Click to Insert)
                 </span>
                 {emojis.length > 0 && (
@@ -351,7 +353,7 @@ export default function WelcomeEmbedPage() {
                     type="button"
                     onClick={() => insertTag(v.label)}
                     title={v.desc}
-                    className="px-2 py-1 rounded-md bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.07] text-[11px] font-mono text-white/70 hover:text-white transition-colors"
+                    className="px-2 py-1 rounded-sm bg-[#121417] hover:bg-[#17191c] border border-[#24272b] text-[11px] font-mono text-[#a9adb2] hover:text-[#f1f2f3] transition-colors"
                   >
                     {v.label}
                   </button>
@@ -363,10 +365,10 @@ export default function WelcomeEmbedPage() {
             {isEmbed && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#7e8389]">
                     Embed Title
                   </label>
-                  <span className="text-[10px] font-mono text-white/30">{title.length}/256</span>
+                  <span className="text-[10px] font-mono text-[#7e8389]">{title.length}/256</span>
                 </div>
                 <input
                   type="text"
@@ -382,10 +384,10 @@ export default function WelcomeEmbedPage() {
             {/* Description */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+                <label className="text-[11px] font-mono uppercase tracking-wider text-[#7e8389]">
                   {isEmbed ? 'Embed Description' : 'Message Content'}
                 </label>
-                <span className="text-[10px] font-mono text-white/30">{description.length}/4096</span>
+                <span className="text-[10px] font-mono text-[#7e8389]">{description.length}/4096</span>
               </div>
               <textarea
                 rows={4}
@@ -401,7 +403,7 @@ export default function WelcomeEmbedPage() {
             {isEmbed && (
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-[#7e8389]">
                     Embed Accent Color
                   </label>
                   <div className="flex items-center gap-2">
@@ -409,7 +411,7 @@ export default function WelcomeEmbedPage() {
                       type="color"
                       value={color.startsWith('#') ? color : '#ffffff'}
                       onChange={(e) => setColor(e.target.value)}
-                      className="w-7 h-7 rounded-lg bg-transparent border border-white/20 cursor-pointer p-0.5"
+                      className="w-7 h-7 rounded-md bg-transparent border border-[#24272b] cursor-pointer p-0.5"
                     />
                     <input
                       type="text"
@@ -423,7 +425,7 @@ export default function WelcomeEmbedPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+                    <label className="text-[11px] font-mono uppercase tracking-wider text-[#7e8389]">
                       Banner Image URL
                     </label>
                     <input
@@ -436,7 +438,7 @@ export default function WelcomeEmbedPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+                    <label className="text-[11px] font-mono uppercase tracking-wider text-[#7e8389]">
                       Thumbnail URL / Token
                     </label>
                     <input
@@ -451,10 +453,10 @@ export default function WelcomeEmbedPage() {
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+                    <label className="text-[11px] font-mono uppercase tracking-wider text-[#7e8389]">
                       Footer Text
                     </label>
-                    <span className="text-[10px] font-mono text-white/30">{footerText.length}/2048</span>
+                    <span className="text-[10px] font-mono text-[#7e8389]">{footerText.length}/2048</span>
                   </div>
                   <input
                     type="text"
@@ -473,10 +475,10 @@ export default function WelcomeEmbedPage() {
         {/* Right Column: Sticky Live Discord Simulator (5 cols) */}
         <div className="lg:col-span-5 sticky top-20 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
               Live Discord Preview
             </span>
-            <span className="text-[10px] font-mono text-white/30">
+            <span className="text-[10px] font-mono text-[#7e8389]">
               # {channels.find((c) => c.id === channelId)?.name || 'welcome'}
             </span>
           </div>
@@ -497,7 +499,7 @@ export default function WelcomeEmbedPage() {
       </div>
 
       <SaveBar
-        hasChanges={hasChanges}
+        hasChanges={Boolean(hasChanges)}
         isSaving={isSaving}
         onSave={handleSave}
         onReset={handleReset}

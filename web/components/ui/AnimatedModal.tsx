@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
-import { animateModalOpen } from '@/lib/animations';
+import { HawkScrollArea } from './HawkScrollArea';
+import { animateModalOpen, animateModalClose } from '@/lib/animations';
 
 interface AnimatedModalProps {
   isOpen: boolean;
@@ -30,6 +31,20 @@ export function AnimatedModal({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
+  const handleClose = () => {
+    animateModalClose(modalRef.current, backdropRef.current, onClose);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -37,35 +52,35 @@ export function AnimatedModal({
       {/* Backdrop */}
       <div
         ref={backdropRef}
-        onClick={onClose}
+        onClick={handleClose}
         className="fixed inset-0 bg-black/75 backdrop-blur-sm"
       />
 
       {/* Modal Dialog */}
       <div
         ref={modalRef}
-        className={`relative z-10 w-full ${maxWidth} bg-[#0a0a0c] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]`}
+        className={`relative z-10 w-full ${maxWidth} bg-[#0d0e10] border border-[#24272b] rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]`}
       >
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-white/[0.07] flex items-center justify-between shrink-0 bg-[#08080a]">
+        <div className="px-5 py-4 border-b border-[#1c1f23] flex items-center justify-between shrink-0 bg-[#08090a]">
           <div className="space-y-0.5">
-            <h2 className="text-sm font-semibold text-white tracking-tight">{title}</h2>
-            {subtitle && <p className="text-[11px] text-white/40">{subtitle}</p>}
+            <h2 className="text-sm font-semibold text-[#f1f2f3] tracking-tight">{title}</h2>
+            {subtitle && <p className="text-[11px] text-[#7e8389]">{subtitle}</p>}
           </div>
 
           <button
             type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.05] transition-colors"
+            onClick={handleClose}
+            className="p-1.5 rounded-md text-[#7e8389] hover:text-[#f1f2f3] hover:bg-white/[0.05] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Modal Body (Independently Scrollable) */}
-        <div className="flex-1 overflow-y-auto p-5">
+        {/* Modal Body (Independently Scrollable with HawkScrollArea) */}
+        <HawkScrollArea className="flex-1 p-5">
           {children}
-        </div>
+        </HawkScrollArea>
       </div>
     </div>
   );

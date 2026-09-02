@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 import { CommandPalette } from '@/components/Layout/CommandPalette';
+import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
 import { GuildProvider } from '@/context/GuildContext';
 
 interface GuildDashboardShellProps {
@@ -42,7 +43,7 @@ export function GuildDashboardShell({
       initialGuildName={guildName}
       initialGuildIcon={guildIcon}
     >
-      <div className="h-screen overflow-hidden flex flex-col bg-[#050505]">
+      <div className="h-screen overflow-hidden flex flex-col bg-[#08090a]">
         <Navbar
           user={user}
           guildName={guildName}
@@ -57,9 +58,9 @@ export function GuildDashboardShell({
             mobileOpen={mobileOpen}
             onCloseMobile={() => setMobileOpen(false)}
           />
-          <main className="flex-1 h-[calc(100vh-3.5rem)] overflow-y-auto p-4 sm:p-6 md:p-8 max-w-6xl w-full mx-auto">
+          <HawkScrollArea className="flex-1 h-[calc(100vh-3.5rem)] p-4 sm:p-6 md:p-8 max-w-6xl w-full mx-auto">
             {children}
-          </main>
+          </HawkScrollArea>
         </div>
 
         <CommandPalette

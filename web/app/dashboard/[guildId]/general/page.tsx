@@ -7,11 +7,13 @@ import { RoleSelect } from '@/components/RoleSelect';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { Sliders, Terminal, FileText } from 'lucide-react';
 
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const containerRef = usePageEntrance();
   const { channels, roles, config, updateConfigLocally } = useGuildData();
 
   // Form State
@@ -102,14 +104,14 @@ export default function GeneralSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+    <div ref={containerRef} className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-white/80" />
+          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-[#a9adb2]" />
             <span>General Server Settings</span>
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-xs text-[#7e8389] mt-0.5">
             Configure bot command prefix, administrator authority role, and server audit logging channels.
           </p>
         </div>
@@ -126,7 +128,7 @@ export default function GeneralSettingsPage() {
 
       <div className="space-y-8">
         {/* Core Settings Section */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Core Bot Configuration"
             description="Fundamental prefix and elevated role settings."
@@ -168,7 +170,7 @@ export default function GeneralSettingsPage() {
         </div>
 
         {/* Logging Channels Section */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Audit & Activity Logging"
             description="Routing channels for moderation events and economy transaction logs."

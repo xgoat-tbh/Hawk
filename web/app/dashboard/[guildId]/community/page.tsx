@@ -6,11 +6,13 @@ import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { MessageSquare, Lightbulb, Lock } from 'lucide-react';
 
 export default function CommunitySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
+  const containerRef = usePageEntrance();
   const { channels, config, updateConfigLocally } = useGuildData();
 
   // Suggestion State
@@ -104,14 +106,14 @@ export default function CommunitySettingsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.07] pb-5">
+    <div ref={containerRef} className="space-y-6 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-white tracking-tight flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-white/80" />
+          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-[#a9adb2]" />
             <span>Community Feedback & Tools</span>
           </h1>
-          <p className="text-xs text-white/40 mt-0.5">
+          <p className="text-xs text-[#7e8389] mt-0.5">
             Configure server suggestion boards, voting workflows, and anonymous confession channels.
           </p>
         </div>
@@ -128,7 +130,7 @@ export default function CommunitySettingsPage() {
 
       <div className="space-y-8">
         {/* Suggestion System */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Suggestion Board"
             description="Automated member feedback with upvote & downvote reaction buttons."
@@ -154,7 +156,7 @@ export default function CommunitySettingsPage() {
         </div>
 
         {/* Confession System */}
-        <div className="space-y-1">
+        <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Anonymous Confessions"
             description="Modal-based anonymous confessions feed with administrative audit tracking."
