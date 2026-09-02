@@ -1,8 +1,8 @@
 node_modules/
-dist/
 .env
 *.log
 *.tsbuildinfo
+
 *.zip
 .restart_state.json
 
