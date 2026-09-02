@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeOAuthCode, fetchUserProfile } from '@/lib/discord';
-import { createToken, isAuthorizedUser, isBotAdmin, isBotOwner, COOKIE_NAME } from '@/lib/auth';
+import { createToken, isBotAdmin, isBotOwner, COOKIE_NAME } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -28,14 +28,6 @@ export async function GET(req: NextRequest) {
   const profile = await fetchUserProfile(tokenData.access_token);
   if (!profile?.id) {
     return NextResponse.redirect(`${origin}/?error=Failed to retrieve Discord profile`);
-  }
-
-  // Check authorization: Bot owner/admin or dashboard_access table
-  const authorized = await isAuthorizedUser(profile.id);
-  if (!authorized) {
-    return NextResponse.redirect(
-      `${origin}/?error=Access Denied: Your Discord account is not authorized to access this private dashboard.`
-    );
   }
 
   const userSession = {
