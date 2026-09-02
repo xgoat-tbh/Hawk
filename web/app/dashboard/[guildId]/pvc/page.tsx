@@ -25,6 +25,37 @@ export default function PvcSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isAutoCreating, setIsAutoCreating] = useState(false);
+  const [autoCreateStatus, setAutoCreateStatus] = useState<string | null>(null);
+
+  const handleAutoCreatePvc = async () => {
+    setIsAutoCreating(true);
+    setAutoCreateStatus(null);
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/setup-pvc`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to auto-create channels');
+
+      setPvcCategoryId(data.categoryId);
+      setPvcJtcChannelId(data.jtcChannelId);
+
+      // Refresh channels list
+      const gRes = await fetch(`/api/guilds/${guildId}`);
+      const gData = await gRes.json();
+      if (gData.channels) setChannels(gData.channels);
+
+      setAutoCreateStatus('✓ "🔊 PRIVATE VOICE" category & "➕ Join to Create" voice channel created!');
+      setTimeout(() => setAutoCreateStatus(null), 5000);
+    } catch (err: any) {
+      setAutoCreateStatus(`Failed: ${err.message}`);
+      setTimeout(() => setAutoCreateStatus(null), 5000);
+    } finally {
+      setIsAutoCreating(false);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -141,15 +172,38 @@ export default function PvcSettingsPage() {
       <div className="grid grid-cols-1 gap-6">
         {/* Join to Create Setup */}
         <div className="box-card p-6 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 border-b-2 border-violet-500/40 flex items-center justify-center text-violet-400">
-              <Radio className="w-5 h-5" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 border-b-2 border-violet-500/40 flex items-center justify-center text-violet-400">
+                <Radio className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-white uppercase tracking-wide">Join-to-Create Channel & Category</h3>
+                <p className="text-xs text-muted">When members join the trigger channel, a new private room is spawned.</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Join-to-Create Channel & Category</h3>
-              <p className="text-xs text-muted">When members join the trigger channel, a new private room is spawned.</p>
-            </div>
+            <button
+              type="button"
+              disabled={isAutoCreating}
+              onClick={handleAutoCreatePvc}
+              className="btn-outline-primary text-xs py-2 px-3 flex items-center gap-2 self-start sm:self-auto disabled:opacity-50"
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>{isAutoCreating ? 'Creating in Discord...' : '1-Click Auto-Create Channels'}</span>
+            </button>
           </div>
+
+          {autoCreateStatus && (
+            <div
+              className={`p-3 rounded-xl text-xs font-bold border transition-all ${
+                autoCreateStatus.startsWith('✓')
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : 'bg-red-500/10 border-red-500/20 text-red-400'
+              }`}
+            >
+              {autoCreateStatus}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
             <div className="space-y-2">

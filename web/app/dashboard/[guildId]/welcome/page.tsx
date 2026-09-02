@@ -29,6 +29,44 @@ export default function WelcomeEmbedPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testStatus, setTestStatus] = useState<string | null>(null);
+
+  const handleSendTest = async () => {
+    if (!channelId) {
+      setTestStatus('Please select a welcome channel first.');
+      setTimeout(() => setTestStatus(null), 4000);
+      return;
+    }
+    setIsTesting(true);
+    setTestStatus(null);
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/test-welcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channelId,
+          embed: {
+            title,
+            description,
+            color,
+            image_url: imageUrl || null,
+            thumbnail_url: thumbnailUrl || null,
+            footer_text: footerText || null,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send test message');
+      setTestStatus('✓ Test message sent to your Discord channel!');
+      setTimeout(() => setTestStatus(null), 5000);
+    } catch (err: any) {
+      setTestStatus(`Failed: ${err.message}`);
+      setTimeout(() => setTestStatus(null), 5000);
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -303,10 +341,33 @@ export default function WelcomeEmbedPage() {
 
         {/* Live Simulator Preview */}
         <div className="space-y-4 sticky top-20">
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted">
-            <Eye className="w-4 h-4 text-[#5865F2]" />
-            <span>Live Discord Preview</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted">
+              <Eye className="w-4 h-4 text-[#5865F2]" />
+              <span>Live Discord Preview</span>
+            </div>
+            <button
+              type="button"
+              disabled={isTesting || !channelId}
+              onClick={handleSendTest}
+              className="btn-outline-primary text-xs py-1.5 px-3 flex items-center gap-2 disabled:opacity-50"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{isTesting ? 'Sending...' : 'Send Test Message'}</span>
+            </button>
           </div>
+
+          {testStatus && (
+            <div
+              className={`p-3 rounded-xl text-xs font-bold border transition-all ${
+                testStatus.startsWith('✓')
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : 'bg-red-500/10 border-red-500/20 text-red-400'
+              }`}
+            >
+              {testStatus}
+            </div>
+          )}
 
           <div className="p-1 rounded-2xl bg-gradient-to-b from-[#1f222a] to-transparent shadow-2xl">
             <DiscordEmbedSimulator
@@ -321,6 +382,7 @@ export default function WelcomeEmbedPage() {
             />
           </div>
         </div>
+
       </div>
 
       <SaveBar

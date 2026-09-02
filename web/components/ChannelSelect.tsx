@@ -17,7 +17,7 @@ export function ChannelSelect({
   value,
   onChange,
   placeholder = 'Select a channel...',
-  allowedTypes = [0],
+  allowedTypes = [0, 5],
 }: ChannelSelectProps) {
   const filtered = channels.filter((c) => allowedTypes.includes(c.type));
 

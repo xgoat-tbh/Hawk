@@ -181,7 +181,7 @@ export default function StoreSettingsPage() {
           <button
             type="submit"
             disabled={isAdding}
-            className="btn-box-primary text-xs px-6 py-2.5 flex items-center gap-2"
+            className="btn-outline-primary text-xs px-6 py-2.5 flex items-center gap-2"
           >
             {isAdding && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             <span>Create Item</span>
