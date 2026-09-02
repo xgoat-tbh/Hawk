@@ -25,6 +25,7 @@ export function getDb(): postgres.Sql {
       idle_timeout: constants.dbIdleTimeout,
       connect_timeout: constants.dbConnectTimeout,
       ssl: sslMode,
+      prepare: false,
       onnotice: () => {},
     });
   }

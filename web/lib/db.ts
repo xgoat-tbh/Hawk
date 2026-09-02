@@ -33,6 +33,7 @@ export const db =
     idle_timeout: 20,
     connect_timeout: 10,
     ssl: sslMode,
+    prepare: false,
     onnotice: () => {},
   });
 

@@ -88,7 +88,7 @@ export async function handleMemberJoin(member) {
     if (!member.guild)
         return;
     const config = await getWelcomeConfig(member.guild.id);
-    if (!config?.greetChannelId || !config.greetPayload)
+    if (!config?.greetChannelId || !config.greetPayload || config.greetEnabled === false)
         return;
     const textChannel = (await member.guild.channels.fetch(config.greetChannelId).catch(() => null));
     if (!textChannel)

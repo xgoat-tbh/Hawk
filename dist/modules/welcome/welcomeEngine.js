@@ -20,13 +20,34 @@ export function buildVariableContext(guild, userOrMember) {
         randomuser: randomUserMention,
     };
 }
-const VAR_REGEX = /\{(username|usermention|usertag|useravatar|servername|servermember|serveravatar|randomuser)\}/gi;
+const VAR_MAP = {
+    user: 'usermention',
+    username: 'username',
+    usermention: 'usermention',
+    usertag: 'usertag',
+    useravatar: 'useravatar',
+    'user.avatar': 'useravatar',
+    server: 'servername',
+    servername: 'servername',
+    'server.name': 'servername',
+    servermember: 'servermember',
+    servercount: 'servermember',
+    'server.count': 'servermember',
+    serveravatar: 'serveravatar',
+    'server.avatar': 'serveravatar',
+    'server.icon': 'serveravatar',
+    randomuser: 'randomuser',
+};
+const VAR_REGEX = /\{(user|username|usermention|usertag|useravatar|user\.avatar|server|servername|server\.name|servermember|servercount|server\.count|serveravatar|server\.avatar|server\.icon|randomuser)\}/gi;
 export function substituteVariables(text, ctx) {
     if (!text)
         return text;
     return text.replace(VAR_REGEX, (match, p1) => {
-        const key = p1.toLowerCase();
-        return String(ctx[key] ?? match);
+        const key = VAR_MAP[p1.toLowerCase()];
+        if (key && ctx[key] !== undefined) {
+            return String(ctx[key]);
+        }
+        return match;
     });
 }
 const MAX_JSON_PAYLOAD_LENGTH = 20_000;

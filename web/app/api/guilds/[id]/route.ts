@@ -85,7 +85,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    const rows = await db`SELECT * FROM welcome_configs WHERE guild_id = ${guildId}`;
+    const rows = await db`
+      SELECT guild_id, greet_channel_id, greet_payload, greet_enabled, leave_channel_id, leave_payload, leave_enabled
+      FROM welcome_configs WHERE guild_id = ${guildId}
+    `;
     if (rows[0]) {
       const row = rows[0];
       welcomeConfig.channel_id = row.greet_channel_id || null;

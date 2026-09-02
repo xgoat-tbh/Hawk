@@ -3,7 +3,10 @@ import type { WelcomeConfig } from '../../../types/welcome.js';
 
 export async function getWelcomeConfig(guildId: string): Promise<WelcomeConfig | null> {
   const db = getDb();
-  const rows = await db`SELECT * FROM welcome_configs WHERE guild_id = ${guildId}`;
+  const rows = await db`
+    SELECT guild_id, greet_channel_id, greet_payload, greet_enabled, leave_channel_id, leave_payload, leave_enabled
+    FROM welcome_configs WHERE guild_id = ${guildId}
+  `;
   if (rows.length === 0) return null;
   return mapWelcomeRow(rows[0]);
 }

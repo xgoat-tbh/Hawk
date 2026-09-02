@@ -1,7 +1,10 @@
 import { getDb } from '../pool.js';
 export async function getWelcomeConfig(guildId) {
     const db = getDb();
-    const rows = await db `SELECT * FROM welcome_configs WHERE guild_id = ${guildId}`;
+    const rows = await db `
+    SELECT guild_id, greet_channel_id, greet_payload, greet_enabled, leave_channel_id, leave_payload, leave_enabled
+    FROM welcome_configs WHERE guild_id = ${guildId}
+  `;
     if (rows.length === 0)
         return null;
     return mapWelcomeRow(rows[0]);
@@ -63,8 +66,10 @@ function mapWelcomeRow(row) {
         guildId: row.guild_id,
         greetChannelId: row.greet_channel_id ?? null,
         greetPayload: row.greet_payload ?? null,
+        greetEnabled: row.greet_enabled !== undefined ? Boolean(row.greet_enabled) : Boolean(row.greet_channel_id),
         leaveChannelId: row.leave_channel_id ?? null,
         leavePayload: row.leave_payload ?? null,
+        leaveEnabled: row.leave_enabled !== undefined ? Boolean(row.leave_enabled) : Boolean(row.leave_channel_id),
         createdAt: row.created_at,
         updatedAt: row.updated_at,
     };
