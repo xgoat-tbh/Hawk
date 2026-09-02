@@ -124,7 +124,7 @@ export function HawkSelect({
     <div
       ref={containerRef}
       onKeyDown={handleKeyDown}
-      className={`relative w-full ${isOpen ? 'z-50' : 'z-0'} ${className}`}
+      className={`relative w-full ${isOpen ? 'z-[100]' : 'z-0'} ${className}`}
     >
       {/* Trigger Button */}
       <button
@@ -166,7 +166,7 @@ export function HawkSelect({
       {isOpen && (
         <div
           ref={menuRef}
-          className="absolute top-full left-0 mt-1.5 w-full bg-[#0d0e10] border border-[#2b2f34] rounded-md shadow-popover-soft z-50 overflow-hidden backdrop-blur-xl"
+          className="absolute top-full left-0 mt-1.5 w-full bg-[#0d0e10] border border-[#2b2f34] rounded-md shadow-2xl z-[100] overflow-hidden"
         >
           {/* Search Header if enabled */}
           {searchable && options.length > 5 && (

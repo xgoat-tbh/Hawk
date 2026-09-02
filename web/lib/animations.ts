@@ -17,6 +17,14 @@ export function animatePageEnter(container: HTMLElement | null) {
 
   const tl = createTimeline({
     defaults: { ease: 'outCubic' },
+    onComplete: () => {
+      if (container) {
+        container.style.transform = '';
+        container.querySelectorAll<HTMLElement>('[data-animate-section]').forEach((s) => {
+          s.style.transform = '';
+        });
+      }
+    },
   });
 
   tl.add(container, {
