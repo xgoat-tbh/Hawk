@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id: guildId } = await params;
 
-  // 1. Fetch live Discord channels and roles with bot token
+  // 1. Fetch live Discord channels and roles with in-memory cached rate-limit protection
   const [botGuilds, channels, roles] = await Promise.all([
     fetchBotGuilds(),
     fetchGuildChannels(guildId),
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const targetGuild = botGuilds.find((g) => g.id === guildId);
 
-  // 2. Fetch all configs from PostgreSQL with graceful error handling
+  // 2. Fetch all configs from PostgreSQL with resilient error handling
   let guildConfig: any = { prefix: '!', log_channel_id: null };
   let economyConfig: any = {
     currency_symbol: '$',
@@ -46,7 +46,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   };
   const suggestionConfig: any = { submission_channel_id: null };
   const confessionConfig: any = { submission_channel_id: null, log_channel_id: null };
-
   let storeItems: any[] = [];
   let vconfigs: any[] = [];
 
@@ -120,9 +119,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
-    vconfigs = await db`SELECT * FROM vconfig WHERE guild_id = ${guildId}`;
+    vconfigs = await db`SELECT * FROM vconfig_rules WHERE guild_id = ${guildId}`;
   } catch (err) {
-    console.warn('vconfig query error:', err);
+    console.warn('vconfig_rules query error:', err);
   }
 
   const mergedGeneral = {
