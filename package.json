@@ -40,7 +40,11 @@
     "tsx": "^4.19.0",
     "typescript-eslint": "^8.25.0"
   },
+  "overrides": {
+    "postcss": "^8.5.26"
+  },
   "engines": {
     "node": ">=22.0.0"
   }
 }
+
