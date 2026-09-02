@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const targetGuild = botGuilds.find((g) => g.id === guildId);
 
-  // 2. Fetch all configs from PostgreSQL with resilient error handling
+  // 2. Fetch all module configs from PostgreSQL with resilient error handling
   let guildConfig: any = { prefix: '!', log_channel_id: null };
   let economyConfig: any = {
     currency_symbol: '$',
@@ -47,7 +47,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const suggestionConfig: any = { submission_channel_id: null };
   const confessionConfig: any = { submission_channel_id: null, log_channel_id: null };
   let storeItems: any[] = [];
-  let vconfigs: any[] = [];
+  let gamePings: any[] = [];
+  let gameTestChannel: string | null = null;
+  let incomeRoles: any[] = [];
+  let stickyMessages: any[] = [];
+  let mediaChannels: any[] = [];
+  let mediaAutoThread = true;
+  let permits: any[] = [];
+  let restrictions: any[] = [];
+  let ignoredEntities: any[] = [];
 
   try {
     const rows = await db`SELECT * FROM guild_config WHERE guild_id = ${guildId}`;
@@ -118,10 +126,45 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     console.warn('store_items query error:', err);
   }
 
+  // Gaming Pings & Test Channel
   try {
-    vconfigs = await db`SELECT * FROM vconfig_rules WHERE guild_id = ${guildId}`;
+    gamePings = await db`SELECT * FROM game_pings WHERE guild_id = ${guildId} ORDER BY identifier ASC`;
+    const testRow = await db`SELECT test_channel_id FROM game_guild_configs WHERE guild_id = ${guildId}`;
+    if (testRow[0]) gameTestChannel = testRow[0].test_channel_id || null;
   } catch (err) {
-    console.warn('vconfig_rules query error:', err);
+    console.warn('game_pings query error:', err);
+  }
+
+  // Income Roles
+  try {
+    incomeRoles = await db`SELECT * FROM income_roles WHERE guild_id = ${guildId} ORDER BY income_amount DESC`;
+  } catch (err) {
+    console.warn('income_roles query error:', err);
+  }
+
+  // Sticky Messages
+  try {
+    stickyMessages = await db`SELECT * FROM sticky_messages WHERE guild_id = ${guildId} ORDER BY id ASC`;
+  } catch (err) {
+    console.warn('sticky_messages query error:', err);
+  }
+
+  // Media Channels
+  try {
+    mediaChannels = await db`SELECT * FROM media_channels WHERE guild_id = ${guildId} ORDER BY id ASC`;
+    const mediaConf = await db`SELECT auto_thread FROM media_guild_configs WHERE guild_id = ${guildId}`;
+    if (mediaConf[0]) mediaAutoThread = Boolean(mediaConf[0].auto_thread);
+  } catch (err) {
+    console.warn('media_channels query error:', err);
+  }
+
+  // Permissions & Restrictions
+  try {
+    permits = await db`SELECT * FROM permits WHERE guild_id = ${guildId} ORDER BY id ASC`;
+    restrictions = await db`SELECT * FROM restrictions WHERE guild_id = ${guildId} ORDER BY id ASC`;
+    ignoredEntities = await db`SELECT * FROM ignored_entities WHERE guild_id = ${guildId} ORDER BY id ASC`;
+  } catch (err) {
+    console.warn('permissions queries error:', err);
   }
 
   const mergedGeneral = {
@@ -149,7 +192,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       suggestion: suggestionConfig,
       confession: confessionConfig,
       storeItems,
-      vconfigs,
+      gamePings,
+      gameTestChannel,
+      incomeRoles,
+      stickyMessages,
+      mediaChannels,
+      mediaAutoThread,
+      permits,
+      restrictions,
+      ignoredEntities,
     },
   });
 }

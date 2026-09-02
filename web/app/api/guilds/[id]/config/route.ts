@@ -16,7 +16,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       case 'general': {
         const { prefix, log_channel_id, audit_channel_id, bot_commander_role_id } = data;
 
-        // 1. Update guild_config
         await db`
           INSERT INTO guild_config (guild_id, prefix, log_channel_id)
           VALUES (${guildId}, ${prefix || '!'}, ${log_channel_id || null})
@@ -27,7 +26,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             updated_at = NOW()
         `;
 
-        // 2. Update economy_config for commander role and audit channel
         await db`
           INSERT INTO economy_config (guild_id, audit_channel_id, bot_commander_role_id)
           VALUES (${guildId}, ${audit_channel_id || null}, ${bot_commander_role_id || null})
@@ -115,7 +113,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       case 'welcome': {
         const { config, embed } = data;
 
-        // Convert hex color to integer for Discord embed compatibility
         let embedColorInt = 5793266;
         if (embed.color) {
           const hex = embed.color.replace('#', '');
@@ -178,6 +175,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         break;
       }
 
+      // Store items
       case 'add_store_item': {
         const { name, price, description, inventory_role_id } = data;
         const [last] = await db`SELECT COALESCE(MAX(item_id), 0) + 1 AS next_id FROM store_items WHERE guild_id = ${guildId}`;
@@ -193,6 +191,170 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       case 'delete_store_item': {
         const { item_id } = data;
         await db`DELETE FROM store_items WHERE guild_id = ${guildId} AND item_id = ${Number(item_id)}`;
+        break;
+      }
+
+      // Gaming LFG Triggers
+      case 'gaming_add_ping': {
+        const { identifier, game_name, role_id, vc_id, cooldown_seconds } = data;
+        const lowerId = String(identifier).trim().toLowerCase();
+        await db`
+          INSERT INTO game_pings (guild_id, identifier, game_name, role_id, vc_id, cooldown_seconds)
+          VALUES (${guildId}, ${lowerId}, ${game_name}, ${role_id}, ${vc_id}, ${Number(cooldown_seconds) || 1200})
+          ON CONFLICT (guild_id, identifier)
+          DO UPDATE SET
+            game_name = EXCLUDED.game_name,
+            role_id = EXCLUDED.role_id,
+            vc_id = EXCLUDED.vc_id,
+            cooldown_seconds = EXCLUDED.cooldown_seconds,
+            updated_at = NOW()
+        `;
+        break;
+      }
+
+      case 'gaming_delete_ping': {
+        const { identifier } = data;
+        const lowerId = String(identifier).trim().toLowerCase();
+        await db`DELETE FROM game_pings WHERE guild_id = ${guildId} AND identifier = ${lowerId}`;
+        break;
+      }
+
+      case 'gaming_set_test_channel': {
+        const { channel_id } = data;
+        if (channel_id) {
+          await db`
+            INSERT INTO game_guild_configs (guild_id, test_channel_id)
+            VALUES (${guildId}, ${channel_id})
+            ON CONFLICT (guild_id)
+            DO UPDATE SET test_channel_id = EXCLUDED.test_channel_id, updated_at = NOW()
+          `;
+        } else {
+          await db`DELETE FROM game_guild_configs WHERE guild_id = ${guildId}`;
+        }
+        break;
+      }
+
+      // Income Roles
+      case 'income_add_role': {
+        const { role_id, income_amount } = data;
+        await db`
+          INSERT INTO income_roles (guild_id, role_id, income_amount)
+          VALUES (${guildId}, ${role_id}, ${Number(income_amount) || 0})
+          ON CONFLICT (guild_id, role_id)
+          DO UPDATE SET income_amount = EXCLUDED.income_amount
+        `;
+        break;
+      }
+
+      case 'income_delete_role': {
+        const { role_id } = data;
+        await db`DELETE FROM income_roles WHERE guild_id = ${guildId} AND role_id = ${role_id}`;
+        break;
+      }
+
+      // Sticky Messages
+      case 'sticky_add': {
+        const { channel_id, content } = data;
+        await db`
+          INSERT INTO sticky_messages (guild_id, channel_id, message_id, content)
+          VALUES (${guildId}, ${channel_id}, '0', ${content})
+          ON CONFLICT (guild_id, channel_id)
+          DO UPDATE SET content = EXCLUDED.content, updated_at = NOW()
+        `;
+        break;
+      }
+
+      case 'sticky_delete': {
+        const { channel_id } = data;
+        await db`DELETE FROM sticky_messages WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
+        break;
+      }
+
+      // Media Channels
+      case 'media_add': {
+        const { channel_id } = data;
+        await db`
+          INSERT INTO media_channels (guild_id, channel_id)
+          VALUES (${guildId}, ${channel_id})
+          ON CONFLICT (guild_id, channel_id) DO NOTHING
+        `;
+        break;
+      }
+
+      case 'media_delete': {
+        const { channel_id } = data;
+        await db`DELETE FROM media_channels WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
+        break;
+      }
+
+      case 'media_set_autothread': {
+        const { auto_thread } = data;
+        await db`
+          INSERT INTO media_guild_configs (guild_id, auto_thread)
+          VALUES (${guildId}, ${Boolean(auto_thread)})
+          ON CONFLICT (guild_id)
+          DO UPDATE SET auto_thread = EXCLUDED.auto_thread, updated_at = NOW()
+        `;
+        break;
+      }
+
+      // Custom Permits
+      case 'permit_add': {
+        const { target_type, target_id, command_name, module_name } = data;
+        await db`
+          INSERT INTO permits (guild_id, target_type, target_id, command_name, module_name)
+          VALUES (${guildId}, ${target_type}, ${target_id}, ${command_name || null}, ${module_name || null})
+          ON CONFLICT (guild_id, target_type, target_id, command_name, module_name) DO NOTHING
+        `;
+        break;
+      }
+
+      case 'permit_delete': {
+        const { id } = data;
+        await db`DELETE FROM permits WHERE guild_id = ${guildId} AND id = ${Number(id)}`;
+        break;
+      }
+
+      // Restrictions
+      case 'restrict_add': {
+        const { command_name, module_name, target_type, target_id, location_type, location_id, effect } = data;
+        await db`
+          INSERT INTO restrictions (guild_id, command_name, module_name, target_type, target_id, location_type, location_id, effect)
+          VALUES (
+            ${guildId},
+            ${command_name || null},
+            ${module_name},
+            ${target_type || null},
+            ${target_id || null},
+            ${location_type},
+            ${location_id},
+            ${effect || 'allow'}
+          )
+          ON CONFLICT (guild_id, command_name, module_name, target_type, target_id, location_type, location_id) DO NOTHING
+        `;
+        break;
+      }
+
+      case 'restrict_delete': {
+        const { id } = data;
+        await db`DELETE FROM restrictions WHERE guild_id = ${guildId} AND id = ${Number(id)}`;
+        break;
+      }
+
+      // Ignored Entities
+      case 'ignore_add': {
+        const { entity_type, entity_id, scope_type, scope_id } = data;
+        await db`
+          INSERT INTO ignored_entities (guild_id, entity_type, entity_id, scope_type, scope_id)
+          VALUES (${guildId}, ${entity_type}, ${entity_id}, ${scope_type || null}, ${scope_id || null})
+          ON CONFLICT (guild_id, entity_type, entity_id, scope_type, scope_id) DO NOTHING
+        `;
+        break;
+      }
+
+      case 'ignore_delete': {
+        const { id } = data;
+        await db`DELETE FROM ignored_entities WHERE guild_id = ${guildId} AND id = ${Number(id)}`;
         break;
       }
 

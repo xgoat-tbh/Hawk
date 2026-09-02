@@ -12,6 +12,10 @@ import {
   MessageSquare,
   ChevronLeft,
   ShoppingBag,
+  Briefcase,
+  Pin,
+  Image as ImageIcon,
+  ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,11 +31,15 @@ export function Sidebar({ guildId, guildName, guildIcon }: SidebarProps) {
   const navItems = [
     { label: 'General Settings', href: `/dashboard/${guildId}/general`, icon: Sliders },
     { label: 'Economy & Rewards', href: `/dashboard/${guildId}/economy`, icon: Coins },
+    { label: 'Role Income', href: `/dashboard/${guildId}/income`, icon: Briefcase },
     { label: 'Server Store', href: `/dashboard/${guildId}/store`, icon: ShoppingBag },
     { label: 'Private Voice (PVC)', href: `/dashboard/${guildId}/pvc`, icon: Radio },
     { label: 'Gaming LFG', href: `/dashboard/${guildId}/gaming`, icon: Gamepad2 },
     { label: 'Welcome Embeds', href: `/dashboard/${guildId}/welcome`, icon: Sparkles },
     { label: 'Community Tools', href: `/dashboard/${guildId}/community`, icon: MessageSquare },
+    { label: 'Sticky Messages', href: `/dashboard/${guildId}/sticky`, icon: Pin },
+    { label: 'Media Channels', href: `/dashboard/${guildId}/media`, icon: ImageIcon },
+    { label: 'Permissions & Rules', href: `/dashboard/${guildId}/permissions`, icon: ShieldAlert },
   ];
 
   return (
@@ -82,4 +90,3 @@ export function Sidebar({ guildId, guildName, guildIcon }: SidebarProps) {
     </aside>
   );
 }
-
