@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { DiscordRole } from '@/lib/discord';
-import { Search, ChevronDown, X, Shield } from 'lucide-react';
+import { Search, ChevronDown, X } from 'lucide-react';
 
 interface SearchableRoleSelectProps {
   roles: DiscordRole[];
@@ -12,7 +12,7 @@ interface SearchableRoleSelectProps {
 }
 
 export function SearchableRoleSelect({
-  roles,
+  roles = [],
   value,
   onChange,
   placeholder = 'Select a role...',
@@ -87,35 +87,33 @@ export function SearchableRoleSelect({
         </div>
       </div>
 
-      {/* Popover Menu */}
+      {/* Popover Menu (Unclipped High Z-Index) */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1.5 w-full bg-[#08080a] border border-white/[0.14] rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-2xl">
-          {/* Search Input */}
-          <div className="p-2 border-b border-white/[0.08] flex items-center gap-2 bg-[#040406]">
-            <Search className="w-3.5 h-3.5 text-white/40 shrink-0 ml-1" />
-            <input
-              type="text"
-              autoFocus
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search roles..."
-              className="w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="text-white/40 hover:text-white text-[10px]"
-              >
-                Clear
-              </button>
-            )}
+        <div className="absolute top-full left-0 mt-1.5 w-full bg-[#08080a] border border-white/[0.16] rounded-xl shadow-2xl z-[100] overflow-hidden backdrop-blur-2xl">
+          {/* Search Header */}
+          <div className="p-2.5 border-b border-white/[0.08] flex items-center justify-between gap-2 bg-[#040406]">
+            <div className="flex items-center gap-2 flex-1">
+              <Search className="w-3.5 h-3.5 text-white/40 shrink-0 ml-1" />
+              <input
+                type="text"
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search roles..."
+                className="w-full bg-transparent text-xs text-white placeholder:text-white/30 focus:outline-none"
+              />
+            </div>
+            <span className="text-[10px] font-mono text-white/30 px-1">
+              {filteredRoles.length} {filteredRoles.length === 1 ? 'role' : 'roles'}
+            </span>
           </div>
 
           {/* Role List */}
-          <div className="max-h-56 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
+          <div className="max-h-60 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
             {filteredRoles.length === 0 ? (
-              <div className="py-4 text-center text-[11px] text-white/30">No matching roles found</div>
+              <div className="py-6 text-center text-xs text-white/30">
+                {roles.length === 0 ? 'No roles loaded from server.' : 'No matching roles found'}
+              </div>
             ) : (
               filteredRoles.map((role) => {
                 const isSelected = role.id === value;

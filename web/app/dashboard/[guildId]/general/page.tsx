@@ -5,7 +5,9 @@ import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { RoleSelect } from '@/components/RoleSelect';
 import { SaveBar } from '@/components/SaveBar';
+import { SyncLoader } from '@/components/SyncLoader';
 import { Sliders, Shield, Terminal, FileText } from 'lucide-react';
+
 
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -112,14 +114,9 @@ export default function GeneralSettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-surface rounded-xl w-48" />
-        <div className="h-32 bg-surface rounded-3xl" />
-        <div className="h-32 bg-surface rounded-3xl" />
-      </div>
-    );
+    return <SyncLoader title="Syncing General Settings" subtitle="Loading Discord server roles, logging channels, and command permissions..." />;
   }
+
 
   return (
     <div className="space-y-8 pb-20">

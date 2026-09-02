@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { RoleSelect } from '@/components/RoleSelect';
+import { SyncLoader } from '@/components/SyncLoader';
 import { ShoppingBag, Plus, Trash2, Tag, Loader2 } from 'lucide-react';
+
 
 export default function StoreSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -95,13 +97,9 @@ export default function StoreSettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-surface rounded-xl w-48" />
-        <div className="h-40 bg-surface rounded-3xl" />
-      </div>
-    );
+    return <SyncLoader title="Syncing Server Store" subtitle="Loading live Discord shop catalog, role grants, and inventory permissions..." />;
   }
+
 
   return (
     <div className="space-y-8 pb-20">

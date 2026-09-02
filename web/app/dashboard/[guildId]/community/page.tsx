@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
+import { SyncLoader } from '@/components/SyncLoader';
 import { MessageSquare, Lightbulb, Lock } from 'lucide-react';
+
 
 export default function CommunitySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -132,13 +134,9 @@ export default function CommunitySettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-surface rounded-xl w-48" />
-        <div className="h-32 bg-surface rounded-3xl" />
-      </div>
-    );
+    return <SyncLoader title="Syncing Community Channels" subtitle="Connecting with Discord suggestion boxes, staff review logs, and confession routing..." />;
   }
+
 
   return (
     <div className="space-y-8 pb-20">

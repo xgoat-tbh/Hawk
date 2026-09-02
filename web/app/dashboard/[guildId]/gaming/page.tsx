@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { SyncLoader } from '@/components/SyncLoader';
 import { Gamepad2, Info } from 'lucide-react';
 
 export default function GamingSettingsPage() {
@@ -10,7 +11,6 @@ export default function GamingSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [vconfigs, setVconfigs] = useState<any[]>([]);
 
-
   useEffect(() => {
     async function loadData() {
       try {
@@ -18,7 +18,6 @@ export default function GamingSettingsPage() {
         const data = await res.json();
         setVconfigs(data.config?.vconfigs || []);
       } catch (err) {
-
         console.error('Failed to load gaming config:', err);
       } finally {
         setLoading(false);
@@ -28,13 +27,9 @@ export default function GamingSettingsPage() {
   }, [guildId]);
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-surface rounded-xl w-48" />
-        <div className="h-40 bg-surface rounded-3xl" />
-      </div>
-    );
+    return <SyncLoader title="Syncing Gaming Voice Triggers" subtitle="Fetching active voice channels mapped to game roles and alert text channels..." />;
   }
+
 
   return (
     <div className="space-y-8 pb-20">

@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
+import { SyncLoader } from '@/components/SyncLoader';
 import { DiscordEmbedSimulator } from '@/components/DiscordEmbedSimulator';
 import { Sparkles, Eye, Palette, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+
 
 export default function WelcomeEmbedPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -188,13 +190,9 @@ export default function WelcomeEmbedPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-surface rounded-xl w-48" />
-        <div className="h-40 bg-surface rounded-3xl" />
-      </div>
-    );
+    return <SyncLoader title="Syncing Welcome Messages" subtitle="Loading live Discord embed configurations and greeting channel routing..." />;
   }
+
 
   return (
     <div className="space-y-8 pb-20">

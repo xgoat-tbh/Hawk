@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
+import { SyncLoader } from '@/components/SyncLoader';
 import { Radio, Clock, LayoutTemplate, Loader2, Plus, Trash2 } from 'lucide-react';
+
 
 export default function PvcSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -149,13 +151,9 @@ export default function PvcSettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-surface rounded-xl w-48" />
-        <div className="h-32 bg-surface rounded-3xl" />
-      </div>
-    );
+    return <SyncLoader title="Syncing Private Voice Channels" subtitle="Connecting with Discord voice state and hourly room rental configurations..." />;
   }
+
 
   return (
     <div className="space-y-8 pb-20">

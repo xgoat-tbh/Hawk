@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { SaveBar } from '@/components/SaveBar';
+import { SyncLoader } from '@/components/SyncLoader';
 import { Coins, Flame, MessageSquareText, Radio } from 'lucide-react';
+
 
 export default function EconomySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
@@ -120,13 +122,9 @@ export default function EconomySettingsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 bg-surface rounded-xl w-48" />
-        <div className="h-32 bg-surface rounded-3xl" />
-      </div>
-    );
+    return <SyncLoader title="Syncing Economy & Rewards" subtitle="Fetching currency balance tables, daily claim bonus values, and multiplier rules..." />;
   }
+
 
   return (
     <div className="space-y-8 pb-20">
