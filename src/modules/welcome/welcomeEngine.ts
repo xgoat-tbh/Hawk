@@ -59,73 +59,35 @@ export function substituteVariables(text: string, ctx: VariableContext): string 
   });
 }
 
-const MAX_JSON_PAYLOAD_LENGTH = 20_000;
-const MAX_RECURSION_DEPTH = 6;
-
-function processValue(val: unknown, ctx: VariableContext, depth = 0): unknown {
-  if (depth > MAX_RECURSION_DEPTH) return val;
-
-  if (typeof val === 'string') {
-    return substituteVariables(val, ctx);
-  }
-  if (Array.isArray(val)) {
-    return val.slice(0, 50).map(item => processValue(item, ctx, depth + 1));
-  }
-  if (val !== null && typeof val === 'object') {
-    const obj: Record<string, unknown> = {};
-    const entries = Object.entries(val as Record<string, unknown>).slice(0, 50);
-    for (const [k, v] of entries) {
-      obj[k] = processValue(v, ctx, depth + 1);
-    }
-    return obj;
-  }
-  return val;
-}
-
 export function renderWelcomePayload(rawPayload: string, ctx: VariableContext): BaseMessageOptions {
   const trimmed = rawPayload.trim();
+  let text = trimmed;
 
-  // Guard against massive JSON payload abuse
-  if (trimmed.length > MAX_JSON_PAYLOAD_LENGTH) {
-    const replacedText = substituteVariables(trimmed.slice(0, 2000), ctx);
-    return {
-      content: replacedText,
-      allowedMentions: { parse: [], roles: [], users: [ctx.usermention.replace(/[<@!>]/g, '')].filter(Boolean) },
-    };
-  }
-
-  // Try parsing as raw JSON payload first
+  // If previous payload was stored in Discohook/JSON format, extract plain text cleanly
   if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
     try {
       const parsed = JSON.parse(trimmed);
-      const processed = processValue(parsed, ctx) as Record<string, any>;
-
-      let embeds = Array.isArray(processed.embeds) ? processed.embeds : (processed.embed ? [processed.embed] : undefined);
-      if (embeds && embeds.length > 10) {
-        embeds = embeds.slice(0, 10);
+      if (typeof parsed.content === 'string' && parsed.content) {
+        text = parsed.content;
+      } else if (Array.isArray(parsed.embeds) && parsed.embeds.length > 0) {
+        const first = parsed.embeds[0];
+        const parts = [first.title, first.description].filter(Boolean);
+        text = parts.join('\n');
+      } else if (parsed.description) {
+        text = String(parsed.description);
       }
-
-      return {
-        content: processed.content ? String(processed.content).slice(0, 2000) : undefined,
-        embeds,
-        components: Array.isArray(processed.components) ? processed.components.slice(0, 5) : undefined,
-        allowedMentions: {
-          parse: [],
-          roles: [],
-          users: [ctx.usermention.replace(/[<@!>]/g, '')].filter(Boolean),
-        },
-      };
     } catch {
-      // Fallback to simple text if JSON parsing fails
+      // Fallback to raw text
     }
   }
 
-  // Simple text payload
-  const replacedText = substituteVariables(trimmed, ctx);
+  // Substitute variables in the plain text
+  const replacedText = substituteVariables(text, ctx);
+
   return {
-    content: replacedText,
+    content: replacedText.slice(0, 2000),
     allowedMentions: {
-      parse: [],
+      parse: ['users'],
       roles: [],
       users: [ctx.usermention.replace(/[<@!>]/g, '')].filter(Boolean),
     },

@@ -16,7 +16,7 @@ test('welcome command structure, aliases, and permissions', () => {
   assert.ok(welcomeCommand.permissions.length > 0);
 });
 
-test('substituteVariables replaces all alias tokens accurately', () => {
+test('substituteVariables replaces all alias tokens accurately in plain text', () => {
   const ctx: VariableContext = {
     username: 'Alice',
     usermention: '<@123456789>',
@@ -39,7 +39,7 @@ test('substituteVariables replaces all alias tokens accurately', () => {
   assert.ok(result.includes('https://cdn.discordapp.com/icons/456/icon.png'));
 });
 
-test('renderWelcomePayload processes rich JSON embeds with variable substitutions', () => {
+test('renderWelcomePayload outputs clean plain text without embeds', () => {
   const ctx: VariableContext = {
     username: 'Bob',
     usermention: '<@111222333>',
@@ -51,23 +51,29 @@ test('renderWelcomePayload processes rich JSON embeds with variable substitution
     randomuser: '<@333444555>',
   };
 
+  // Plain text message
+  const plainText = 'Welcome {user} to {server}! Member #{servermember}';
+  const renderedPlain = renderWelcomePayload(plainText, ctx);
+  assert.equal(renderedPlain.embeds, undefined);
+  assert.equal(renderedPlain.content, 'Welcome <@111222333> to Test Server! Member #42');
+
+  // JSON format converted cleanly to plain text with NO embeds
   const payloadJson = JSON.stringify({
     embeds: [
       {
         title: 'Welcome to {server}!',
-        description: 'Hey {user}, welcome! Total members: {server.count}',
-        color: 0xffffff,
+        description: 'Hey {user}, welcome to {server}! Member #{server.count}',
       },
     ],
   });
 
-  const rendered = renderWelcomePayload(payloadJson, ctx);
-  assert.ok(rendered.embeds && rendered.embeds.length > 0);
-  assert.equal(rendered.embeds[0].title, 'Welcome to Test Server!');
-  assert.equal(rendered.embeds[0].description, 'Hey <@111222333>, welcome! Total members: 42');
+  const renderedJson = renderWelcomePayload(payloadJson, ctx);
+  assert.equal(renderedJson.embeds, undefined);
+  assert.ok(renderedJson.content?.includes('Welcome to Test Server!'));
+  assert.ok(renderedJson.content?.includes('Hey <@111222333>, welcome to Test Server! Member #42'));
 });
 
-test('buildWelcomeConfigPanel generates valid interactive action rows', () => {
+test('buildWelcomeConfigPanel generates valid interactive action rows with Set Message button', () => {
   const greetPanel = buildWelcomeConfigPanel('greet');
   assert.ok(greetPanel.components);
   assert.ok(greetPanel.components.length > 0);

@@ -27,42 +27,28 @@ export async function handleWelcomeButton(interaction: ButtonInteraction): Promi
   if (!customId.startsWith('welcome_') || interaction.replied || interaction.deferred) return;
 
   const isGreet = customId.endsWith('_greet');
-  const isSimple = customId.includes('_simple_');
   const type = isGreet ? 'greet' : 'leave';
 
-  if (isSimple) {
-    const modal = new ModalBuilder()
-      .setCustomId(`welcome_modal_simple_${type}`)
-      .setTitle(`Configure ${isGreet ? 'Welcome' : 'Leave'} Simple Message`)
-      .addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId('welcome_text_input')
-            .setLabel('Message Text (with variables)')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder(`Welcome {usermention} to {servername}! You are member #{servermember}.`)
-            .setRequired(true)
-            .setMaxLength(2000),
-        ),
-      );
-    await interaction.showModal(modal);
-  } else {
-    const modal = new ModalBuilder()
-      .setCustomId(`welcome_modal_json_${type}`)
-      .setTitle(`Configure ${isGreet ? 'Welcome' : 'Leave'} JSON Payload`)
-      .addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId('welcome_json_input')
-            .setLabel('Raw JSON Payload (Discohook format)')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('{"content": "Welcome {usermention}!", "embeds": [{"title": "Hello"}]}')
-            .setRequired(true)
-            .setMaxLength(4000),
-        ),
-      );
-    await interaction.showModal(modal);
-  }
+  const modal = new ModalBuilder()
+    .setCustomId(`welcome_modal_simple_${type}`)
+    .setTitle(`Configure ${isGreet ? 'Welcome' : 'Leave'} Message`)
+    .addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId('welcome_text_input')
+          .setLabel('Plain Text Message (with variables)')
+          .setStyle(TextInputStyle.Paragraph)
+          .setPlaceholder(
+            isGreet
+              ? 'Welcome {user} to {server}! You are member #{servermember}.'
+              : 'Goodbye {user}, thanks for being part of {server}!'
+          )
+          .setRequired(true)
+          .setMaxLength(2000),
+      ),
+    );
+
+  await interaction.showModal(modal);
 }
 
 export async function handleWelcomeModal(interaction: ModalSubmitInteraction): Promise<void> {

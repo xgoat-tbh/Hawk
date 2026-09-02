@@ -7,20 +7,14 @@ export function buildWelcomeConfigPanel(type: 'greet' | 'leave'): ComponentV2Pay
   const title = isGreet ? 'Welcome Greeting Configuration' : 'Leave Message Configuration';
 
   const body =
-    `Choose how you would like to configure the **${isGreet ? 'Welcome' : 'Leave'}** message payload:\n\n` +
-    '• **Simple Message**: Plain text message with variables.\n' +
-    '• **Paste JSON**: Raw JSON payload with embed support.\n\n' +
+    `Configure the plain text message for **${isGreet ? 'Welcome' : 'Leave'}** events:\n\n` +
     WELCOME_VARIABLES_GUIDE;
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`welcome_simple_${type}`)
-      .setLabel('Simple Message')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`welcome_json_${type}`)
-      .setLabel('Paste JSON')
-      .setStyle(ButtonStyle.Secondary),
+      .setLabel('Set Message')
+      .setStyle(ButtonStyle.Primary),
   );
 
   return ui.standard({

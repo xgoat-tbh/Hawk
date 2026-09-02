@@ -6,8 +6,10 @@ import { resolveChannel } from '../../core/resolver/ChannelResolver.js';
 import {
   getWelcomeConfig,
   setGreetChannel,
+  setGreetPayload,
   removeGreetPayload,
   setLeaveChannel,
+  setLeavePayload,
   removeLeavePayload,
 } from '../../core/database/repositories/welcomeRepo.js';
 import { buildWelcomeConfigPanel } from './welcomeUI.js';
@@ -90,8 +92,10 @@ export default defineCommand({
 
       case 'message':
       case 'setmessage':
+      case 'text':
+      case 'msg':
       case 'panel':
-        await handleMessageConfig(ctx, isGreet);
+        await handleMessageConfig(ctx, isGreet, actionArgs);
         break;
 
       case 'remove':
@@ -162,8 +166,29 @@ async function handleChannel(ctx: CommandContext, isGreet: boolean, args: string
   });
 }
 
-async function handleMessageConfig(ctx: CommandContext, isGreet: boolean): Promise<void> {
-  const { channel, respond } = ctx;
+async function handleMessageConfig(ctx: CommandContext, isGreet: boolean, args: string[]): Promise<void> {
+  const { channel, respond, guild, member } = ctx;
+
+  if (args.length > 0) {
+    const rawText = args.join(' ').trim();
+    if (isGreet) {
+      await setGreetPayload(guild.id, rawText);
+    } else {
+      await setLeavePayload(guild.id, rawText);
+    }
+
+    await respond.success(`Configured ${isGreet ? 'welcome greeting' : 'leave message'} plain text message:\n\`\`\`\n${rawText}\n\`\`\``);
+
+    logEvent('info', 'command_execution', `Welcome ${isGreet ? 'greet' : 'leave'} message updated by ${member.user.tag}`, {
+      administrator: member.user.tag,
+      adminId: member.id,
+      guild: guild.name,
+      guildId: guild.id,
+      type: isGreet ? 'greet' : 'leave',
+    });
+    return;
+  }
+
   const panel = buildWelcomeConfigPanel(isGreet ? 'greet' : 'leave');
   await (channel as GuildTextBasedChannel).send(panel);
   await respond.success(`Posted ${isGreet ? 'Welcome' : 'Leave'} message configuration panel.`);
