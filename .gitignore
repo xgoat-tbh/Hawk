@@ -1,4 +1,5 @@
 node_modules/
+dist/
 .env
 *.log
 *.tsbuildinfo
@@ -12,4 +13,3 @@ web/.next/
 web/.env
 web/.env.local
 web/.env.*.local
-
