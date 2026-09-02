@@ -1,8 +1,8 @@
 import type { ModuleManifest } from '../../types/module.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
 import { getLeaderboard, addBank, LeaderboardSort } from './economyService.js';
-import { buildLeaderboardEmbed } from './economyUI.js';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Message } from 'discord.js';
+import { buildLeaderboardPayload } from './economyUI.js';
+import { Message, MessageFlags } from 'discord.js';
 
 const passiveCooldowns = new Map<string, number>();
 
@@ -25,41 +25,34 @@ async function handlePassiveChatIncome(message: Message) {
 export default {
   name: 'economy',
   description: 'Economy and currency system',
-  buttonPrefixes: ['lb_page_'],
+  buttonPrefixes: ['econ_lb_'],
   onMessage: async (message) => {
     await handlePassiveChatIncome(message);
   },
   onButton: async (interaction) => {
-    if (!interaction.customId.startsWith('lb_page_')) return;
+    if (!interaction.customId.startsWith('econ_lb_')) return;
     
-    const [, , sortBy, pageStr, userId] = interaction.customId.split('_');
+    const parts = interaction.customId.split('_');
+    const direction = parts[2]; // 'prev' or 'next'
+    const userId = parts[3];
+    const pageNum = parseInt(parts[4], 10);
+    const sortBy = (parts[5] || 'net') as LeaderboardSort;
+
     if (interaction.user.id !== userId) {
-      await interaction.reply({ content: 'This button is not for you.', ephemeral: true });
+      await interaction.reply({ content: 'Only the command invoker can use these pagination controls.', flags: MessageFlags.Ephemeral });
       return;
     }
 
-    const page = parseInt(pageStr, 10);
+    const newPage = direction === 'prev' ? pageNum - 1 : pageNum + 1;
     const config = await getEconomyConfig(interaction.guildId!);
     const pageSize = 10;
-    const { entries, total } = await getLeaderboard(interaction.guildId!, sortBy as LeaderboardSort, page, pageSize);
+    const { entries, total } = await getLeaderboard(interaction.guildId!, sortBy, newPage, pageSize);
     const totalPages = Math.ceil(total / pageSize) || 1;
 
-    const embed = buildLeaderboardEmbed(entries, page, totalPages, sortBy, config.currencySymbol, interaction.guild!.name);
-    
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId(`lb_page_${sortBy}_${page - 1}_${userId}`)
-          .setLabel('Previous')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(page <= 1),
-        new ButtonBuilder()
-          .setCustomId(`lb_page_${sortBy}_${page + 1}_${userId}`)
-          .setLabel('Next')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(page >= totalPages)
-      );
-
-    await interaction.update({ embeds: [embed], components: [row] });
+    const payload = buildLeaderboardPayload(entries, newPage, totalPages, sortBy, config.currencySymbol, interaction.guild!.name, userId);
+    await interaction.update({
+      components: payload.components,
+      flags: payload.flags as any,
+    });
   },
 } satisfies ModuleManifest;

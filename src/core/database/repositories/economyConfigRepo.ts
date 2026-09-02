@@ -7,6 +7,8 @@ export interface EconomyConfig {
   currencySymbol: string;
   botCommanderRoleId: string | null;
   startBalance: number;
+  dailyRewardAmount: number;
+  dailyStreakBonus: number;
   minBet: number;
   maxBet: number;
   blackjackDecks: number;
@@ -34,6 +36,8 @@ const DEFAULTS: Omit<EconomyConfig, 'guildId'> = {
   currencySymbol: '$',
   botCommanderRoleId: null,
   startBalance: 0,
+  dailyRewardAmount: 1000,
+  dailyStreakBonus: 100,
   minBet: 10,
   maxBet: 50000,
   blackjackDecks: 6,
@@ -61,6 +65,8 @@ function mapRow(row: Record<string, unknown>): EconomyConfig {
     currencySymbol: (row.currency_symbol as string) ?? DEFAULTS.currencySymbol,
     botCommanderRoleId: (row.bot_commander_role_id as string) ?? null,
     startBalance: Number(row.start_balance ?? DEFAULTS.startBalance),
+    dailyRewardAmount: Number(row.daily_reward_amount ?? DEFAULTS.dailyRewardAmount),
+    dailyStreakBonus: Number(row.daily_streak_bonus ?? DEFAULTS.dailyStreakBonus),
     minBet: Number(row.min_bet ?? DEFAULTS.minBet),
     maxBet: Number(row.max_bet ?? DEFAULTS.maxBet),
     blackjackDecks: Number(row.blackjack_decks ?? DEFAULTS.blackjackDecks),
@@ -116,6 +122,8 @@ export async function setEconomyConfigField(
     currencySymbol: 'currency_symbol',
     botCommanderRoleId: 'bot_commander_role_id',
     startBalance: 'start_balance',
+    dailyRewardAmount: 'daily_reward_amount',
+    dailyStreakBonus: 'daily_streak_bonus',
     minBet: 'min_bet',
     maxBet: 'max_bet',
     blackjackDecks: 'blackjack_decks',

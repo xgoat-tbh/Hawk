@@ -1,85 +1,113 @@
 import {
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
   UserSelectMenuBuilder,
-  type Client
+  type Client,
 } from 'discord.js';
+import { ui } from '../../core/ui/index.js';
 import type { PvcSession, PvcAccessEntry } from './pvcService.js';
+
+export function buildPvcInfoPayload(
+  session: PvcSession,
+  ownerName: string,
+  accessList: PvcAccessEntry[],
+  client: Client,
+): { components: any[]; flags?: any } {
+  const fastagBadge = session.autoPayEnabled ? '`Enabled`' : '`Disabled`';
+  const lockStatus = session.isLocked ? '`Locked`' : '`Unlocked`';
+  const hideStatus = session.isHidden ? '`Hidden`' : '`Visible`';
+  const userLimit = session.userLimit ? `\`${session.userLimit}\`` : '`Unlimited`';
+  const expiryTimestamp = Math.floor(session.expiresAt.getTime() / 1000);
+
+  const allowedUsers = accessList.filter(a => a.access === 'ALLOW' && a.targetType === 'USER');
+  const permittedStr = allowedUsers.length > 0
+    ? allowedUsers.map(a => `<@${a.targetId}>`).join(', ')
+    : '*None*';
+
+  const content =
+    `• **Owner:** **${ownerName}**\n` +
+    `• **Room Status:** ${lockStatus} · ${hideStatus}\n` +
+    `• **Member Limit:** ${userLimit}\n` +
+    `• **FASTag Auto-Pay:** ${fastagBadge}\n` +
+    `• **Room Expiry:** <t:${expiryTimestamp}:R> (<t:${expiryTimestamp}:t>)\n` +
+    `• **Permitted Members:** ${permittedStr}`;
+
+  const components: ActionRowBuilder<any>[] = [];
+
+  // Row 1: Add User Select
+  const addUserSelect = new UserSelectMenuBuilder()
+    .setCustomId('pvc_select_add_user')
+    .setPlaceholder('Permit members to join your PVC')
+    .setMinValues(1)
+    .setMaxValues(10);
+  components.push(new ActionRowBuilder().addComponents(addUserSelect));
+
+  // Row 2: Remove User Select (if members permitted)
+  if (allowedUsers.length > 0) {
+    const removeUserSelect = new StringSelectMenuBuilder()
+      .setCustomId('pvc_select_remove_user')
+      .setPlaceholder('Revoke permissions from members')
+      .setMinValues(1)
+      .setMaxValues(Math.min(allowedUsers.length, 10));
+
+    for (const a of allowedUsers.slice(0, 25)) {
+      const u = client?.users?.cache?.get(a.targetId);
+      removeUserSelect.addOptions({
+        label: u ? u.username : `User ${a.targetId}`,
+        value: a.targetId,
+      });
+    }
+    components.push(new ActionRowBuilder().addComponents(removeUserSelect));
+  }
+
+  // Row 3: Quick Action Buttons
+  const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId('pvc_btn_lock')
+      .setLabel(session.isLocked ? 'Unlock' : 'Lock')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('pvc_btn_hide')
+      .setLabel(session.isHidden ? 'Unhide' : 'Hide')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('pvc_btn_fastag')
+      .setLabel('FASTag')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('pvc_btn_delete')
+      .setLabel('Delete Room')
+      .setStyle(ButtonStyle.Danger),
+  );
+  components.push(row3);
+
+  // Row 4: Customization Buttons
+  const row4 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId('pvc_btn_rename').setLabel('Rename').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('pvc_btn_limit').setLabel('Set Limit').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('pvc_btn_transfer').setLabel('Transfer').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('pvc_btn_friends').setLabel('Add Friends').setStyle(ButtonStyle.Secondary),
+  );
+  components.push(row4);
+
+  const payload = ui.standard({
+    title: `Private Voice Channel Settings`,
+    text: content,
+    components,
+  });
+
+  return { components: payload.components, flags: payload.flags as any };
+}
 
 export function buildPvcInfoEmbed(
   session: PvcSession,
   ownerName: string,
   accessList: PvcAccessEntry[],
-  client: Client
-): { embeds: EmbedBuilder[]; components: ActionRowBuilder<any>[] } {
-  const fastagBadge = session.autoPayEnabled ? ' [FASTag]' : '';
-  
-  const embed = new EmbedBuilder()
-    .setTitle(`Private Voice Channel Info`)
-    .setColor('#2F3136')
-    .addFields(
-      { name: 'Owner', value: `${ownerName}${fastagBadge}`, inline: true },
-      { name: 'Expires At', value: `<t:${Math.floor(session.expiresAt.getTime() / 1000)}:R>`, inline: true },
-      { name: 'Status', value: `${session.isLocked ? 'Locked' : 'Unlocked'} | ${session.isHidden ? 'Hidden' : 'Visible'}`, inline: true },
-      { name: 'User Limit', value: session.userLimit ? session.userLimit.toString() : 'Unlimited', inline: true }
-    );
-    
-  const allowedUsers = accessList.filter(a => a.access === 'ALLOW' && a.targetType === 'USER');
-  if (allowedUsers.length > 0) {
-    const mentions = allowedUsers.map(a => `<@${a.targetId}>`).join(', ');
-    embed.addFields({ name: 'Permitted Members', value: mentions, inline: false });
-  } else {
-    embed.addFields({ name: 'Permitted Members', value: 'None', inline: false });
-  }
-  
-  const components: ActionRowBuilder<any>[] = [];
-  
-  // Row 1: Add User
-  const addUserSelect = new UserSelectMenuBuilder()
-    .setCustomId('pvc_select_add_user')
-    .setPlaceholder('Add members to your PVC')
-    .setMinValues(1)
-    .setMaxValues(10);
-  components.push(new ActionRowBuilder().addComponents(addUserSelect));
-  
-  // Row 2: Remove User
-  if (allowedUsers.length > 0) {
-    const removeUserSelect = new StringSelectMenuBuilder()
-      .setCustomId('pvc_select_remove_user')
-      .setPlaceholder('Remove members from your PVC')
-      .setMinValues(1)
-      .setMaxValues(Math.min(allowedUsers.length, 10));
-      
-    for (const a of allowedUsers.slice(0, 25)) {
-      const u = client?.users?.cache?.get(a.targetId);
-      removeUserSelect.addOptions({
-        label: u ? u.username : `User ${a.targetId}`,
-        value: a.targetId
-      });
-    }
-    components.push(new ActionRowBuilder().addComponents(removeUserSelect));
-  }
-  
-  // Row 3: Buttons 
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('pvc_btn_lock').setLabel(session.isLocked ? 'Unlock' : 'Lock').setStyle(session.isLocked ? ButtonStyle.Success : ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('pvc_btn_hide').setLabel(session.isHidden ? 'Unhide' : 'Hide').setStyle(session.isHidden ? ButtonStyle.Success : ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('pvc_btn_fastag').setLabel('FASTag').setStyle(session.autoPayEnabled ? ButtonStyle.Success : ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('pvc_btn_delete').setLabel('Delete').setStyle(ButtonStyle.Danger)
-  );
-  components.push(row3);
-  
-  // Row 4: Buttons
-  const row4 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('pvc_btn_rename').setLabel('Rename').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('pvc_btn_limit').setLabel('Set Limit').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('pvc_btn_transfer').setLabel('Transfer').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('pvc_btn_friends').setLabel('Add Friends').setStyle(ButtonStyle.Secondary)
-  );
-  components.push(row4);
-
-  return { embeds: [embed], components };
+  client: Client,
+): { embeds: any[]; components: any[]; flags?: any } {
+  const payload = buildPvcInfoPayload(session, ownerName, accessList, client);
+  return { embeds: [], components: payload.components, flags: payload.flags };
 }
+

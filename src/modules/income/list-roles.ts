@@ -1,12 +1,15 @@
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { listIncomeRoles } from './incomeService.js';
+import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
+import { ui } from '../../core/ui/index.js';
+import type { GuildTextBasedChannel } from 'discord.js';
 
 export default defineCommand({
   name: 'list-roles',
-  aliases: ['incroles'],
+  aliases: ['incroles', 'incomeroles'],
   module: 'income',
-  description: 'List all roles that provide income',
+  description: 'List all roles that provide passive income',
   usage: 'list-roles',
   examples: ['list-roles'],
   permissions: [],
@@ -14,17 +17,25 @@ export default defineCommand({
   cooldown: 3,
   async execute(ctx: CommandContext): Promise<void> {
     const roles = await listIncomeRoles(ctx.guild!.id);
+    const config = await getEconomyConfig(ctx.guild!.id);
     
     if (roles.length === 0) {
       await ctx.respond.info('There are currently no income roles configured for this server.');
       return;
     }
 
-    let description = 'The following roles provide passive income when you use `!collect`:\n\n';
-    for (const r of roles) {
-      description += `• <@&${r.roleId}>: **$${r.incomeAmount}**\n`;
-    }
+    const lines = roles.map(r => `• <@&${r.roleId}> · **${config.currencySymbol}${r.incomeAmount.toLocaleString()}** per cycle`);
+    const content = `Roles below provide passive income claimable via \`${ctx.parsed.prefix}collect\`:\n\n${lines.join('\n')}`;
 
-    await ctx.respond.info(description);
+    const payload = ui.standard({
+      title: `${ctx.guild!.name} Income Roles`,
+      text: content,
+      thumbnailUrl: ctx.guild!.iconURL({ size: 128 }) || undefined,
+    });
+
+    await (ctx.channel as GuildTextBasedChannel).send({
+      components: payload.components,
+      flags: payload.flags as any,
+    });
   },
 });

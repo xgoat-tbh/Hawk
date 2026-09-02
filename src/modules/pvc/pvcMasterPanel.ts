@@ -1,30 +1,34 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel } from 'discord.js';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel } from 'discord.js';
+import { ui } from '../../core/ui/index.js';
 
-export function buildMasterPanel(): { embeds: EmbedBuilder[]; components: ActionRowBuilder<any>[] } {
-  const embed = new EmbedBuilder()
-    .setTitle('Private Voice Channel Control Panel')
-    .setDescription('Manage your Private Voice Channel using the buttons below.\n\nTo create a PVC, join the designated "Join to Create" channel. If you don\'t have active time, use `!pvc buy <hours>`.')
-    .setColor('#5865F2');
+export function buildMasterPanel(): { components: any[]; flags?: any } {
+  const content =
+    `• **Join to Create:** Connect to the designated Join-to-Create voice channel to claim your private room.\n` +
+    `• **Room Extension:** Need more room time? Purchase additional hours with \`!pvc buy <hours>\`.\n` +
+    `• **FASTag Auto-Pay:** Automatically renews your room from your economy balance before expiry.\n` +
+    `• **Controls:** Use the interactive buttons below to manage access, locks, and room visibility.`;
 
-  const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('btn_master_info').setLabel('Info').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('btn_master_add_user').setLabel('Add User').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('btn_master_remove_user').setLabel('Remove User').setStyle(ButtonStyle.Danger)
+  const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId('btn_master_info').setLabel('Room Info').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_master_lock').setLabel('Lock / Unlock').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_master_hide').setLabel('Hide / Unhide').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_master_fastag').setLabel('Toggle FASTag').setStyle(ButtonStyle.Secondary),
   );
 
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('btn_master_hide').setLabel('Hide/Unhide').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('btn_master_friends').setLabel('Friends').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('btn_master_fastag').setLabel('FASTag').setStyle(ButtonStyle.Success)
+  const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder().setCustomId('btn_master_add_user').setLabel('Permit Member').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_master_remove_user').setLabel('Deny Member').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_master_transfer').setLabel('Transfer').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_master_delete').setLabel('Delete Room').setStyle(ButtonStyle.Danger),
   );
 
-  const row3 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('btn_master_transfer').setLabel('Transfer').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('btn_master_delete').setLabel('Delete').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('btn_master_privacy').setLabel('Privacy').setStyle(ButtonStyle.Secondary)
-  );
+  const payload = ui.standard({
+    title: 'Private Voice Channel Dashboard',
+    text: content,
+    components: [row1, row2],
+  });
 
-  return { embeds: [embed], components: [row1, row2, row3] };
+  return { components: payload.components, flags: payload.flags as any };
 }
 
 export async function deployMasterPanel(channel: TextChannel, existingMsgId?: string): Promise<void> {
@@ -37,7 +41,7 @@ export async function deployMasterPanel(channel: TextChannel, existingMsgId?: st
         await msg.edit(panel);
         return;
       }
-    } catch (e) {
+    } catch {
       // Message not found, send new
     }
   }

@@ -42,11 +42,23 @@ export default defineCommand({
     
     try {
       await buyItem(ctx.guild.id, ctx.message.author.id, item.itemId, quantity);
+      
+      let roleAssigned = false;
+      if (item.inventoryRoleId && ctx.member) {
+        try {
+          await ctx.member.roles.add(item.inventoryRoleId);
+          roleAssigned = true;
+        } catch {
+          // Bot may lack role hierarchy permissions
+        }
+      }
+
       const config = await getEconomyConfig(ctx.guild.id);
       const currency = config?.currencySymbol || '$';
-      await ctx.respond.success(`You successfully bought ${quantity}x **${item.name}** for ${currency}${item.price * quantity}.`);
+      const roleText = roleAssigned ? ` and was granted <@&${item.inventoryRoleId}>` : '';
+      await ctx.respond.success(`Purchased **${quantity}x ${item.name}** for **${currency}${(item.price * quantity).toLocaleString()}**${roleText}.`);
     } catch (err: any) {
-      await ctx.respond.error(err.message || 'Failed to buy item.');
+      await ctx.respond.error(err.message || 'Failed to complete store purchase.');
     }
   },
 });

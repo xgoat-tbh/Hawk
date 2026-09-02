@@ -7,6 +7,8 @@ export interface Balance {
   cash: number;
   bank: number;
   bankCapacity: number;
+  dailyLast: Date | null;
+  dailyStreak: number;
   workLast: Date | null;
   slutLast: Date | null;
   crimeLast: Date | null;
@@ -34,6 +36,8 @@ function mapBalance(row: Record<string, unknown>): Balance {
     cash: Number(row.cash ?? 0),
     bank: Number(row.bank ?? 0),
     bankCapacity: Number(row.bank_capacity ?? 0),
+    dailyLast: row.daily_last ? new Date(row.daily_last as string) : null,
+    dailyStreak: Number(row.daily_streak ?? 0),
     workLast: row.work_last ? new Date(row.work_last as string) : null,
     slutLast: row.slut_last ? new Date(row.slut_last as string) : null,
     crimeLast: row.crime_last ? new Date(row.crime_last as string) : null,
@@ -50,7 +54,7 @@ export async function getBalance(guildId: string, userId: string): Promise<Balan
     SELECT * FROM economy_balances WHERE guild_id = ${guildId} AND user_id = ${userId}
   `;
   if (rows.length === 0) {
-    return { cash: 0, bank: 0, bankCapacity: 0, workLast: null, slutLast: null, crimeLast: null, robLast: null, passiveLast: null };
+    return { cash: 0, bank: 0, bankCapacity: 0, dailyLast: null, dailyStreak: 0, workLast: null, slutLast: null, crimeLast: null, robLast: null, passiveLast: null };
   }
   return mapBalance(rows[0]);
 }
@@ -423,7 +427,95 @@ export async function setGuildDefaultBankCapacity(guildId: string, capacity: num
   return rows.length;
 }
 
+export interface DailyClaimResult {
+  success: boolean;
+  reward: number;
+  streak: number;
+  streakReset: boolean;
+  nextClaimDate: Date;
+  cooldownRemainingMs?: number;
+}
+
+export async function claimDaily(guildId: string, userId: string): Promise<DailyClaimResult> {
+  const db = getDb();
+  const config = await getEconomyConfig(guildId);
+  const now = new Date();
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const TWO_DAYS_MS = 48 * 60 * 60 * 1000;
+
+  return await db.begin(async (tx) => {
+    const rows = await tx`
+      SELECT * FROM economy_balances
+      WHERE guild_id = ${guildId} AND user_id = ${userId}
+      FOR UPDATE
+    `;
+
+    let currentStreak = 0;
+    let lastClaim: Date | null = null;
+
+    if (rows.length > 0) {
+      currentStreak = Number(rows[0].daily_streak ?? 0);
+      lastClaim = rows[0].daily_last ? new Date(rows[0].daily_last as string) : null;
+    }
+
+    if (lastClaim) {
+      const elapsed = now.getTime() - lastClaim.getTime();
+      if (elapsed < ONE_DAY_MS) {
+        const nextClaim = new Date(lastClaim.getTime() + ONE_DAY_MS);
+        return {
+          success: false,
+          reward: 0,
+          streak: currentStreak,
+          streakReset: false,
+          nextClaimDate: nextClaim,
+          cooldownRemainingMs: ONE_DAY_MS - elapsed,
+        };
+      }
+    }
+
+    // Evaluate streak: if within 48h, streak + 1; otherwise reset to 1
+    let newStreak = 1;
+    let streakReset = false;
+    if (lastClaim) {
+      const elapsed = now.getTime() - lastClaim.getTime();
+      if (elapsed <= TWO_DAYS_MS) {
+        newStreak = currentStreak + 1;
+      } else {
+        streakReset = true;
+        newStreak = 1;
+      }
+    }
+
+    // Base reward + streak bonus (capped at max 30-day streak bonus)
+    const effectiveStreak = Math.min(newStreak, 30);
+    const baseReward = config.dailyRewardAmount;
+    const streakBonus = (effectiveStreak - 1) * config.dailyStreakBonus;
+    const totalReward = baseReward + streakBonus;
+
+    await tx`
+      INSERT INTO economy_balances (guild_id, user_id, cash, daily_last, daily_streak)
+      VALUES (${guildId}, ${userId}, ${config.startBalance + totalReward}, ${now}, ${newStreak})
+      ON CONFLICT (guild_id, user_id)
+      DO UPDATE SET
+        cash = economy_balances.cash + ${totalReward},
+        daily_last = ${now},
+        daily_streak = ${newStreak},
+        updated_at = NOW()
+    `;
+
+    const nextClaimDate = new Date(now.getTime() + ONE_DAY_MS);
+    return {
+      success: true,
+      reward: totalReward,
+      streak: newStreak,
+      streakReset,
+      nextClaimDate,
+    };
+  });
+}
+
 export function formatCurrency(amount: number, symbol: string): string {
   return `${symbol} ${amount.toLocaleString()}`;
 }
+
 

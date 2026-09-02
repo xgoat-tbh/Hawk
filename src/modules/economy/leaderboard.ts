@@ -1,27 +1,28 @@
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
-import { getLeaderboard } from './economyService.js';
+import { getLeaderboard, LeaderboardSort } from './economyService.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
-import { buildLeaderboardEmbed } from './economyUI.js';
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { buildLeaderboardPayload } from './economyUI.js';
+import type { GuildTextBasedChannel } from 'discord.js';
 
 export default defineCommand({
   name: 'leaderboard',
-  aliases: ['lb', 'top'],
+  aliases: ['lb', 'top', 'rich'],
   module: 'economy',
-  description: 'View the economy leaderboard',
+  description: 'View the server economy leaderboard',
   usage: 'leaderboard [cash|bank|net] [page]',
   examples: ['leaderboard', 'leaderboard bank 2'],
   permissions: [],
   botPermissions: [],
   cooldown: 5,
   async execute(ctx: CommandContext): Promise<void> {
-    let sortBy: 'cash' | 'bank' | 'net' = 'net';
+    let sortBy: LeaderboardSort = 'net';
     let page = 1;
 
     for (const arg of ctx.parsed.args) {
-      if (['cash', 'bank', 'net'].includes(arg.toLowerCase())) {
-        sortBy = arg.toLowerCase() as 'cash' | 'bank' | 'net';
+      const lower = arg.toLowerCase();
+      if (['cash', 'bank', 'net'].includes(lower)) {
+        sortBy = lower as LeaderboardSort;
       } else if (!isNaN(parseInt(arg, 10))) {
         page = parseInt(arg, 10);
       }
@@ -37,22 +38,10 @@ export default defineCommand({
       return;
     }
 
-    const embed = buildLeaderboardEmbed(entries, page, totalPages, sortBy, config.currencySymbol, ctx.guild.name);
-    
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId(`lb_page_${sortBy}_${page - 1}_${ctx.message.author.id}`)
-          .setLabel('Previous')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(page <= 1),
-        new ButtonBuilder()
-          .setCustomId(`lb_page_${sortBy}_${page + 1}_${ctx.message.author.id}`)
-          .setLabel('Next')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(page >= totalPages)
-      );
-
-    await ctx.respond.raw({ embeds: [embed], components: [row] });
+    const payload = buildLeaderboardPayload(entries, page, totalPages, sortBy, config.currencySymbol, ctx.guild.name, ctx.message.author.id);
+    await (ctx.channel as GuildTextBasedChannel).send({
+      components: payload.components,
+      flags: payload.flags as any,
+    });
   },
 });

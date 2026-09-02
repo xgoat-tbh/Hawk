@@ -1,62 +1,108 @@
-import { EmbedBuilder } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} from 'discord.js';
+import { ui, type ComponentV2Payload } from '../../core/ui/index.js';
 import type { StoreItem, InventoryEntry } from './storeService.js';
 
-export function buildStoreEmbed(items: StoreItem[], currencySymbol: string, guildName: string, page: number, totalPages: number): EmbedBuilder {
-  const embed = new EmbedBuilder()
-    .setTitle(`${guildName} Store`)
-    .setColor('#00AAFF');
-
+export function buildStorePayload(
+  items: StoreItem[],
+  currencySymbol: string,
+  guildName: string,
+  page: number,
+  totalPages: number,
+  invokerId: string,
+): ComponentV2Payload {
+  let text = '';
   if (items.length === 0) {
-    embed.setDescription('The store is currently empty.');
+    text = '*The store is currently empty. Admins can add items using `!create-item`.*';
   } else {
     const itemsPerPage = 10;
     const start = (page - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     const currentItems = items.slice(start, end);
 
-    const description = currentItems.map((item) => {
-      return `**${item.itemId}. ${item.name}** — ${currencySymbol}${item.price}\n*${item.description}*`;
-    }).join('\n\n');
+    const lines = currentItems.map((item) => {
+      let line = `• **#${item.itemId} · ${item.name}** — \`${currencySymbol}${item.price.toLocaleString()}\``;
+      if (item.inventoryRoleId) {
+        line += `\n   └ Auto-grants role: <@&${item.inventoryRoleId}>`;
+      }
+      if (item.description) {
+        line += `\n   └ *${item.description}*`;
+      }
+      return line;
+    });
 
-    embed.setDescription(description);
-    embed.setFooter({ text: `Page ${page} of ${totalPages || 1}` });
+    text = `${lines.join('\n\n')}\n\n*Purchase an item using \`!buy <item_id>\`.*`;
   }
 
-  return embed;
+  const prevBtn = new ButtonBuilder()
+    .setCustomId(`store_page_prev_${invokerId}_${page}`)
+    .setLabel('◀ Previous')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(page <= 1);
+
+  const pageIndicator = new ButtonBuilder()
+    .setCustomId(`store_page_indicator_${invokerId}`)
+    .setLabel(`${page} / ${totalPages || 1}`)
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(true);
+
+  const nextBtn = new ButtonBuilder()
+    .setCustomId(`store_page_next_${invokerId}_${page}`)
+    .setLabel('Next ▶')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(page >= totalPages);
+
+  const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(prevBtn, pageIndicator, nextBtn);
+
+  return ui.standard({
+    title: `${guildName} Store Catalog`,
+    text,
+    components: items.length > 0 ? [actionRow] : [],
+  });
 }
 
-export function buildItemInfoEmbed(item: StoreItem, currencySymbol: string): EmbedBuilder {
-  const embed = new EmbedBuilder()
-    .setTitle(item.name)
-    .setColor('#00AAFF')
-    .addFields(
-      { name: 'ID', value: item.itemId.toString(), inline: true },
-      { name: 'Price', value: `${currencySymbol}${item.price}`, inline: true },
-      { name: 'Description', value: item.description || 'No description provided.', inline: false }
-    );
+export function buildItemInfoPayload(item: StoreItem, currencySymbol: string): ComponentV2Payload {
+  let content =
+    `• **Item ID:** \`${item.itemId}\`\n` +
+    `• **Item Name:** **${item.name}**\n` +
+    `• **Price:** \`${currencySymbol}${item.price.toLocaleString()}\`\n`;
 
   if (item.inventoryRoleId) {
-    embed.addFields({ name: 'Grants Role', value: `<@&${item.inventoryRoleId}>`, inline: true });
+    content += `• **Grants Role:** <@&${item.inventoryRoleId}>\n`;
   }
 
-  return embed;
+  content += `• **Description:** ${item.description || 'No description provided.'}`;
+
+  return ui.standard({
+    title: `Store Item: ${item.name}`,
+    text: content,
+  });
 }
 
-export function buildInventoryEmbed(entries: InventoryEntry[], userName: string, currencySymbol: string): EmbedBuilder {
-  const embed = new EmbedBuilder()
-    .setTitle(`${userName}'s Inventory`)
-    .setColor('#00AAFF');
-
+export function buildInventoryPayload(
+  entries: InventoryEntry[],
+  userName: string,
+  avatarUrl: string | undefined,
+  currencySymbol: string,
+): ComponentV2Payload {
+  let text = '';
   if (entries.length === 0) {
-    embed.setDescription('Inventory is empty.');
+    text = '*Your inventory is empty. Browse items in the store with `!store`!*';
   } else {
-    const description = entries.map(entry => {
-      return `**${entry.name}** (x${entry.quantity}) — ID: ${entry.itemId} • Value: ${currencySymbol}${entry.price * entry.quantity}`;
-    }).join('\n');
-    
-    embed.setDescription(description);
+    const lines = entries.map(entry => {
+      return `• **${entry.name}** (x${entry.quantity}) — ID: \`${entry.itemId}\` · Total Value: \`${currencySymbol}${(entry.price * entry.quantity).toLocaleString()}\``;
+    });
+    text = lines.join('\n');
   }
 
-  return embed;
+  return ui.standard({
+    title: `${userName}'s Inventory`,
+    text,
+    thumbnailUrl: avatarUrl,
+  });
 }
+
 

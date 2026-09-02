@@ -1,14 +1,15 @@
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { getItem } from './storeService.js';
-import { buildItemInfoEmbed } from './storeUI.js';
+import { buildItemInfoPayload } from './storeUI.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
+import type { GuildTextBasedChannel } from 'discord.js';
 
 export default defineCommand({
   name: 'item-info',
   aliases: ['iteminfo'],
   module: 'store',
-  description: 'Shows detailed information about an item',
+  description: 'Shows detailed information about a store item',
   usage: 'item-info <item name or ID>',
   examples: ['item-info 1', 'item-info VIP Role'],
   permissions: [],
@@ -30,8 +31,11 @@ export default defineCommand({
     const config = await getEconomyConfig(ctx.guild.id);
     const currency = config?.currencySymbol || '$';
 
-    const embed = buildItemInfoEmbed(item, currency);
-    await ctx.respond.raw({ embeds: [embed] });
+    const payload = buildItemInfoPayload(item, currency);
+    await (ctx.channel as GuildTextBasedChannel).send({
+      components: payload.components,
+      flags: payload.flags as any,
+    });
   },
 });
 
