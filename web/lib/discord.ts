@@ -371,3 +371,46 @@ export async function fetchBotProfile(
     return { id: 'bot', name: 'Hawk', avatarUrl: null, username: 'Hawk' };
   }
 }
+
+export async function sendChannelMessage(channelId: string, content: string): Promise<string | null> {
+  const token = getBotToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content,
+        allowed_mentions: { parse: [] },
+      }),
+    });
+    if (!res.ok) {
+      console.warn(`Failed to send message to channel ${channelId}: HTTP ${res.status}`);
+      return null;
+    }
+    const msg = await res.json();
+    return msg.id;
+  } catch (err) {
+    console.error('Error sending Discord channel message:', err);
+    return null;
+  }
+}
+
+export async function deleteChannelMessage(channelId: string, messageId: string): Promise<boolean> {
+  const token = getBotToken();
+  if (!token || !messageId || messageId === '0') return false;
+  try {
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bot ${token}`,
+      },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
