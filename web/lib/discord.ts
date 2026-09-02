@@ -25,16 +25,25 @@ export interface DiscordRole {
   managed: boolean;
 }
 
-const BOT_TOKEN = process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
+import dotenv from 'dotenv';
+dotenv.config();
+
+function getBotToken(): string {
+  return process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
+}
 
 export async function fetchBotGuilds(): Promise<DiscordGuild[]> {
-  if (!BOT_TOKEN) return [];
+  const token = getBotToken();
+  if (!token) return [];
   try {
     const res = await fetch('https://discord.com/api/v10/users/@me/guilds', {
-      headers: { Authorization: `Bot ${BOT_TOKEN}` },
-      next: { revalidate: 30 },
+      headers: { Authorization: `Bot ${token}` },
+      cache: 'no-store',
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`Discord API error fetching bot guilds: HTTP ${res.status}`);
+      return [];
+    }
     const guilds = (await res.json()) as DiscordGuild[];
     return guilds.map((g) => ({
       ...g,
@@ -50,13 +59,17 @@ export async function fetchBotGuilds(): Promise<DiscordGuild[]> {
 }
 
 export async function fetchGuildChannels(guildId: string): Promise<DiscordChannel[]> {
-  if (!BOT_TOKEN) return [];
+  const token = getBotToken();
+  if (!token) return [];
   try {
     const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, {
-      headers: { Authorization: `Bot ${BOT_TOKEN}` },
-      next: { revalidate: 30 },
+      headers: { Authorization: `Bot ${token}` },
+      cache: 'no-store',
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`Discord API error fetching channels for guild ${guildId}: HTTP ${res.status}`);
+      return [];
+    }
     return res.json();
   } catch (error) {
     console.error(`Error fetching channels for guild ${guildId}:`, error);
@@ -65,17 +78,22 @@ export async function fetchGuildChannels(guildId: string): Promise<DiscordChanne
 }
 
 export async function fetchGuildRoles(guildId: string): Promise<DiscordRole[]> {
-  if (!BOT_TOKEN) return [];
+  const token = getBotToken();
+  if (!token) return [];
   try {
     const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
-      headers: { Authorization: `Bot ${BOT_TOKEN}` },
-      next: { revalidate: 30 },
+      headers: { Authorization: `Bot ${token}` },
+      cache: 'no-store',
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`Discord API error fetching roles for guild ${guildId}: HTTP ${res.status}`);
+      return [];
+    }
     return res.json();
   } catch (error) {
     console.error(`Error fetching roles for guild ${guildId}:`, error);
     return [];
   }
 }
+
 
