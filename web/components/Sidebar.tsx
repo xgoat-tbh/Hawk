@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -35,30 +35,30 @@ export function Sidebar({ guildId, guildName, guildIcon }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-64 border-r border-border bg-surface/50 flex flex-col h-[calc(100vh-4rem)] sticky top-16">
+    <aside className="w-64 border-r border-[#1b1f2b] bg-[#0a0c12]/70 backdrop-blur-md flex flex-col h-[calc(100vh-4rem)] sticky top-16">
       {/* Guild Header */}
-      <div className="p-4 border-b border-border flex items-center gap-3">
+      <div className="p-4 border-b border-[#1b1f2b] flex items-center gap-3">
         <Link
           href="/dashboard"
-          className="p-1.5 rounded-lg border border-border text-muted hover:text-white hover:bg-surfaceHover transition-colors"
+          className="p-2 rounded-lg bg-[#14171f] border border-[#232733] border-b-2 border-[#0e1017] text-muted hover:text-white hover:border-[#343a4c] transition-all active:translate-y-0.5"
           title="Back to Servers"
         >
           <ChevronLeft className="w-4 h-4" />
         </Link>
-        <div className="flex items-center gap-2.5 overflow-hidden">
+        <div className="flex items-center gap-3 overflow-hidden">
           {guildIcon ? (
-            <img src={guildIcon} alt={guildName} className="w-8 h-8 rounded-full border border-border flex-shrink-0" />
+            <img src={guildIcon} alt={guildName} className="w-9 h-9 rounded-lg border border-[#232733] flex-shrink-0 object-cover shadow-sm" />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-accent/20 border border-accent/30 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-[#5865F2]/20 border border-[#5865F2]/30 text-[#5865F2] font-bold text-xs flex items-center justify-center flex-shrink-0">
               {guildName.slice(0, 2).toUpperCase()}
             </div>
           )}
-          <span className="font-semibold text-sm text-white truncate">{guildName}</span>
+          <span className="font-bold text-sm text-white truncate tracking-wide">{guildName}</span>
         </div>
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -67,10 +67,10 @@ export function Sidebar({ guildId, guildName, guildIcon }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                'flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all select-none duration-150',
                 isActive
-                  ? 'bg-accent text-white shadow-lg shadow-accent/20'
-                  : 'text-muted hover:text-white hover:bg-surfaceHover'
+                  ? 'bg-[#5865F2] text-white border-t border-white/20 border-b-4 border-[#3b44aa] shadow-[0_0_15px_rgba(88,101,242,0.3)]'
+                  : 'bg-[#101218]/40 border border-[#1b1f2b] text-muted hover:text-white hover:border-[#2f364a] hover:bg-[#151821]'
               )}
             >
               <Icon className={cn('w-4 h-4', isActive ? 'text-white' : 'text-muted')} />

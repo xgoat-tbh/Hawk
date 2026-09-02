@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getDiscordOAuthUrl } from '@/lib/discord';
 
 export async function GET() {

@@ -1,4 +1,4 @@
-﻿import postgres from 'postgres';
+import postgres from 'postgres';
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || 'postgresql://postgres:postgres@localhost:5432/hawk';
 

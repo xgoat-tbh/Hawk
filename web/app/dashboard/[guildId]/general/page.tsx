@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
@@ -124,24 +124,24 @@ export default function GeneralSettingsPage() {
   return (
     <div className="space-y-8 pb-20">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-          <Sliders className="w-6 h-6 text-accent" />
+        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
+          <Sliders className="w-6 h-6 text-[#5865F2]" />
           <span>General Settings</span>
         </h1>
-        <p className="text-sm text-muted mt-1">
+        <p className="text-xs text-muted mt-1 font-medium">
           Configure core bot prefixes, administrative permissions, and server logging channels.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         {/* Command Prefix */}
-        <div className="bg-surface border border-border rounded-3xl p-6 space-y-4">
+        <div className="box-card p-6 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
+            <div className="w-10 h-10 rounded-lg bg-[#5865F2]/10 border border-[#5865F2]/20 border-b-2 border-[#5865F2]/40 flex items-center justify-center text-[#5865F2]">
               <Terminal className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Command Prefix</h3>
+              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Command Prefix</h3>
               <p className="text-xs text-muted">The character used before all bot commands (e.g. !help, !bal).</p>
             </div>
           </div>
@@ -151,20 +151,20 @@ export default function GeneralSettingsPage() {
               value={prefix}
               maxLength={5}
               onChange={(e) => setPrefix(e.target.value)}
-              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-white font-mono text-base focus:outline-none focus:border-accent"
+              className="box-input font-mono text-base"
               placeholder="!"
             />
           </div>
         </div>
 
         {/* Bot Commander Role */}
-        <div className="bg-surface border border-border rounded-3xl p-6 space-y-4">
+        <div className="box-card p-6 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+            <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 border-b-2 border-violet-500/40 flex items-center justify-center text-violet-400">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Bot Commander Role</h3>
+              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Bot Commander Role</h3>
               <p className="text-xs text-muted">Members with this role can execute administrative bot commands.</p>
             </div>
           </div>
@@ -179,20 +179,20 @@ export default function GeneralSettingsPage() {
         </div>
 
         {/* Logging Channels */}
-        <div className="bg-surface border border-border rounded-3xl p-6 space-y-6">
+        <div className="box-card p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 border-b-2 border-emerald-500/40 flex items-center justify-center text-emerald-400">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-semibold text-white">Audit & Event Logging Channels</h3>
+              <h3 className="font-bold text-sm text-white uppercase tracking-wide">Audit & Event Logging Channels</h3>
               <p className="text-xs text-muted">Direct bot notifications, moderation events, and economy logs.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Server Log Channel</label>
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Server Log Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={logChannelId}
@@ -202,7 +202,7 @@ export default function GeneralSettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Economy Audit Channel</label>
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Economy Audit Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={auditChannelId}

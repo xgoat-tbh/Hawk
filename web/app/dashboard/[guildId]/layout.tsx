@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { fetchUserGuilds } from '@/lib/discord';

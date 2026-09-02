@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { exchangeOAuthCode, fetchDiscordUser } from '@/lib/discord';
 import { createToken } from '@/lib/auth';
 

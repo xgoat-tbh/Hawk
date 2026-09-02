@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { fetchUserGuilds, fetchGuildChannels, fetchGuildRoles } from '@/lib/discord';
 import { db } from '@/lib/db';

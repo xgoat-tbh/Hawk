@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import type { DiscordRole } from '@/lib/discord';
@@ -21,7 +21,7 @@ export function RoleSelect({
       <select
         value={value || ''}
         onChange={(e) => onChange(e.target.value || null)}
-        className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-accent appearance-none cursor-pointer hover:bg-surfaceHover transition-colors"
+        className="box-input appearance-none cursor-pointer text-xs font-semibold uppercase tracking-wider"
       >
         <option value="">{placeholder}</option>
         {roles.map((r) => (
@@ -30,7 +30,7 @@ export function RoleSelect({
           </option>
         ))}
       </select>
-      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
+      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted text-[10px]">
         ▼
       </div>
     </div>

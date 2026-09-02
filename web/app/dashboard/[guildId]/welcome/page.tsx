@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
@@ -161,11 +161,11 @@ export default function WelcomeEmbedPage() {
   return (
     <div className="space-y-8 pb-20">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-          <Sparkles className="w-6 h-6 text-accent" />
+        <h1 className="text-2xl font-black text-white uppercase tracking-wider flex items-center gap-2.5">
+          <Sparkles className="w-6 h-6 text-[#5865F2]" />
           <span>Welcome Messages & Embed Builder</span>
         </h1>
-        <p className="text-sm text-muted mt-1">
+        <p className="text-xs text-muted mt-1 font-medium">
           Design custom greeting cards with our live visual Discord simulator.
         </p>
       </div>
@@ -175,10 +175,10 @@ export default function WelcomeEmbedPage() {
         {/* Editor Form */}
         <div className="space-y-6">
           {/* Toggle & Channel */}
-          <div className="bg-surface border border-border rounded-3xl p-6 space-y-6">
+          <div className="box-card p-6 space-y-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h3 className="font-semibold text-white">Enable Welcome Messages</h3>
+                <h3 className="font-bold text-sm text-white uppercase tracking-wide">Enable Welcome Messages</h3>
                 <p className="text-xs text-muted">Automatically send a greeting card when new members join.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -188,12 +188,12 @@ export default function WelcomeEmbedPage() {
                   onChange={(e) => setEnabled(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent" />
+                <div className="w-12 h-6 bg-[#14171f] border border-[#232733] peer-focus:outline-none rounded-lg peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded after:h-5 after:w-5 after:transition-all peer-checked:bg-[#5865F2] peer-checked:border-[#5865F2]" />
               </label>
             </div>
 
             <div className="space-y-2 pt-2">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Welcome Channel</label>
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Welcome Channel</label>
               <ChannelSelect
                 channels={channels}
                 value={channelId}
@@ -204,17 +204,17 @@ export default function WelcomeEmbedPage() {
           </div>
 
           {/* Embed Fields */}
-          <div className="bg-surface border border-border rounded-3xl p-6 space-y-5">
-            <h3 className="font-semibold text-white">Embed Card Configuration</h3>
+          <div className="box-card p-6 space-y-5">
+            <h3 className="font-bold text-sm text-white uppercase tracking-wide">Embed Card Configuration</h3>
 
             {/* Title */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Embed Title</label>
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Embed Title</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-accent"
+                className="box-input font-bold"
                 placeholder="Welcome to {server}!"
               />
             </div>
@@ -222,26 +222,26 @@ export default function WelcomeEmbedPage() {
             {/* Description */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-muted uppercase tracking-wider">Embed Description</label>
+                <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Embed Description</label>
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => insertTag('{user}')}
-                    className="text-[10px] px-2 py-0.5 rounded bg-surfaceHover text-accent hover:bg-accent hover:text-white transition-colors"
+                    className="text-[10px] px-2 py-0.5 rounded bg-[#14171f] border border-[#232733] text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
                   >
                     + {"{user}"}
                   </button>
                   <button
                     type="button"
                     onClick={() => insertTag('{server}')}
-                    className="text-[10px] px-2 py-0.5 rounded bg-surfaceHover text-accent hover:bg-accent hover:text-white transition-colors"
+                    className="text-[10px] px-2 py-0.5 rounded bg-[#14171f] border border-[#232733] text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
                   >
                     + {"{server}"}
                   </button>
                   <button
                     type="button"
                     onClick={() => insertTag('{server.count}')}
-                    className="text-[10px] px-2 py-0.5 rounded bg-surfaceHover text-accent hover:bg-accent hover:text-white transition-colors"
+                    className="text-[10px] px-2 py-0.5 rounded bg-[#14171f] border border-[#232733] text-[#5865F2] hover:bg-[#5865F2] hover:text-white font-bold transition-colors"
                   >
                     + {"{server.count}"}
                   </button>
@@ -251,50 +251,50 @@ export default function WelcomeEmbedPage() {
                 rows={4}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl p-3 text-white text-sm focus:outline-none focus:border-accent resize-none"
+                className="box-input resize-none"
                 placeholder="Message body..."
               />
             </div>
 
             {/* Color */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Accent Color</label>
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Accent Color</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="w-10 h-10 rounded-xl cursor-pointer bg-transparent border-0"
+                  className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-0"
                 />
                 <input
                   type="text"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="bg-background border border-border rounded-xl px-4 py-2 text-white font-mono text-xs focus:outline-none focus:border-accent w-28 uppercase"
+                  className="box-input w-28 uppercase font-mono text-xs font-bold"
                 />
               </div>
             </div>
 
             {/* Image Banner URL */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Banner Image URL</label>
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Banner Image URL</label>
               <input
                 type="url"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-accent"
+                className="box-input"
                 placeholder="https://imgur.com/banner.png"
               />
             </div>
 
             {/* Footer Text */}
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wider">Footer Text</label>
+              <label className="text-[11px] font-bold text-muted uppercase tracking-wider">Footer Text</label>
               <input
                 type="text"
                 value={footerText}
                 onChange={(e) => setFooterText(e.target.value)}
-                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-accent"
+                className="box-input"
                 placeholder="Member #{server.count}"
               />
             </div>
@@ -303,21 +303,23 @@ export default function WelcomeEmbedPage() {
 
         {/* Live Simulator Preview */}
         <div className="space-y-4 sticky top-20">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted">
-            <Eye className="w-4 h-4 text-accent" />
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted">
+            <Eye className="w-4 h-4 text-[#5865F2]" />
             <span>Live Discord Preview</span>
           </div>
 
-          <DiscordEmbedSimulator
-            title={title}
-            description={description}
-            color={color}
-            imageUrl={imageUrl || null}
-            thumbnailUrl={thumbnailUrl || null}
-            footerText={footerText}
-            serverName={guildName}
-            memberCount={1250}
-          />
+          <div className="p-1 rounded-2xl bg-gradient-to-b from-[#1f222a] to-transparent shadow-2xl">
+            <DiscordEmbedSimulator
+              title={title}
+              description={description}
+              color={color}
+              imageUrl={imageUrl || null}
+              thumbnailUrl={thumbnailUrl || null}
+              footerText={footerText}
+              serverName={guildName}
+              memberCount={1250}
+            />
+          </div>
         </div>
       </div>
 

@@ -1,19 +1,23 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
+    --background: 0 0% 3%;
     --foreground: 210 20% 98%;
   }
 }
 
 body {
-  background-color: #090a0d;
+  background-color: #08090c;
   color: #f3f4f6;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Geist", Helvetica, Arial, sans-serif;
   overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(88, 101, 242, 0.08) 0%, transparent 50%),
+    radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px;
 }
 
 /* Custom sleek scrollbar */
@@ -22,12 +26,46 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090a0d;
+  background: #08090c;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1f222a;
-  border-radius: 9999px;
+  background: #1c1f26;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2a2e39;
+  background: #2b303c;
 }
+
+/* Boxy Tactile Button Classes */
+@layer components {
+  .btn-box-primary {
+    @apply relative inline-flex items-center justify-center font-semibold text-xs tracking-wider uppercase px-5 py-2.5 rounded-lg bg-[#5865F2] text-white border-t border-white/20 border-b-4 border-[#3b44aa] active:border-b-0 active:translate-y-1 hover:bg-[#4752C4] transition-all duration-150 shadow-[0_0_15px_rgba(88,101,242,0.3)] hover:shadow-[0_0_25px_rgba(88,101,242,0.5)] cursor-pointer select-none;
+  }
+
+  .btn-box-secondary {
+    @apply relative inline-flex items-center justify-center font-semibold text-xs tracking-wider uppercase px-5 py-2.5 rounded-lg bg-[#14171f] text-[#c9ced6] border border-[#232733] border-b-4 border-[#0e1017] active:border-b active:translate-y-1 hover:bg-[#1a1e29] hover:text-white hover:border-[#343a4c] transition-all duration-150 shadow-sm cursor-pointer select-none;
+  }
+
+  .btn-box-danger {
+    @apply relative inline-flex items-center justify-center font-semibold text-xs tracking-wider uppercase px-4 py-2 rounded-lg bg-[#dc2626] text-white border-t border-white/20 border-b-4 border-[#991b1b] active:border-b-0 active:translate-y-1 hover:bg-[#b91c1c] transition-all duration-150 shadow-[0_0_15px_rgba(220,38,38,0.3)] cursor-pointer select-none;
+  }
+
+  .box-card {
+    @apply bg-[#0e1016]/90 border border-[#1b1f2b] rounded-xl shadow-lg shadow-black/60 hover:border-[#2f364a] hover:shadow-[0_0_30px_rgba(0,0,0,0.8)] transition-all duration-200 relative overflow-hidden;
+  }
+
+  .box-input {
+    @apply w-full bg-[#08090d] border border-[#1e222e] rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-[#5865F2] focus:ring-1 focus:ring-[#5865F2] hover:border-[#2c3244] transition-all duration-150;
+  }
+}
+
+/* Micro animations */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite;
+}
+
