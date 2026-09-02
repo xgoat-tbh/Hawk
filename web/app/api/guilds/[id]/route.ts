@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { fetchBotGuilds, fetchGuildChannels, fetchGuildRoles } from '@/lib/discord';
+import { fetchBotGuilds, fetchGuildChannels, fetchGuildRoles, fetchGuildEmojis } from '@/lib/discord';
 import { db } from '@/lib/db';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -9,12 +9,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id: guildId } = await params;
 
-  // 1. Fetch live Discord channels and roles with in-memory cached rate-limit protection
-  const [botGuilds, channels, roles] = await Promise.all([
+  // 1. Fetch live Discord channels, roles, and custom emojis with in-memory cached rate-limit protection
+  const [botGuilds, channels, roles, emojis] = await Promise.all([
     fetchBotGuilds(),
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
+    fetchGuildEmojis(guildId),
   ]);
+
 
   const targetGuild = botGuilds.find((g) => g.id === guildId);
 
@@ -185,7 +187,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       : { id: guildId, name: 'Discord Server', iconUrl: null },
     channels,
     roles: roles.filter((r) => r.name !== '@everyone'),
+    emojis,
     config: {
+
       general: mergedGeneral,
       economy: economyConfig,
       welcome: { config: welcomeConfig, embed: welcomeEmbed },

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
+import { EmojiPicker } from '@/components/EmojiPicker';
 import { SyncLoader } from '@/components/SyncLoader';
 import { Pin, Plus, Trash2, Hash, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -11,6 +12,7 @@ export default function StickyMessagesPage() {
 
   const [loading, setLoading] = useState(true);
   const [channels, setChannels] = useState<any[]>([]);
+  const [emojis, setEmojis] = useState<any[]>([]);
   const [stickies, setStickies] = useState<any[]>([]);
 
   const [newChannelId, setNewChannelId] = useState<string | null>(null);
@@ -24,6 +26,7 @@ export default function StickyMessagesPage() {
       const res = await fetch(`/api/guilds/${guildId}`);
       const data = await res.json();
       setChannels(data.channels || []);
+      setEmojis(data.emojis || []);
       setStickies(data.config?.stickyMessages || []);
     } catch (err) {
       console.error('Failed to load sticky messages:', err);
@@ -87,6 +90,10 @@ export default function StickyMessagesPage() {
     } catch (err) {
       console.error('Failed to delete sticky message:', err);
     }
+  };
+
+  const insertEmoji = (emojiCode: string) => {
+    setNewContent((prev) => `${prev} ${emojiCode}`);
   };
 
   if (loading) {
@@ -155,7 +162,10 @@ export default function StickyMessagesPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Sticky Message Content</label>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Sticky Message Content</label>
+                <EmojiPicker emojis={emojis} onSelectEmoji={insertEmoji} />
+              </div>
               <textarea
                 rows={4}
                 value={newContent}

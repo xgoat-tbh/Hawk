@@ -25,6 +25,18 @@ export interface DiscordRole {
   managed: boolean;
 }
 
+export interface DiscordEmoji {
+  id: string;
+  name: string;
+  roles?: string[];
+  user?: any;
+  require_colons?: boolean;
+  managed?: boolean;
+  animated?: boolean;
+  available?: boolean;
+  url?: string;
+}
+
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -158,5 +170,42 @@ export async function fetchGuildRoles(guildId: string): Promise<DiscordRole[]> {
   } catch (error) {
     console.error(`Error fetching roles for guild ${guildId}:`, error);
     return getStaleFallback<DiscordRole[]>(cacheKey) || [];
+  }
+}
+
+export async function fetchGuildEmojis(guildId: string): Promise<DiscordEmoji[]> {
+  const cacheKey = `emojis_${guildId}`;
+  const cached = getFromCache<DiscordEmoji[]>(cacheKey, 60_000); // 60s cache
+  if (cached) return cached;
+
+  const token = getBotToken();
+  if (!token) return getStaleFallback<DiscordEmoji[]>(cacheKey) || [];
+
+  try {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/emojis`, {
+      headers: { Authorization: `Bot ${token}` },
+    });
+
+    if (res.status === 429) {
+      console.warn(`Discord 429 on emojis for ${guildId}, serving cached data.`);
+      return getStaleFallback<DiscordEmoji[]>(cacheKey) || [];
+    }
+
+    if (!res.ok) {
+      console.warn(`Discord API error fetching emojis for guild ${guildId}: HTTP ${res.status}`);
+      return getStaleFallback<DiscordEmoji[]>(cacheKey) || [];
+    }
+
+    const emojis = (await res.json()) as DiscordEmoji[];
+    const mapped = emojis.map((e) => ({
+      ...e,
+      url: `https://cdn.discordapp.com/emojis/${e.id}.${e.animated ? 'gif' : 'png'}?size=64&quality=lossless`,
+    }));
+
+    setToCache(cacheKey, mapped);
+    return mapped;
+  } catch (error) {
+    console.error(`Error fetching emojis for guild ${guildId}:`, error);
+    return getStaleFallback<DiscordEmoji[]>(cacheKey) || [];
   }
 }

@@ -19,28 +19,60 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   try {
-    const { channelId, embed } = await req.json();
+    const { channelId, embed, is_embed } = await req.json();
 
     if (!channelId) {
       return NextResponse.json({ error: 'Please select a welcome channel first.' }, { status: 400 });
     }
 
-    // Format embed fields with placeholder preview values
+    // Format fields with placeholder preview values
     const title = (embed.title || 'Welcome to {server}!')
       .replace(/\{user\}/gi, session.username)
-      .replace(/\{server\}/gi, 'Server');
+      .replace(/\{usermention\}/gi, `<@${session.id}>`)
+      .replace(/\{username\}/gi, session.username)
+      .replace(/\{server\}/gi, 'Server')
+      .replace(/\{servername\}/gi, 'Server');
 
     const description = (embed.description || 'Welcome {user} to {server}!')
       .replace(/\{user\}/gi, `<@${session.id}>`)
-      .replace(/\{user\.name\}/gi, session.username)
+      .replace(/\{usermention\}/gi, `<@${session.id}>`)
+      .replace(/\{username\}/gi, session.username)
+      .replace(/\{usertag\}/gi, session.username)
       .replace(/\{server\}/gi, 'Server')
-      .replace(/\{server\.count\}/gi, '1,234');
+      .replace(/\{servername\}/gi, 'Server')
+      .replace(/\{server\.count\}/gi, '1,234')
+      .replace(/\{servermember\}/gi, '1,234');
 
     const footer = (embed.footer_text || 'Member #{server.count}')
       .replace(/\{server\.count\}/gi, '1,234')
+      .replace(/\{servermember\}/gi, '1,234')
       .replace(/\{user\}/gi, session.username);
 
-    // Convert hex color to integer
+    // If Plain Text (No Embed)
+    if (is_embed === false) {
+      const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bot ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: description,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        return NextResponse.json(
+          { error: err.message || `Discord API Error (${res.status}): Bot cannot send messages in this channel.` },
+          { status: res.status }
+        );
+      }
+
+      return NextResponse.json({ success: true, message: 'Test plain text welcome message sent!' });
+    }
+
+    // Rich Embed Mode
     let colorInt = 0x5865f2;
     if (embed.color) {
       const cleanHex = embed.color.replace('#', '');
