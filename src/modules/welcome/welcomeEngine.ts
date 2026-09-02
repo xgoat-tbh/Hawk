@@ -89,7 +89,6 @@ export function renderWelcomePayload(rawPayload: string, ctx: VariableContext): 
     allowedMentions: {
       parse: ['users'],
       roles: [],
-      users: [ctx.usermention.replace(/[<@!>]/g, '')].filter(Boolean),
     },
   };
 }

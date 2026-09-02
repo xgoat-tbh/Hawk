@@ -241,7 +241,14 @@ async function handleTest(ctx: CommandContext, isGreet: boolean): Promise<void> 
   const varCtx = buildVariableContext(guild, member);
   const rendered = renderWelcomePayload(rawPayload, varCtx);
 
-  await targetChannel.send(rendered);
+  try {
+    await targetChannel.send(rendered);
+  } catch (err: any) {
+    const errorDetail = err?.message || 'Bot lacks permission to send messages in that channel';
+    await respond.error(`Could not send preview to ${mentionChannel(targetChannel.id)}: \`${errorDetail}\`. Please check channel permissions.`);
+    return;
+  }
+
   await respond.success(`Sent ${isGreet ? 'welcome greeting' : 'leave message'} test preview to ${mentionChannel(targetChannel.id)}.`);
 
   logEvent('info', 'command_execution', `Welcome ${isGreet ? 'greet' : 'leave'} test executed by ${member.user.tag}`, {
