@@ -1,86 +1,59 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { Coins, Flame, MessageSquareText } from 'lucide-react';
+
+interface EconomyFormData {
+  currencySymbol: string;
+  startBalance: number;
+  dailyRewardAmount: number;
+  dailyStreakBonus: number;
+  passiveIncome: boolean;
+  passiveAmount: number;
+}
 
 export default function EconomySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
   const containerRef = usePageEntrance();
   const { config, updateConfigLocally } = useGuildData();
 
-  // Form State
-  const [currencySymbol, setCurrencySymbol] = useState('$');
-  const [startBalance, setStartBalance] = useState(0);
-  const [dailyRewardAmount, setDailyRewardAmount] = useState(1000);
-  const [dailyStreakBonus, setDailyStreakBonus] = useState(100);
-  const [passiveIncome, setPassiveIncome] = useState(false);
-  const [passiveAmount, setPassiveAmount] = useState(10);
+  const initialFormData = useMemo<EconomyFormData>(() => {
+    const eco = config?.economy || {};
+    return {
+      currencySymbol: eco.currency_symbol || '$',
+      startBalance: Number(eco.start_balance) || 0,
+      dailyRewardAmount: Number(eco.daily_reward_amount) || 1000,
+      dailyStreakBonus: Number(eco.daily_streak_bonus) || 100,
+      passiveIncome: Boolean(eco.passive_income),
+      passiveAmount: Number(eco.passive_amount) || 10,
+    };
+  }, [config?.economy]);
 
-  // Original State
-  const [original, setOriginal] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (config?.economy) {
-      const eco = config.economy;
-      setCurrencySymbol(eco.currency_symbol || '$');
-      setStartBalance(Number(eco.start_balance) || 0);
-      setDailyRewardAmount(Number(eco.daily_reward_amount) || 1000);
-      setDailyStreakBonus(Number(eco.daily_streak_bonus) || 100);
-      setPassiveIncome(Boolean(eco.passive_income));
-      setPassiveAmount(Number(eco.passive_amount) || 10);
-
-      setOriginal({
-        currencySymbol: eco.currency_symbol || '$',
-        startBalance: Number(eco.start_balance) || 0,
-        dailyRewardAmount: Number(eco.daily_reward_amount) || 1000,
-        dailyStreakBonus: Number(eco.daily_streak_bonus) || 100,
-        passiveIncome: Boolean(eco.passive_income),
-        passiveAmount: Number(eco.passive_amount) || 10,
-      });
-    }
-  }, [config]);
-
-  const hasChanges =
-    original &&
-    (currencySymbol !== original.currencySymbol ||
-      startBalance !== original.startBalance ||
-      dailyRewardAmount !== original.dailyRewardAmount ||
-      dailyStreakBonus !== original.dailyStreakBonus ||
-      passiveIncome !== original.passiveIncome ||
-      passiveAmount !== original.passiveAmount);
-
-  const handleReset = () => {
-    if (!original) return;
-    setCurrencySymbol(original.currencySymbol);
-    setStartBalance(original.startBalance);
-    setDailyRewardAmount(original.dailyRewardAmount);
-    setDailyStreakBonus(original.dailyStreakBonus);
-    setPassiveIncome(original.passiveIncome);
-    setPassiveAmount(original.passiveAmount);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-
-    try {
+  const {
+    draft,
+    isDirty,
+    saveState,
+    error: saveError,
+    setField,
+    reset,
+    save,
+  } = useFormDraft<EconomyFormData>({
+    initialData: initialFormData,
+    onSave: async (formValues) => {
       const payload = {
-        currency_symbol: currencySymbol,
-        start_balance: startBalance,
-        daily_reward_amount: dailyRewardAmount,
-        daily_streak_bonus: dailyStreakBonus,
-        passive_income: passiveIncome,
-        passive_amount: passiveAmount,
+        currency_symbol: formValues.currencySymbol,
+        start_balance: formValues.startBalance,
+        daily_reward_amount: formValues.dailyRewardAmount,
+        daily_streak_bonus: formValues.dailyStreakBonus,
+        passive_income: formValues.passiveIncome,
+        passive_amount: formValues.passiveAmount,
       };
 
       const res = await fetch(`/api/guilds/${guildId}/config`, {
@@ -94,7 +67,7 @@ export default function EconomySettingsPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Failed to save');
+        throw new Error(errData.error || 'Failed to save economy configuration.');
       }
 
       updateConfigLocally('economy', {
@@ -102,22 +75,11 @@ export default function EconomySettingsPage() {
         ...payload,
       });
 
-      setOriginal({
-        currencySymbol,
-        startBalance,
-        dailyRewardAmount,
-        dailyStreakBonus,
-        passiveIncome,
-        passiveAmount,
-      });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      setSaveError(err.message || 'Error saving settings.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+      return formValues;
+    },
+  });
+
+  const current = draft || initialFormData;
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
@@ -134,11 +96,11 @@ export default function EconomySettingsPage() {
 
         <button
           type="button"
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges}
+          onClick={() => save()}
+          disabled={saveState === 'saving' || !isDirty}
           className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
+          <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
@@ -159,8 +121,8 @@ export default function EconomySettingsPage() {
               <input
                 type="text"
                 maxLength={5}
-                value={currencySymbol}
-                onChange={(e) => setCurrencySymbol(e.target.value)}
+                value={current.currencySymbol}
+                onChange={(e) => setField('currencySymbol', e.target.value)}
                 className="glass-input font-mono text-xs w-28 text-center"
                 placeholder="$"
               />
@@ -174,12 +136,12 @@ export default function EconomySettingsPage() {
                 <input
                   type="number"
                   min={0}
-                  value={startBalance}
-                  onChange={(e) => setStartBalance(parseInt(e.target.value, 10) || 0)}
+                  value={current.startBalance}
+                  onChange={(e) => setField('startBalance', parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                  {currencySymbol}
+                  {current.currencySymbol}
                 </span>
               </div>
             </SettingRow>
@@ -203,12 +165,12 @@ export default function EconomySettingsPage() {
                 <input
                   type="number"
                   min={0}
-                  value={dailyRewardAmount}
-                  onChange={(e) => setDailyRewardAmount(parseInt(e.target.value, 10) || 0)}
+                  value={current.dailyRewardAmount}
+                  onChange={(e) => setField('dailyRewardAmount', parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                  {currencySymbol}
+                  {current.currencySymbol}
                 </span>
               </div>
             </SettingRow>
@@ -221,12 +183,12 @@ export default function EconomySettingsPage() {
                 <input
                   type="number"
                   min={0}
-                  value={dailyStreakBonus}
-                  onChange={(e) => setDailyStreakBonus(parseInt(e.target.value, 10) || 0)}
+                  value={current.dailyStreakBonus}
+                  onChange={(e) => setField('dailyStreakBonus', parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                  {currencySymbol}
+                  {current.currencySymbol}
                 </span>
               </div>
             </SettingRow>
@@ -245,21 +207,21 @@ export default function EconomySettingsPage() {
             <SettingRow
               label="Enable Passive Chat Income"
               description="Grants currency to members for active conversation messages (1-minute anti-spam cooldown)."
-              badge={passiveIncome ? 'Active' : 'Disabled'}
-              badgeVariant={passiveIncome ? 'success' : 'neutral'}
+              badge={current.passiveIncome ? 'Active' : 'Disabled'}
+              badgeVariant={current.passiveIncome ? 'success' : 'neutral'}
             >
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={passiveIncome}
-                  onChange={(e) => setPassiveIncome(e.target.checked)}
+                  checked={current.passiveIncome}
+                  onChange={(e) => setField('passiveIncome', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-10 h-5 bg-[#17191c] border border-[#24272b] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#f1f2f3] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success peer-checked:after:bg-black"></div>
               </label>
             </SettingRow>
 
-            {passiveIncome && (
+            {current.passiveIncome && (
               <SettingRow
                 label="Reward Amount Per Message"
                 description="Amount added to member wallet per message sent in eligible text channels."
@@ -268,12 +230,12 @@ export default function EconomySettingsPage() {
                   <input
                     type="number"
                     min={1}
-                    value={passiveAmount}
-                    onChange={(e) => setPassiveAmount(parseInt(e.target.value, 10) || 1)}
+                    value={current.passiveAmount}
+                    onChange={(e) => setField('passiveAmount', parseInt(e.target.value, 10) || 1)}
                     className="glass-input font-mono text-xs pl-8"
                   />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                    {currencySymbol}
+                    {current.currencySymbol}
                   </span>
                 </div>
               </SettingRow>
@@ -283,12 +245,11 @@ export default function EconomySettingsPage() {
       </div>
 
       <SaveBar
-        hasChanges={Boolean(hasChanges)}
-        isSaving={isSaving}
-        onSave={handleSave}
-        onReset={handleReset}
+        isDirty={isDirty}
+        saveState={saveState}
+        onSave={save}
+        onReset={reset}
         error={saveError}
-        success={saveSuccess}
       />
     </div>
   );

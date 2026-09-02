@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
@@ -8,69 +8,48 @@ import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { MessageSquare, Lightbulb, Lock } from 'lucide-react';
+
+interface CommunityFormData {
+  sugSubmission: string | null;
+  confSubmission: string | null;
+  confLog: string | null;
+}
 
 export default function CommunitySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
   const containerRef = usePageEntrance();
   const { channels, config, updateConfigLocally } = useGuildData();
 
-  // Suggestion State
-  const [sugSubmission, setSugSubmission] = useState<string | null>(null);
+  const initialFormData = useMemo<CommunityFormData>(() => {
+    const sug = config?.suggestion || {};
+    const conf = config?.confession || {};
+    return {
+      sugSubmission: sug.submission_channel_id || null,
+      confSubmission: conf.submission_channel_id || null,
+      confLog: conf.log_channel_id || null,
+    };
+  }, [config?.suggestion, config?.confession]);
 
-  // Confession State
-  const [confSubmission, setConfSubmission] = useState<string | null>(null);
-  const [confLog, setConfLog] = useState<string | null>(null);
-
-  // Original State
-  const [original, setOriginal] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (config) {
-      const sug = config.suggestion || {};
-      const conf = config.confession || {};
-
-      setSugSubmission(sug.submission_channel_id || null);
-      setConfSubmission(conf.submission_channel_id || null);
-      setConfLog(conf.log_channel_id || null);
-
-      setOriginal({
-        sugSubmission: sug.submission_channel_id || null,
-        confSubmission: conf.submission_channel_id || null,
-        confLog: conf.log_channel_id || null,
-      });
-    }
-  }, [config]);
-
-  const hasChanges =
-    original &&
-    (sugSubmission !== original.sugSubmission ||
-      confSubmission !== original.confSubmission ||
-      confLog !== original.confLog);
-
-  const handleReset = () => {
-    if (!original) return;
-    setSugSubmission(original.sugSubmission);
-    setConfSubmission(original.confSubmission);
-    setConfLog(original.confLog);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-
-    try {
+  const {
+    draft,
+    isDirty,
+    saveState,
+    error: saveError,
+    setField,
+    reset,
+    save,
+  } = useFormDraft<CommunityFormData>({
+    initialData: initialFormData,
+    onSave: async (formValues) => {
       const payload = {
         suggestion: {
-          submission_channel_id: sugSubmission,
+          submission_channel_id: formValues.sugSubmission,
         },
         confession: {
-          submission_channel_id: confSubmission,
-          log_channel_id: confLog,
+          submission_channel_id: formValues.confSubmission,
+          log_channel_id: formValues.confLog,
         },
       };
 
@@ -85,25 +64,17 @@ export default function CommunitySettingsPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Failed to save');
+        throw new Error(errData.error || 'Failed to save community configuration.');
       }
 
       updateConfigLocally('suggestion', payload.suggestion);
       updateConfigLocally('confession', payload.confession);
 
-      setOriginal({
-        sugSubmission,
-        confSubmission,
-        confLog,
-      });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      setSaveError(err.message || 'Error saving settings.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+      return formValues;
+    },
+  });
+
+  const current = draft || initialFormData;
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
@@ -120,11 +91,11 @@ export default function CommunitySettingsPage() {
 
         <button
           type="button"
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges}
+          onClick={() => save()}
+          disabled={saveState === 'saving' || !isDirty}
           className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
+          <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
@@ -145,8 +116,8 @@ export default function CommunitySettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={sugSubmission}
-                  onChange={setSugSubmission}
+                  value={current.sugSubmission}
+                  onChange={(val) => setField('sugSubmission', val)}
                   placeholder="Select suggestions channel..."
                   allowedTypes={[0, 5]}
                 />
@@ -171,8 +142,8 @@ export default function CommunitySettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={confSubmission}
-                  onChange={setConfSubmission}
+                  value={current.confSubmission}
+                  onChange={(val) => setField('confSubmission', val)}
                   placeholder="Select confession feed..."
                   allowedTypes={[0, 5]}
                 />
@@ -188,8 +159,8 @@ export default function CommunitySettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={confLog}
-                  onChange={setConfLog}
+                  value={current.confLog}
+                  onChange={(val) => setField('confLog', val)}
                   placeholder="Select admin log channel..."
                   allowedTypes={[0, 5]}
                 />
@@ -200,12 +171,11 @@ export default function CommunitySettingsPage() {
       </div>
 
       <SaveBar
-        hasChanges={Boolean(hasChanges)}
-        isSaving={isSaving}
-        onSave={handleSave}
-        onReset={handleReset}
+        isDirty={isDirty}
+        saveState={saveState}
+        onSave={save}
+        onReset={reset}
         error={saveError}
-        success={saveSuccess}
       />
     </div>
   );

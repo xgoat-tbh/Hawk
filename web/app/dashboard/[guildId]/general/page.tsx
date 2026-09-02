@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { RoleSelect } from '@/components/RoleSelect';
@@ -9,68 +9,47 @@ import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { Sliders, Terminal, FileText } from 'lucide-react';
+
+interface GeneralFormData {
+  prefix: string;
+  logChannelId: string | null;
+  auditChannelId: string | null;
+  botCommanderRoleId: string | null;
+}
 
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
   const containerRef = usePageEntrance();
   const { channels, roles, config, updateConfigLocally } = useGuildData();
 
-  // Form State
-  const [prefix, setPrefix] = useState('!');
-  const [logChannelId, setLogChannelId] = useState<string | null>(null);
-  const [auditChannelId, setAuditChannelId] = useState<string | null>(null);
-  const [botCommanderRoleId, setBotCommanderRoleId] = useState<string | null>(null);
+  const initialFormData = useMemo<GeneralFormData>(() => {
+    const gen = config?.general || {};
+    return {
+      prefix: gen.prefix || '!',
+      logChannelId: gen.log_channel_id || null,
+      auditChannelId: gen.audit_channel_id || null,
+      botCommanderRoleId: gen.bot_commander_role_id || null,
+    };
+  }, [config?.general]);
 
-  // Original State for tracking changes
-  const [original, setOriginal] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (config?.general) {
-      const gen = config.general;
-      setPrefix(gen.prefix || '!');
-      setLogChannelId(gen.log_channel_id || null);
-      setAuditChannelId(gen.audit_channel_id || null);
-      setBotCommanderRoleId(gen.bot_commander_role_id || null);
-
-      setOriginal({
-        prefix: gen.prefix || '!',
-        logChannelId: gen.log_channel_id || null,
-        auditChannelId: gen.audit_channel_id || null,
-        botCommanderRoleId: gen.bot_commander_role_id || null,
-      });
-    }
-  }, [config]);
-
-  const hasChanges =
-    original &&
-    (prefix !== original.prefix ||
-      logChannelId !== original.logChannelId ||
-      auditChannelId !== original.auditChannelId ||
-      botCommanderRoleId !== original.botCommanderRoleId);
-
-  const handleReset = () => {
-    if (!original) return;
-    setPrefix(original.prefix);
-    setLogChannelId(original.logChannelId);
-    setAuditChannelId(original.auditChannelId);
-    setBotCommanderRoleId(original.botCommanderRoleId);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-
-    try {
+  const {
+    draft,
+    isDirty,
+    saveState,
+    error: saveError,
+    setField,
+    reset,
+    save,
+  } = useFormDraft<GeneralFormData>({
+    initialData: initialFormData,
+    onSave: async (formValues) => {
       const payload = {
-        prefix,
-        log_channel_id: logChannelId,
-        audit_channel_id: auditChannelId,
-        bot_commander_role_id: botCommanderRoleId,
+        prefix: formValues.prefix,
+        log_channel_id: formValues.logChannelId,
+        audit_channel_id: formValues.auditChannelId,
+        bot_commander_role_id: formValues.botCommanderRoleId,
       };
 
       const res = await fetch(`/api/guilds/${guildId}/config`, {
@@ -84,24 +63,15 @@ export default function GeneralSettingsPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Failed to save');
+        throw new Error(errData.error || 'Failed to save general configuration.');
       }
 
       updateConfigLocally('general', payload);
-      setOriginal({
-        prefix,
-        logChannelId,
-        auditChannelId,
-        botCommanderRoleId,
-      });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      setSaveError(err.message || 'Error saving settings.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+      return formValues;
+    },
+  });
+
+  const current = draft || initialFormData;
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
@@ -118,11 +88,11 @@ export default function GeneralSettingsPage() {
 
         <button
           type="button"
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges}
+          onClick={() => save()}
+          disabled={saveState === 'saving' || !isDirty}
           className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
+          <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
@@ -143,9 +113,9 @@ export default function GeneralSettingsPage() {
             >
               <input
                 type="text"
-                value={prefix}
+                value={current.prefix}
                 maxLength={5}
-                onChange={(e) => setPrefix(e.target.value)}
+                onChange={(e) => setField('prefix', e.target.value)}
                 className="glass-input font-mono text-xs w-28 text-center"
                 placeholder="!"
               />
@@ -160,8 +130,8 @@ export default function GeneralSettingsPage() {
               <div className="w-64">
                 <RoleSelect
                   roles={roles}
-                  value={botCommanderRoleId}
-                  onChange={setBotCommanderRoleId}
+                  value={current.botCommanderRoleId}
+                  onChange={(val) => setField('botCommanderRoleId', val)}
                   placeholder="Select commander role..."
                 />
               </div>
@@ -185,8 +155,8 @@ export default function GeneralSettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={logChannelId}
-                  onChange={setLogChannelId}
+                  value={current.logChannelId}
+                  onChange={(val) => setField('logChannelId', val)}
                   placeholder="Select log channel..."
                   allowedTypes={[0, 5]}
                 />
@@ -200,8 +170,8 @@ export default function GeneralSettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={auditChannelId}
-                  onChange={setAuditChannelId}
+                  value={current.auditChannelId}
+                  onChange={(val) => setField('auditChannelId', val)}
                   placeholder="Select economy log..."
                   allowedTypes={[0, 5]}
                 />
@@ -212,12 +182,11 @@ export default function GeneralSettingsPage() {
       </div>
 
       <SaveBar
-        hasChanges={Boolean(hasChanges)}
-        isSaving={isSaving}
-        onSave={handleSave}
-        onReset={handleReset}
+        isDirty={isDirty}
+        saveState={saveState}
+        onSave={save}
+        onReset={reset}
         error={saveError}
-        success={saveSuccess}
       />
     </div>
   );

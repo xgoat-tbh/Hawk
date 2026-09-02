@@ -43,6 +43,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
     }
 
+    let canonicalData: any = null;
+
     switch (module) {
       case 'general': {
         const prefix = cleanString(data.prefix, 5) || '!';
@@ -69,6 +71,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             bot_commander_role_id = EXCLUDED.bot_commander_role_id,
             updated_at = NOW()
         `;
+
+        canonicalData = {
+          prefix,
+          log_channel_id,
+          audit_channel_id,
+          bot_commander_role_id,
+        };
         break;
       }
 
@@ -109,6 +118,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             passive_amount = EXCLUDED.passive_amount,
             updated_at = NOW()
         `;
+
+        canonicalData = {
+          currency_symbol,
+          start_balance,
+          daily_reward_amount,
+          daily_streak_bonus,
+          passive_income,
+          passive_amount,
+        };
         break;
       }
 
@@ -145,6 +163,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             pvc_panel_channel_id = EXCLUDED.pvc_panel_channel_id,
             updated_at = NOW()
         `;
+
+        canonicalData = {
+          pvc_hourly_rate,
+          pvc_jtc_channel_id,
+          pvc_category_id,
+          pvc_command_channel_id,
+          pvc_panel_channel_id,
+        };
         break;
       }
 
@@ -152,8 +178,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const { config = {}, embed = {} } = data;
 
         let embedColorInt = 0x2b2d31;
+        let colorHex = '#ffffff';
         if (embed.color && typeof embed.color === 'string') {
-          const hex = embed.color.replace('#', '');
+          colorHex = embed.color.startsWith('#') ? embed.color : `#${embed.color}`;
+          const hex = colorHex.replace('#', '');
           const parsed = parseInt(hex, 16);
           if (!isNaN(parsed)) embedColorInt = parsed;
         }
@@ -189,6 +217,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             greet_payload = EXCLUDED.greet_payload,
             updated_at = NOW()
         `;
+
+        canonicalData = {
+          is_embed: Boolean(data.is_embed),
+          plain_content: description,
+          config: {
+            enabled: Boolean(config.enabled && channelId),
+            channel_id: channelId,
+          },
+          embed: {
+            title,
+            description,
+            color: colorHex,
+            image_url,
+            thumbnail_url,
+            footer_text,
+          },
+        };
         break;
       }
 
@@ -219,6 +264,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               updated_at = NOW()
           `;
         }
+
+        canonicalData = {
+          suggestion: {
+            submission_channel_id: sugChannel || null,
+          },
+          confession: {
+            submission_channel_id: confChannel || null,
+            log_channel_id: confLog || null,
+          },
+        };
         break;
       }
 
@@ -240,12 +295,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           INSERT INTO store_items (guild_id, item_id, name, price, description, inventory_role_id)
           VALUES (${guildId}, ${nextId}, ${name}, ${price}, ${description}, ${inventory_role_id})
         `;
+
+        canonicalData = { item_id: nextId, name, price, description, inventory_role_id };
         break;
       }
 
       case 'delete_store_item': {
         const item_id = cleanInt(data.item_id);
         await db`DELETE FROM store_items WHERE guild_id = ${guildId} AND item_id = ${item_id}`;
+        canonicalData = { item_id, deleted: true };
         break;
       }
 
@@ -272,12 +330,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             cooldown_seconds = EXCLUDED.cooldown_seconds,
             updated_at = NOW()
         `;
+
+        canonicalData = { identifier, game_name, role_id, vc_id, cooldown_seconds };
         break;
       }
 
       case 'gaming_delete_ping': {
         const identifier = cleanString(data.identifier, 32).toLowerCase();
         await db`DELETE FROM game_pings WHERE guild_id = ${guildId} AND identifier = ${identifier}`;
+        canonicalData = { identifier, deleted: true };
         break;
       }
 
@@ -293,6 +354,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         } else {
           await db`DELETE FROM game_guild_configs WHERE guild_id = ${guildId}`;
         }
+        canonicalData = { test_channel_id: channel_id };
         break;
       }
 
@@ -310,6 +372,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ON CONFLICT (guild_id, role_id)
           DO UPDATE SET income_amount = EXCLUDED.income_amount
         `;
+
+        canonicalData = { role_id, income_amount };
         break;
       }
 
@@ -318,6 +382,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (role_id) {
           await db`DELETE FROM income_roles WHERE guild_id = ${guildId} AND role_id = ${role_id}`;
         }
+        canonicalData = { role_id, deleted: true };
         break;
       }
 
@@ -335,6 +400,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ON CONFLICT (guild_id, channel_id)
           DO UPDATE SET content = EXCLUDED.content, updated_at = NOW()
         `;
+
+        canonicalData = { channel_id, content };
         break;
       }
 
@@ -343,6 +410,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (channel_id) {
           await db`DELETE FROM sticky_messages WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
         }
+        canonicalData = { channel_id, deleted: true };
         break;
       }
 
@@ -356,6 +424,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             ON CONFLICT (guild_id, channel_id) DO NOTHING
           `;
         }
+        canonicalData = { channel_id };
         break;
       }
 
@@ -364,6 +433,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (channel_id) {
           await db`DELETE FROM media_channels WHERE guild_id = ${guildId} AND channel_id = ${channel_id}`;
         }
+        canonicalData = { channel_id, deleted: true };
         break;
       }
 
@@ -375,6 +445,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ON CONFLICT (guild_id)
           DO UPDATE SET auto_thread = EXCLUDED.auto_thread, updated_at = NOW()
         `;
+        canonicalData = { auto_thread };
         break;
       }
 
@@ -394,6 +465,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           VALUES (${guildId}, ${target_type}, ${target_id}, ${command_name}, ${module_name})
           ON CONFLICT (guild_id, target_type, target_id, command_name, module_name) DO NOTHING
         `;
+        canonicalData = { target_type, target_id, command_name, module_name };
         break;
       }
 
@@ -402,6 +474,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (id) {
           await db`DELETE FROM permits WHERE guild_id = ${guildId} AND id = ${id}`;
         }
+        canonicalData = { id, deleted: true };
         break;
       }
 
@@ -433,6 +506,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           )
           ON CONFLICT (guild_id, command_name, module_name, target_type, target_id, location_type, location_id) DO NOTHING
         `;
+        canonicalData = {
+          command_name,
+          module_name,
+          target_type,
+          target_id: cleanTargetId,
+          location_type: cleanLocType,
+          location_id: cleanLocId,
+          effect: cleanEffect,
+        };
         break;
       }
 
@@ -441,6 +523,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (id) {
           await db`DELETE FROM restrictions WHERE guild_id = ${guildId} AND id = ${id}`;
         }
+        canonicalData = { id, deleted: true };
         break;
       }
 
@@ -459,6 +542,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           VALUES (${guildId}, ${cleanEntityType}, ${cleanEntityId}, ${scope_type || null}, ${scope_id || null})
           ON CONFLICT (guild_id, entity_type, entity_id, scope_type, scope_id) DO NOTHING
         `;
+        canonicalData = { entity_type: cleanEntityType, entity_id: cleanEntityId, scope_type, scope_id };
         break;
       }
 
@@ -467,6 +551,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (id) {
           await db`DELETE FROM ignored_entities WHERE guild_id = ${guildId} AND id = ${id}`;
         }
+        canonicalData = { id, deleted: true };
         break;
       }
 
@@ -474,7 +559,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: `Unknown module: ${module}` }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: 'Configuration saved successfully.' });
+    return NextResponse.json({
+      success: true,
+      data: canonicalData,
+      updatedAt: new Date().toISOString(),
+      message: 'Configuration saved successfully.',
+    });
   } catch (error) {
     console.error('Save config error:', error);
     return NextResponse.json({ error: 'Failed to save configuration.' }, { status: 500 });

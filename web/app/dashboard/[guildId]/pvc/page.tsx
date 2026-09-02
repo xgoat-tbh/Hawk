@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelSelect } from '@/components/ChannelSelect';
 import { SaveBar } from '@/components/SaveBar';
@@ -8,26 +8,79 @@ import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
+import { useFormDraft } from '@/hooks/useFormDraft';
 import { Radio, Clock, LayoutTemplate, Loader2, Plus, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+
+interface PvcFormData {
+  pvcHourlyRate: number;
+  pvcJtcChannelId: string | null;
+  pvcCategoryId: string | null;
+  pvcCommandChannelId: string | null;
+  pvcPanelChannelId: string | null;
+}
 
 export default function PvcSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
   const containerRef = usePageEntrance();
   const { channels, config, updateConfigLocally, refreshData } = useGuildData();
 
-  // Form State
-  const [pvcHourlyRate, setPvcHourlyRate] = useState(100);
-  const [pvcJtcChannelId, setPvcJtcChannelId] = useState<string | null>(null);
-  const [pvcCategoryId, setPvcCategoryId] = useState<string | null>(null);
-  const [pvcCommandChannelId, setPvcCommandChannelId] = useState<string | null>(null);
-  const [pvcPanelChannelId, setPvcPanelChannelId] = useState<string | null>(null);
-  const [currencySymbol, setCurrencySymbol] = useState('$');
+  const initialFormData = useMemo<PvcFormData>(() => {
+    const eco = config?.economy || {};
+    return {
+      pvcHourlyRate: Number(eco.pvc_hourly_rate) || 100,
+      pvcJtcChannelId: eco.pvc_jtc_channel_id || null,
+      pvcCategoryId: eco.pvc_category_id || null,
+      pvcCommandChannelId: eco.pvc_command_channel_id || null,
+      pvcPanelChannelId: eco.pvc_panel_channel_id || null,
+    };
+  }, [config?.economy]);
 
-  // Original State
-  const [original, setOriginal] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const {
+    draft,
+    isDirty,
+    saveState,
+    error: saveError,
+    setField,
+    reset,
+    save,
+  } = useFormDraft<PvcFormData>({
+    initialData: initialFormData,
+    onSave: async (formValues) => {
+      const payload = {
+        pvc_hourly_rate: formValues.pvcHourlyRate,
+        pvc_jtc_channel_id: formValues.pvcJtcChannelId,
+        pvc_category_id: formValues.pvcCategoryId,
+        pvc_command_channel_id: formValues.pvcCommandChannelId,
+        pvc_panel_channel_id: formValues.pvcPanelChannelId,
+      };
+
+      const res = await fetch(`/api/guilds/${guildId}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: 'pvc',
+          data: payload,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to save PVC configuration.');
+      }
+
+      updateConfigLocally('economy', {
+        ...(config?.economy || {}),
+        ...payload,
+      });
+
+      return formValues;
+    },
+  });
+
+  const current = draft || initialFormData;
+  const currencySymbol = config?.economy?.currency_symbol || '$';
+
+  // Auto setup state
   const [isAutoCreating, setIsAutoCreating] = useState(false);
   const [autoCreateStatus, setAutoCreateStatus] = useState<string | null>(null);
   const [autoCreateError, setAutoCreateError] = useState<string | null>(null);
@@ -44,8 +97,8 @@ export default function PvcSettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to auto-create channels');
 
-      setPvcCategoryId(data.categoryId);
-      setPvcJtcChannelId(data.jtcChannelId);
+      setField('pvcCategoryId', data.categoryId);
+      setField('pvcJtcChannelId', data.jtcChannelId);
 
       await refreshData();
       setAutoCreateStatus('Voice Category & Join-to-Create voice channel generated.');
@@ -55,92 +108,6 @@ export default function PvcSettingsPage() {
       setTimeout(() => setAutoCreateError(null), 5000);
     } finally {
       setIsAutoCreating(false);
-    }
-  };
-
-  useEffect(() => {
-    if (config?.economy) {
-      const eco = config.economy;
-      setPvcHourlyRate(Number(eco.pvc_hourly_rate) || 100);
-      setPvcJtcChannelId(eco.pvc_jtc_channel_id || null);
-      setPvcCategoryId(eco.pvc_category_id || null);
-      setPvcCommandChannelId(eco.pvc_command_channel_id || null);
-      setPvcPanelChannelId(eco.pvc_panel_channel_id || null);
-      setCurrencySymbol(eco.currency_symbol || '$');
-
-      setOriginal({
-        pvcHourlyRate: Number(eco.pvc_hourly_rate) || 100,
-        pvcJtcChannelId: eco.pvc_jtc_channel_id || null,
-        pvcCategoryId: eco.pvc_category_id || null,
-        pvcCommandChannelId: eco.pvc_command_channel_id || null,
-        pvcPanelChannelId: eco.pvc_panel_channel_id || null,
-      });
-    }
-  }, [config]);
-
-  const hasChanges =
-    original &&
-    (pvcHourlyRate !== original.pvcHourlyRate ||
-      pvcJtcChannelId !== original.pvcJtcChannelId ||
-      pvcCategoryId !== original.pvcCategoryId ||
-      pvcCommandChannelId !== original.pvcCommandChannelId ||
-      pvcPanelChannelId !== original.pvcPanelChannelId);
-
-  const handleReset = () => {
-    if (!original) return;
-    setPvcHourlyRate(original.pvcHourlyRate);
-    setPvcJtcChannelId(original.pvcJtcChannelId);
-    setPvcCategoryId(original.pvcCategoryId);
-    setPvcCommandChannelId(original.pvcCommandChannelId);
-    setPvcPanelChannelId(original.pvcPanelChannelId);
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-
-    try {
-      const payload = {
-        pvc_hourly_rate: pvcHourlyRate,
-        pvc_jtc_channel_id: pvcJtcChannelId,
-        pvc_category_id: pvcCategoryId,
-        pvc_command_channel_id: pvcCommandChannelId,
-        pvc_panel_channel_id: pvcPanelChannelId,
-      };
-
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          module: 'pvc',
-          data: payload,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to save');
-      }
-
-      updateConfigLocally('economy', {
-        ...(config?.economy || {}),
-        ...payload,
-      });
-
-      setOriginal({
-        pvcHourlyRate,
-        pvcJtcChannelId,
-        pvcCategoryId,
-        pvcCommandChannelId,
-        pvcPanelChannelId,
-      });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      setSaveError(err.message || 'Error saving settings.');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -159,11 +126,11 @@ export default function PvcSettingsPage() {
 
         <button
           type="button"
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges}
+          onClick={() => save()}
+          disabled={saveState === 'saving' || !isDirty}
           className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
         >
-          <span>{isSaving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save Changes'}</span>
+          <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
@@ -221,8 +188,8 @@ export default function PvcSettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={pvcJtcChannelId}
-                  onChange={setPvcJtcChannelId}
+                  value={current.pvcJtcChannelId}
+                  onChange={(val) => setField('pvcJtcChannelId', val)}
                   placeholder="Select Join-to-Create channel..."
                   allowedTypes={[2, 13]}
                 />
@@ -236,8 +203,8 @@ export default function PvcSettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={pvcCategoryId}
-                  onChange={setPvcCategoryId}
+                  value={current.pvcCategoryId}
+                  onChange={(val) => setField('pvcCategoryId', val)}
                   placeholder="Select Category container..."
                   allowedTypes={[4]}
                 />
@@ -251,8 +218,8 @@ export default function PvcSettingsPage() {
               <div className="w-64">
                 <ChannelSelect
                   channels={channels}
-                  value={pvcPanelChannelId}
-                  onChange={setPvcPanelChannelId}
+                  value={current.pvcPanelChannelId}
+                  onChange={(val) => setField('pvcPanelChannelId', val)}
                   placeholder="Select Panel channel..."
                   allowedTypes={[0, 5]}
                 />
@@ -278,8 +245,8 @@ export default function PvcSettingsPage() {
                 <input
                   type="number"
                   min={0}
-                  value={pvcHourlyRate}
-                  onChange={(e) => setPvcHourlyRate(parseInt(e.target.value, 10) || 0)}
+                  value={current.pvcHourlyRate}
+                  onChange={(e) => setField('pvcHourlyRate', parseInt(e.target.value, 10) || 0)}
                   className="glass-input font-mono text-xs pl-8"
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
@@ -292,12 +259,11 @@ export default function PvcSettingsPage() {
       </div>
 
       <SaveBar
-        hasChanges={Boolean(hasChanges)}
-        isSaving={isSaving}
-        onSave={handleSave}
-        onReset={handleReset}
+        isDirty={isDirty}
+        saveState={saveState}
+        onSave={save}
+        onReset={reset}
         error={saveError}
-        success={saveSuccess}
       />
     </div>
   );
