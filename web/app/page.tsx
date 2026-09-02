@@ -50,7 +50,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Authentication failed.');
       }
 
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err: any) {
       setError(err.message || 'Access Denied: You are not authorized.');
     } finally {
