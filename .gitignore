@@ -6,3 +6,10 @@ dist/
 *.zip
 .restart_state.json
 
+# Web Dashboard
+web/node_modules/
+web/.next/
+web/.env
+web/.env.local
+web/.env.*.local
+
