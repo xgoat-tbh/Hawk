@@ -4,24 +4,25 @@
 
 :root {
   --background: #08090a;
-  --foreground: #f1f2f3;
-  --scroll-track: rgba(13, 14, 16, 0.6);
-  --scroll-thumb: #24272b;
-  --scroll-thumb-hover: #373b42;
-  --scroll-thumb-active: #4a4f58;
-  --scroll-width: 6px;
+  --foreground: #ededed;
+  --scroll-track: rgba(8, 9, 10, 0.4);
+  --scroll-thumb: #1e2226;
+  --scroll-thumb-hover: #2d3238;
+  --scroll-thumb-active: #3e444d;
+  --scroll-width: 5px;
 }
 
 body {
   background-color: #08090a;
-  color: #f1f2f3;
-  font-family: -apple-system, BlinkMacSystemFont, "Geist", "Segoe UI", Roboto, sans-serif;
+  color: #ededed;
+  font-family: -apple-system, BlinkMacSystemFont, "Geist", "Inter", "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
-  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.015) 0%, transparent 65%);
-  background-size: 100% 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar System */
+/* Custom Scrollbar System — Discreet, thin, non-distracting */
 ::-webkit-scrollbar {
   width: var(--scroll-width);
   height: var(--scroll-width);
@@ -33,8 +34,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scroll-thumb);
-  border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -51,64 +51,67 @@ body {
   scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
 
-/* Soft Neutral & Tactile Design Tokens */
 @layer components {
-  /* Tactile Clay Buttons */
+  /* Tactile Button Hierarchy */
   .btn-primary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-md bg-[#e6e8eb] text-[#0d0e10] hover:bg-[#f1f2f3] active:translate-y-[1px] shadow-clay-button active:shadow-clay-button-pressed transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-[#e2e5e8] text-[#0d0e10] hover:bg-[#ffffff] active:translate-y-[0.5px] shadow-tactile-btn active:shadow-tactile-btn-pressed transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
   .btn-outline-primary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-md bg-[#121417] border border-[#24272b] text-[#f1f2f3] hover:bg-[#17191c] hover:border-[#2b2f34] active:translate-y-[1px] shadow-clay-button transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-[#121417] border border-[#1f2226] text-[#ededed] hover:bg-[#17191c] hover:border-[#2a2d33] active:translate-y-[0.5px] shadow-tactile-btn transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
   .btn-outline-secondary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3.5 py-1.5 rounded-md bg-transparent border border-[#24272b] text-[#a9adb2] hover:bg-[#121417] hover:border-[#2b2f34] hover:text-[#f1f2f3] active:translate-y-[1px] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-transparent border border-[#1f2226] text-[#949aa2] hover:bg-[#121417] hover:border-[#2a2d33] hover:text-[#ededed] active:translate-y-[0.5px] transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-2.5 py-1.5 rounded-md bg-transparent text-[#949aa2] hover:text-[#ededed] hover:bg-[#17191c] active:translate-y-[0.5px] transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
   .btn-outline-danger {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-wide px-3 py-1.5 rounded-md bg-critical-soft border border-critical-border text-critical-text hover:bg-critical/20 hover:border-critical/40 active:translate-y-[1px] transition-all duration-150 cursor-pointer select-none disabled:opacity-40 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-critical-soft border border-critical-border text-critical-text hover:bg-critical/20 hover:border-critical/35 active:translate-y-[0.5px] transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
-  /* Soft Surfaces & Panels */
-  .panel-soft {
-    @apply bg-[#0d0e10] border border-[#24272b] rounded-lg shadow-panel-soft;
+  /* Cohesive Control Surfaces (Replacing excessive cards) */
+  .surface-container {
+    @apply bg-[#0d0e10] border border-[#1f2226] rounded-lg overflow-hidden shadow-sm;
   }
 
-  .glass-card {
-    @apply bg-[#0d0e10]/90 backdrop-blur-xl border border-[#24272b] rounded-lg hover:border-[#2b2f34] transition-all duration-200 relative focus-within:z-30;
+  .surface-elevated {
+    @apply bg-[#121417] border border-[#1f2226] rounded-lg shadow-sm;
   }
 
   /* Tactile Input */
   .glass-input {
-    @apply w-full bg-[#0a0b0d] border border-[#24272b] rounded-md px-3 py-2 text-xs text-[#f1f2f3] placeholder:text-[#7e8389] shadow-clay-input focus:outline-none focus:border-border-focus focus:ring-1 focus:ring-[#3e434a]/30 hover:border-[#2b2f34] transition-all duration-150;
+    @apply w-full bg-[#0a0b0d] border border-[#1f2226] rounded-md px-3 py-1.5 text-xs text-[#ededed] placeholder:text-[#6e747c] shadow-tactile-input focus:outline-none focus:border-[#3d424a] focus:ring-1 focus:ring-[#3d424a]/25 hover:border-[#2a2d33] transition-colors duration-100;
   }
 
-  /* Semantic Status Badges */
-  .badge-monochrome {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-[#17191c] border border-[#24272b] text-[11px] font-medium text-[#d5d7da];
-  }
-
-  .badge-danger {
-    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-critical-soft border border-critical-border text-[11px] font-medium text-critical-text;
+  /* Subtle Hairline Dividers */
+  .hairline-divider {
+    @apply border-b border-[#17191c];
   }
 }
 
-/* Backward compatibility aliases */
+/* Backward compatibility classes */
 @layer components {
+  .panel-soft {
+    @apply surface-container;
+  }
+  .glass-card {
+    @apply surface-container;
+  }
   .btn-box-primary {
     @apply btn-outline-primary;
   }
-  .btn-box-secondary {
-    @apply btn-outline-secondary;
-  }
-  .btn-box-danger {
-    @apply btn-outline-danger;
-  }
-  .box-card {
-    @apply glass-card;
-  }
-  .box-input {
-    @apply glass-input;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -1,7 +1,7 @@
-import { animate, createTimeline, stagger, createScope, createLayout } from 'animejs';
+import { animate, createTimeline, stagger } from 'animejs';
 
 /**
- * Checks if the user has requested reduced motion in system preferences.
+ * Checks if user prefers reduced motion.
  */
 export function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false;
@@ -9,42 +9,47 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * Smooth staged page entrance sequence (150–220ms).
- * Animate page container, title, controls, and main body gracefully.
+ * Smooth staged page entrance sequence (160–220ms).
  */
 export function animatePageEnter(container: HTMLElement | null) {
   if (!container || prefersReducedMotion()) return;
+
+  const sections = Array.from(
+    container.querySelectorAll<HTMLElement>('[data-animate-section]')
+  );
 
   const tl = createTimeline({
     defaults: { ease: 'outCubic' },
     onComplete: () => {
       if (container) {
+        container.style.opacity = '';
         container.style.transform = '';
-        container.querySelectorAll<HTMLElement>('[data-animate-section]').forEach((s) => {
-          s.style.transform = '';
-        });
       }
+      sections.forEach((s) => {
+        s.style.opacity = '';
+        s.style.transform = '';
+      });
     },
   });
 
+  // Base container reveal
   tl.add(container, {
     opacity: [0, 1],
-    translateY: [6, 0],
-    duration: 180,
+    y: [4, 0],
+    duration: 160,
   });
 
   // Stagger child sections if present
-  const sections = container.querySelectorAll<HTMLElement>('[data-animate-section]');
   if (sections.length > 0) {
     tl.add(
       sections,
       {
         opacity: [0, 1],
-        translateY: [8, 0],
-        delay: stagger(35),
+        y: [6, 0],
+        delay: stagger(30),
         duration: 160,
       },
-      '-=100'
+      '-=80'
     );
   }
 }
@@ -56,15 +61,15 @@ export function animateDropdownOpen(el: HTMLElement | null) {
   if (!el) return;
   if (prefersReducedMotion()) {
     el.style.opacity = '1';
-    el.style.transform = 'scale(1) translateY(0)';
+    el.style.transform = 'none';
     return;
   }
 
   animate(el, {
     opacity: [0, 1],
-    scale: [0.96, 1],
-    translateY: [-4, 0],
-    duration: 160,
+    scale: [0.97, 1],
+    y: [-3, 0],
+    duration: 140,
     ease: 'outCubic',
   });
 }
@@ -78,16 +83,15 @@ export function animateDropdownClose(el: HTMLElement | null, onComplete?: () => 
     return;
   }
 
-  const tl = createTimeline({
-    onComplete: onComplete ? () => onComplete() : undefined,
-  });
-
-  tl.add(el, {
+  animate(el, {
     opacity: [1, 0],
-    scale: [1, 0.96],
-    translateY: [0, -4],
-    duration: 120,
+    scale: [1, 0.97],
+    y: [0, -3],
+    duration: 100,
     ease: 'inCubic',
+    onComplete: () => {
+      if (onComplete) onComplete();
+    },
   });
 }
 
@@ -99,8 +103,8 @@ export function animateDrawerOpen(drawerEl: HTMLElement | null, backdropEl: HTML
 
   if (prefersReducedMotion()) {
     if (backdropEl) backdropEl.style.opacity = '1';
-    drawerEl.style.transform = 'translateX(0)';
     drawerEl.style.opacity = '1';
+    drawerEl.style.transform = 'none';
     return;
   }
 
@@ -113,9 +117,9 @@ export function animateDrawerOpen(drawerEl: HTMLElement | null, backdropEl: HTML
   }
 
   animate(drawerEl, {
-    translateX: ['100%', '0%'],
-    opacity: [0.7, 1],
-    duration: 220,
+    x: ['100%', '0%'],
+    opacity: [0.8, 1],
+    duration: 200,
     ease: 'outCubic',
   });
 }
@@ -133,28 +137,37 @@ export function animateDrawerClose(
     return;
   }
 
-  const tl = createTimeline({
-    onComplete: onComplete ? () => onComplete() : undefined,
-  });
+  let backdropDone = !backdropEl;
+  let drawerDone = false;
+
+  const checkDone = () => {
+    if (backdropDone && drawerDone && onComplete) {
+      onComplete();
+    }
+  };
 
   if (backdropEl) {
-    tl.add(backdropEl, {
+    animate(backdropEl, {
       opacity: [1, 0],
       duration: 140,
       ease: 'inQuad',
+      onComplete: () => {
+        backdropDone = true;
+        checkDone();
+      },
     });
   }
 
-  tl.add(
-    drawerEl,
-    {
-      translateX: ['0%', '100%'],
-      opacity: [1, 0],
-      duration: 180,
-      ease: 'inCubic',
+  animate(drawerEl, {
+    x: ['0%', '100%'],
+    opacity: [1, 0],
+    duration: 160,
+    ease: 'inCubic',
+    onComplete: () => {
+      drawerDone = true;
+      checkDone();
     },
-    0
-  );
+  });
 }
 
 /**
@@ -166,7 +179,7 @@ export function animateModalOpen(modalEl: HTMLElement | null, backdropEl: HTMLEl
   if (prefersReducedMotion()) {
     if (backdropEl) backdropEl.style.opacity = '1';
     modalEl.style.opacity = '1';
-    modalEl.style.transform = 'scale(1)';
+    modalEl.style.transform = 'none';
     return;
   }
 
@@ -180,9 +193,9 @@ export function animateModalOpen(modalEl: HTMLElement | null, backdropEl: HTMLEl
 
   animate(modalEl, {
     opacity: [0, 1],
-    scale: [0.95, 1],
-    translateY: [4, 0],
-    duration: 180,
+    scale: [0.96, 1],
+    y: [4, 0],
+    duration: 170,
     ease: 'outCubic',
   });
 }
@@ -200,61 +213,83 @@ export function animateModalClose(
     return;
   }
 
-  const tl = createTimeline({
-    onComplete: onComplete ? () => onComplete() : undefined,
-  });
+  let backdropDone = !backdropEl;
+  let modalDone = false;
+
+  const checkDone = () => {
+    if (backdropDone && modalDone && onComplete) {
+      onComplete();
+    }
+  };
 
   if (backdropEl) {
-    tl.add(backdropEl, {
+    animate(backdropEl, {
       opacity: [1, 0],
-      duration: 130,
+      duration: 120,
       ease: 'inQuad',
+      onComplete: () => {
+        backdropDone = true;
+        checkDone();
+      },
     });
   }
 
-  tl.add(
-    modalEl,
-    {
-      opacity: [1, 0],
-      scale: [1, 0.95],
-      translateY: [0, 4],
-      duration: 150,
-      ease: 'inCubic',
+  animate(modalEl, {
+    opacity: [1, 0],
+    scale: [1, 0.96],
+    y: [0, 4],
+    duration: 140,
+    ease: 'inCubic',
+    onComplete: () => {
+      modalDone = true;
+      checkDone();
     },
-    0
-  );
-}
-
-/**
- * Tab indicator sliding transition.
- */
-export function animateTabIndicator(indicatorEl: HTMLElement | null, targetTabEl: HTMLElement | null) {
-  if (!indicatorEl || !targetTabEl || prefersReducedMotion()) return;
-
-  const targetRect = targetTabEl.getBoundingClientRect();
-  const parentRect = targetTabEl.parentElement?.getBoundingClientRect() || targetRect;
-
-  const left = targetRect.left - parentRect.left;
-  const width = targetRect.width;
-
-  animate(indicatorEl, {
-    left: `${left}px`,
-    width: `${width}px`,
-    duration: 170,
-    ease: 'outCubic',
   });
 }
 
 /**
- * Tactile button press / click feedback.
+ * Tactile button press feedback.
  */
 export function animatePress(element: HTMLElement | null) {
   if (!element || prefersReducedMotion()) return;
 
   animate(element, {
     scale: [1, 0.97, 1],
-    duration: 140,
+    duration: 120,
     ease: 'outQuad',
+  });
+}
+
+/**
+ * Floating SaveBar entrance & exit.
+ */
+export function animateSaveBarEnter(barEl: HTMLElement | null) {
+  if (!barEl || prefersReducedMotion()) return;
+
+  animate(barEl, {
+    opacity: [0, 1],
+    y: [16, 0],
+    scale: [0.97, 1],
+    duration: 180,
+    ease: 'outCubic',
+  });
+}
+
+export function animateSaveBarExit(barEl: HTMLElement | null, onComplete?: () => void) {
+  if (!barEl || prefersReducedMotion()) {
+    if (onComplete) onComplete();
+    return;
+  }
+
+  animate(barEl, {
+    opacity: [1, 0],
+    y: [0, 16],
+    scale: [1, 0.97],
+    duration: 140,
+    ease: 'inCubic',
+    onComplete: () => {
+      if (onComplete) onComplete();
+    },
   });
 }
 
@@ -265,23 +300,21 @@ export function flashSuccess(element: HTMLElement | null) {
   if (!element || prefersReducedMotion()) return;
 
   animate(element, {
-    backgroundColor: ['rgba(34, 197, 94, 0.2)', 'transparent'],
-    duration: 500,
+    backgroundColor: ['rgba(34, 197, 94, 0.16)', 'transparent'],
+    duration: 400,
     ease: 'outQuad',
   });
 }
 
 /**
- * Flash feedback for warning / error states.
+ * Flash feedback for errors.
  */
 export function flashError(element: HTMLElement | null) {
   if (!element || prefersReducedMotion()) return;
 
   animate(element, {
-    backgroundColor: ['rgba(239, 68, 68, 0.2)', 'transparent'],
-    duration: 500,
+    backgroundColor: ['rgba(239, 68, 68, 0.16)', 'transparent'],
+    duration: 400,
     ease: 'outQuad',
   });
 }
-
-export { createScope, createLayout };

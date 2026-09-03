@@ -21,8 +21,8 @@ interface EconomyFormData {
 
 export default function EconomySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const containerRef = usePageEntrance();
-  const { config, updateConfigLocally } = useGuildData();
+  const { config, updateConfigLocally, loading } = useGuildData();
+  const containerRef = usePageEntrance(!loading);
 
   const initialFormData = useMemo<EconomyFormData>(() => {
     const eco = config?.economy || {};
@@ -48,7 +48,7 @@ export default function EconomySettingsPage() {
     initialData: initialFormData,
     onSave: async (formValues) => {
       const payload = {
-        currency_symbol: formValues.currencySymbol,
+        currency_symbol: formValues.currencySymbol.trim() || '$',
         start_balance: formValues.startBalance,
         daily_reward_amount: formValues.dailyRewardAmount,
         daily_streak_bonus: formValues.dailyStreakBonus,
@@ -83,13 +83,13 @@ export default function EconomySettingsPage() {
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
-            <Coins className="w-4 h-4 text-[#a9adb2]" />
+          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
+            <Coins className="w-4 h-4 text-[#949aa2]" />
             <span>Economy & Daily Rewards</span>
           </h1>
-          <p className="text-xs text-[#7e8389] mt-0.5">
+          <p className="text-xs text-[#6e747c] mt-0.5">
             Configure server currency symbol, starting wallet cash, daily streaks, and passive message rewards.
           </p>
         </div>
@@ -98,30 +98,31 @@ export default function EconomySettingsPage() {
           type="button"
           onClick={() => save()}
           disabled={saveState === 'saving' || !isDirty}
-          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
+          className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto"
         >
           <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
         </button>
       </div>
 
       <div className="space-y-8">
-        {/* Currency & Base Balances */}
+        {/* Currency & Base Wallet */}
         <div className="space-y-1" data-animate-section>
           <SectionHeader
-            title="Currency & Starting Wallets"
-            description="Base currency symbol and default new member funds."
-            icon={<Coins className="w-4 h-4" />}
+            title="Currency & Initial Balances"
+            description="Control how currency is denominated and initial funds for new members."
+            icon={<Coins className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
             <SettingRow
               label="Currency Symbol"
-              description="Symbol or short code prefix for economy commands (e.g. $, 🪙, credits)."
+              description="The symbol or short code placed adjacent to economy values (e.g. $, 🪙, credits)."
+              badge="Denomination"
             >
               <input
                 type="text"
-                maxLength={5}
                 value={current.currencySymbol}
+                maxLength={5}
                 onChange={(e) => setField('currencySymbol', e.target.value)}
                 className="glass-input font-mono text-xs w-28 text-center"
                 placeholder="$"
@@ -129,84 +130,85 @@ export default function EconomySettingsPage() {
             </SettingRow>
 
             <SettingRow
-              label="Starting Wallet Cash"
-              description="Initial balance granted to new members upon joining the server."
+              label="Starting Wallet Balance"
+              description="Initial currency amount granted to a member when their wallet is first initialized."
+              badge="Base"
             >
-              <div className="relative w-36">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-[#6e747c]">{current.currencySymbol}</span>
                 <input
                   type="number"
                   min={0}
+                  max={1000000000}
                   value={current.startBalance}
-                  onChange={(e) => setField('startBalance', parseInt(e.target.value, 10) || 0)}
-                  className="glass-input font-mono text-xs pl-8"
+                  onChange={(e) => setField('startBalance', Number(e.target.value))}
+                  className="glass-input font-mono text-xs w-36"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                  {current.currencySymbol}
-                </span>
               </div>
             </SettingRow>
           </div>
         </div>
 
-        {/* Daily Streaks & Rewards */}
+        {/* Daily Claims & Streaks */}
         <div className="space-y-1" data-animate-section>
           <SectionHeader
-            title="Daily Streaks & Activity Rewards"
-            description="Configures !daily claim amounts and consecutive day streak multipliers."
-            icon={<Flame className="w-4 h-4" />}
+            title="Daily Claims & Activity Streaks"
+            description="Incentivize daily retention and progressive activity bonuses."
+            icon={<Flame className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
             <SettingRow
               label="Base Daily Reward"
-              description="Base cash granted when running the !daily command."
+              description="The guaranteed reward claimed every 24 hours via the !daily command."
+              badge="Daily"
             >
-              <div className="relative w-36">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-[#6e747c]">{current.currencySymbol}</span>
                 <input
                   type="number"
                   min={0}
+                  max={1000000000}
                   value={current.dailyRewardAmount}
-                  onChange={(e) => setField('dailyRewardAmount', parseInt(e.target.value, 10) || 0)}
-                  className="glass-input font-mono text-xs pl-8"
+                  onChange={(e) => setField('dailyRewardAmount', Number(e.target.value))}
+                  className="glass-input font-mono text-xs w-36"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                  {current.currencySymbol}
-                </span>
               </div>
             </SettingRow>
 
             <SettingRow
-              label="Consecutive Streak Bonus"
-              description="Additional bonus cash added to daily reward for each consecutive daily claim."
+              label="Daily Streak Multiplier Bonus"
+              description="Incremental currency added to the daily reward for each consecutive day claimed."
+              badge="Bonus"
             >
-              <div className="relative w-36">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-[#6e747c]">+{current.currencySymbol}</span>
                 <input
                   type="number"
                   min={0}
+                  max={1000000000}
                   value={current.dailyStreakBonus}
-                  onChange={(e) => setField('dailyStreakBonus', parseInt(e.target.value, 10) || 0)}
-                  className="glass-input font-mono text-xs pl-8"
+                  onChange={(e) => setField('dailyStreakBonus', Number(e.target.value))}
+                  className="glass-input font-mono text-xs w-36"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                  {current.currencySymbol}
-                </span>
+                <span className="text-[11px] text-[#6e747c]">/ day streak</span>
               </div>
             </SettingRow>
           </div>
         </div>
 
-        {/* Passive Message Income */}
+        {/* Passive Chat Income */}
         <div className="space-y-1" data-animate-section>
           <SectionHeader
             title="Passive Chat Income"
-            description="Automated wallet rewards for active conversation in chat channels."
-            icon={<MessageSquareText className="w-4 h-4" />}
+            description="Reward members automatically when they actively converse in non-restricted text channels."
+            icon={<MessageSquareText className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
             <SettingRow
-              label="Enable Passive Chat Income"
-              description="Grants currency to members for active conversation messages (1-minute anti-spam cooldown)."
+              label="Enable Chat Message Income"
+              description="When active, members earn a fixed currency rate per eligible message (governed by internal 60s cooldowns)."
               badge={current.passiveIncome ? 'Active' : 'Disabled'}
               badgeVariant={current.passiveIncome ? 'success' : 'neutral'}
             >
@@ -217,26 +219,27 @@ export default function EconomySettingsPage() {
                   onChange={(e) => setField('passiveIncome', e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-[#17191c] border border-[#24272b] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#f1f2f3] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success peer-checked:after:bg-black"></div>
+                <div className="w-9 h-5 bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#ededed] after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success border border-[#1f2226]"></div>
               </label>
             </SettingRow>
 
             {current.passiveIncome && (
               <SettingRow
-                label="Reward Amount Per Message"
-                description="Amount added to member wallet per message sent in eligible text channels."
+                label="Reward Per Eligible Message"
+                description="The amount of currency awarded per chat message."
+                badge="Rate"
               >
-                <div className="relative w-36">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-[#6e747c]">{current.currencySymbol}</span>
                   <input
                     type="number"
                     min={1}
+                    max={1000000}
                     value={current.passiveAmount}
-                    onChange={(e) => setField('passiveAmount', parseInt(e.target.value, 10) || 1)}
-                    className="glass-input font-mono text-xs pl-8"
+                    onChange={(e) => setField('passiveAmount', Number(e.target.value))}
+                    className="glass-input font-mono text-xs w-36"
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                    {current.currencySymbol}
-                  </span>
+                  <span className="text-[11px] text-[#6e747c]">/ message</span>
                 </div>
               </SettingRow>
             )}

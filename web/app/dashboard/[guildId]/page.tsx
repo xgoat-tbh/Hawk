@@ -21,12 +21,14 @@ import {
   AlertTriangle,
   CheckCircle2,
   Wrench,
+  HeartHandshake,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export default function GuildOverviewPage() {
   const { guildId } = useParams() as { guildId: string };
-  const containerRef = usePageEntrance();
-  const { guild, bot, channels, roles, config } = useGuildData();
+  const { guild, bot, channels, roles, config, loading } = useGuildData();
+  const containerRef = usePageEntrance(!loading);
 
   const channelMap = new Set(channels.map((c) => c.id));
 
@@ -62,16 +64,62 @@ export default function GuildOverviewPage() {
         : 'Target logging channel is missing',
       fixPath: `/dashboard/${guildId}/general`,
     },
+    {
+      id: 'welcome',
+      name: 'Welcome Greetings',
+      status: !config?.welcome?.config?.channel_id
+        ? 'optional'
+        : channelMap.has(config.welcome.config.channel_id)
+        ? 'healthy'
+        : 'stale',
+      message: !config?.welcome?.config?.channel_id
+        ? 'Welcome channel not set'
+        : channelMap.has(config.welcome.config.channel_id)
+        ? 'Greetings active and routing'
+        : 'Configured welcome channel missing from Discord',
+      fixPath: `/dashboard/${guildId}/welcome`,
+    },
   ];
 
   const staleIssues = healthChecks.filter((h) => h.status === 'stale');
 
   const activeModules = [
-    { name: 'Private Voice (PVC)', active: Boolean(config?.economy?.pvc_jtc_channel_id), path: `/dashboard/${guildId}/pvc` },
-    { name: 'Passive Chat Income', active: Boolean(config?.economy?.passive_income), path: `/dashboard/${guildId}/economy` },
-    { name: 'Media-Only Channels', active: (config?.mediaChannels || []).length > 0, path: `/dashboard/${guildId}/media` },
-    { name: 'Sticky Notices', active: (config?.stickyMessages || []).length > 0, path: `/dashboard/${guildId}/sticky` },
-    { name: 'Gaming LFG Alerts', active: (config?.gamePings || []).length > 0, path: `/dashboard/${guildId}/gaming` },
+    {
+      name: 'Welcome Greetings',
+      active: Boolean(config?.welcome?.config?.enabled && config?.welcome?.config?.channel_id),
+      description: 'Automated greeting embeds and DM delivery',
+      path: `/dashboard/${guildId}/welcome`,
+    },
+    {
+      name: 'Private Voice (PVC)',
+      active: Boolean(config?.economy?.pvc_jtc_channel_id),
+      description: 'Join-to-Create dynamic temporary voice rooms',
+      path: `/dashboard/${guildId}/pvc`,
+    },
+    {
+      name: 'Economy & Rewards',
+      active: Boolean(config?.economy?.daily_reward_amount || config?.economy?.passive_income),
+      description: 'Streaks, chat rewards, and currency system',
+      path: `/dashboard/${guildId}/economy`,
+    },
+    {
+      name: 'Media-Only Channels',
+      active: (config?.mediaChannels || []).length > 0,
+      description: 'Enforces media attachments & auto-threads',
+      path: `/dashboard/${guildId}/media`,
+    },
+    {
+      name: 'Sticky Notices',
+      active: (config?.stickyMessages || []).length > 0,
+      description: 'Pinned bottom messages per channel',
+      path: `/dashboard/${guildId}/sticky`,
+    },
+    {
+      name: 'Gaming LFG Alerts',
+      active: (config?.gamePings || []).length > 0,
+      description: 'Voice room activity pings for players',
+      path: `/dashboard/${guildId}/gaming`,
+    },
   ];
 
   const activeCount = activeModules.filter((m) => m.active).length;
@@ -79,40 +127,42 @@ export default function GuildOverviewPage() {
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
       {/* Top Server Banner */}
-      <div className="p-6 rounded-lg bg-[#0d0e10] border border-[#24272b] flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-panel-soft">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-lg bg-[#17191c] border border-[#24272b] flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+      <div className="p-4 sm:p-5 rounded-lg bg-[#0d0e10] border border-[#1f2226] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-lg bg-[#121417] border border-[#1f2226] flex items-center justify-center overflow-hidden shrink-0 shadow-tactile-btn">
             {guild?.iconUrl ? (
               <img src={guild.iconUrl} alt={guild.name} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-base font-bold font-mono text-[#f1f2f3]">
+              <span className="text-sm font-bold font-mono text-[#ededed]">
                 {guild?.name ? guild.name.slice(0, 2).toUpperCase() : 'HK'}
               </span>
             )}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-[#f1f2f3] tracking-tight">{guild?.name || 'Discord Server'}</h1>
-              <StatusBadge status="Operational" variant="operational" />
+              <h1 className="text-base font-semibold text-[#ededed] tracking-tight">
+                {guild?.name || 'Discord Server'}
+              </h1>
+              <StatusBadge status="OPERATIONAL" variant="operational" />
             </div>
-            <p className="text-xs text-[#7e8389]">
-              Bot ID: {bot?.id || 'Connected'} • Discord Snowflake: {guildId}
+            <p className="text-[11px] text-[#6e747c] font-mono">
+              Snowflake: {guildId} • Bot: {bot?.username || 'Hawk'} ({bot?.id ? `ID ${bot.id}` : 'Connected'})
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Link
             href={`/dashboard/${guildId}/permissions`}
-            className="btn-outline-secondary text-xs py-2 px-3 flex items-center gap-1.5"
+            className="btn-outline-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
           >
-            <Lock className="w-3.5 h-3.5 text-[#a9adb2]" />
-            <span>Manage Access Rules</span>
+            <Lock className="w-3.5 h-3.5 text-[#949aa2]" />
+            <span>Manage Access</span>
           </Link>
           <Link
             href={`/dashboard/${guildId}/general`}
-            className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5"
+            className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5"
           >
             <Sliders className="w-3.5 h-3.5" />
             <span>Configure Bot</span>
@@ -122,21 +172,21 @@ export default function GuildOverviewPage() {
 
       {/* Stale Configuration Warning Banner if any */}
       {staleIssues.length > 0 && (
-        <div className="p-4 rounded-md bg-warning-soft border border-warning-border space-y-2">
+        <div className="p-3.5 rounded-lg bg-warning-soft border border-warning-border space-y-2">
           <div className="flex items-center gap-2 text-warning-text text-xs font-semibold">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>Configuration Attention Required ({staleIssues.length} issue{staleIssues.length > 1 ? 's' : ''} detected)</span>
+            <span>Configuration Alert ({staleIssues.length} issue{staleIssues.length > 1 ? 's' : ''} detected)</span>
           </div>
           <div className="space-y-1.5 pl-6">
             {staleIssues.map((issue) => (
-              <div key={issue.id} className="flex items-center justify-between text-xs text-[#f1f2f3]">
+              <div key={issue.id} className="flex items-center justify-between text-xs text-[#ededed]">
                 <span>{issue.name}: {issue.message}</span>
                 <Link
                   href={issue.fixPath}
-                  className="px-2 py-0.5 rounded bg-[#17191c] border border-[#24272b] text-[10px] font-mono text-warning-text hover:bg-[#25282c] flex items-center gap-1"
+                  className="px-2 py-0.5 rounded bg-[#121417] border border-[#1f2226] text-[10px] font-mono text-warning-text hover:bg-[#17191c] flex items-center gap-1"
                 >
                   <Wrench className="w-3 h-3" />
-                  <span>Fix</span>
+                  <span>Resolve</span>
                 </Link>
               </div>
             ))}
@@ -145,45 +195,45 @@ export default function GuildOverviewPage() {
       )}
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-animate-section>
-        <div className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] space-y-1">
-          <div className="flex items-center justify-between text-[#7e8389]">
-            <span className="text-[10px] font-mono uppercase tracking-wider">Bot Status</span>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-animate-section>
+        <div className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] space-y-1">
+          <div className="flex items-center justify-between text-[#6e747c]">
+            <span className="text-[10px] font-mono uppercase tracking-wider">Gateway Status</span>
             <Activity className="w-3.5 h-3.5 text-success" />
           </div>
-          <div className="text-sm font-semibold text-[#f1f2f3]">Online & Healthy</div>
+          <div className="text-sm font-semibold text-[#ededed]">Connected</div>
           <div className="text-[10px] font-mono text-success flex items-center gap-1">
-            <span>● Gateway Latency: ~38ms</span>
+            <span>● 0 Dropped Packets</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] space-y-1">
-          <div className="flex items-center justify-between text-[#7e8389]">
+        <div className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] space-y-1">
+          <div className="flex items-center justify-between text-[#6e747c]">
             <span className="text-[10px] font-mono uppercase tracking-wider">Active Modules</span>
             <Zap className="w-3.5 h-3.5 text-warning" />
           </div>
-          <div className="text-sm font-semibold text-[#f1f2f3]">{activeCount} of {activeModules.length} Active</div>
-          <div className="text-[10px] font-mono text-[#7e8389]">
-            {activeCount === activeModules.length ? 'Full capabilities active' : 'Ready to configure'}
+          <div className="text-sm font-semibold text-[#ededed]">{activeCount} of {activeModules.length} Active</div>
+          <div className="text-[10px] font-mono text-[#6e747c]">
+            {activeCount === activeModules.length ? 'All modules active' : 'Ready for deployment'}
           </div>
         </div>
 
-        <div className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] space-y-1">
-          <div className="flex items-center justify-between text-[#7e8389]">
+        <div className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] space-y-1">
+          <div className="flex items-center justify-between text-[#6e747c]">
             <span className="text-[10px] font-mono uppercase tracking-wider">Discord Channels</span>
             <Users className="w-3.5 h-3.5 text-info" />
           </div>
-          <div className="text-sm font-semibold text-[#f1f2f3]">{channels.length} Channels</div>
-          <div className="text-[10px] font-mono text-[#7e8389]">Synchronized via API</div>
+          <div className="text-sm font-semibold text-[#ededed]">{channels.length} Synchronized</div>
+          <div className="text-[10px] font-mono text-[#6e747c]">Available for routing</div>
         </div>
 
-        <div className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] space-y-1">
-          <div className="flex items-center justify-between text-[#7e8389]">
+        <div className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] space-y-1">
+          <div className="flex items-center justify-between text-[#6e747c]">
             <span className="text-[10px] font-mono uppercase tracking-wider">Server Roles</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-feature" />
+            <ShieldCheck className="w-3.5 h-3.5 text-[#949aa2]" />
           </div>
-          <div className="text-sm font-semibold text-[#f1f2f3]">{roles.length} Roles</div>
-          <div className="text-[10px] font-mono text-[#7e8389]">Available for policies</div>
+          <div className="text-sm font-semibold text-[#ededed]">{roles.length} Roles</div>
+          <div className="text-[10px] font-mono text-[#6e747c]">Mapped for permissions</div>
         </div>
       </div>
 
@@ -199,26 +249,29 @@ export default function GuildOverviewPage() {
             <Link
               key={m.name}
               href={m.path}
-              className="p-3.5 rounded-md bg-[#0d0e10] border border-[#24272b] hover:border-[#3e434a] hover:bg-[#121417] flex items-center justify-between gap-3 transition-colors group"
+              className="p-3 rounded-lg bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] flex items-center justify-between gap-3 transition-colors group"
             >
               <div className="space-y-0.5 overflow-hidden">
-                <div className="text-xs font-medium text-[#f1f2f3] group-hover:text-white transition-colors">
+                <div className="text-xs font-medium text-[#ededed] group-hover:text-white transition-colors">
                   {m.name}
                 </div>
-                <div className="text-[10px] font-mono">
+                <div className="text-[10px] text-[#6e747c] truncate">
+                  {m.description}
+                </div>
+                <div className="text-[10px] font-mono pt-0.5">
                   {m.active ? (
                     <span className="text-success-text flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
+                      <CheckCircle2 className="w-3 h-3 text-success" />
                       Active & Enforcing
                     </span>
                   ) : (
-                    <span className="text-[#7e8389]">Not configured</span>
+                    <span className="text-[#6e747c]">Not configured</span>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[#7e8389] group-hover:text-[#f1f2f3] transition-colors">
-                <ArrowUpRight className="w-4 h-4" />
+              <div className="flex items-center gap-1 text-[#6e747c] group-hover:text-[#ededed] transition-colors shrink-0">
+                <ArrowUpRight className="w-3.5 h-3.5" />
               </div>
             </Link>
           ))}
@@ -229,44 +282,74 @@ export default function GuildOverviewPage() {
       <div className="space-y-3" data-animate-section>
         <SectionHeader
           title="Quick Operations Console"
-          description="Direct jump links to key server controls."
+          description="Direct access to primary server modules and features."
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <Link
-            href={`/dashboard/${guildId}/sticky`}
-            className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] hover:border-[#3e434a] space-y-1 group transition-colors"
+            href={`/dashboard/${guildId}/welcome`}
+            className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] space-y-1 group transition-colors"
           >
-            <Pin className="w-4 h-4 text-[#a9adb2] group-hover:text-[#f1f2f3]" />
-            <div className="text-xs font-medium text-[#f1f2f3]">Sticky Notices</div>
-            <div className="text-[11px] text-[#7e8389]">Persistent channel messages</div>
-          </Link>
-
-          <Link
-            href={`/dashboard/${guildId}/economy`}
-            className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] hover:border-[#3e434a] space-y-1 group transition-colors"
-          >
-            <Coins className="w-4 h-4 text-[#a9adb2] group-hover:text-[#f1f2f3]" />
-            <div className="text-xs font-medium text-[#f1f2f3]">Economy & Store</div>
-            <div className="text-[11px] text-[#7e8389]">Daily streaks & shop items</div>
+            <div className="flex items-center gap-2">
+              <HeartHandshake className="w-4 h-4 text-[#949aa2] group-hover:text-success" />
+              <div className="text-xs font-medium text-[#ededed]">Welcome Greetings</div>
+            </div>
+            <div className="text-[11px] text-[#6e747c]">Interactive embed designer & live preview</div>
           </Link>
 
           <Link
             href={`/dashboard/${guildId}/pvc`}
-            className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] hover:border-[#3e434a] space-y-1 group transition-colors"
+            className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] space-y-1 group transition-colors"
           >
-            <Radio className="w-4 h-4 text-[#a9adb2] group-hover:text-[#f1f2f3]" />
-            <div className="text-xs font-medium text-[#f1f2f3]">Private Voice</div>
-            <div className="text-[11px] text-[#7e8389]">Join-to-Create voice channels</div>
+            <div className="flex items-center gap-2">
+              <Radio className="w-4 h-4 text-[#949aa2] group-hover:text-[#ededed]" />
+              <div className="text-xs font-medium text-[#ededed]">Private Voice (PVC)</div>
+            </div>
+            <div className="text-[11px] text-[#6e747c]">Dynamic join-to-create voice channels</div>
+          </Link>
+
+          <Link
+            href={`/dashboard/${guildId}/economy`}
+            className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] space-y-1 group transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Coins className="w-4 h-4 text-[#949aa2] group-hover:text-[#ededed]" />
+              <div className="text-xs font-medium text-[#ededed]">Economy & Rewards</div>
+            </div>
+            <div className="text-[11px] text-[#6e747c]">Daily streaks, passive income & store</div>
           </Link>
 
           <Link
             href={`/dashboard/${guildId}/permissions`}
-            className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] hover:border-[#3e434a] space-y-1 group transition-colors"
+            className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] space-y-1 group transition-colors"
           >
-            <Lock className="w-4 h-4 text-[#a9adb2] group-hover:text-[#f1f2f3]" />
-            <div className="text-xs font-medium text-[#f1f2f3]">Security & Rules</div>
-            <div className="text-[11px] text-[#7e8389]">ACLs & Audit logging</div>
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-[#949aa2] group-hover:text-[#ededed]" />
+              <div className="text-xs font-medium text-[#ededed]">Security & Rules</div>
+            </div>
+            <div className="text-[11px] text-[#6e747c]">Role policies, command overrides & audit log</div>
+          </Link>
+
+          <Link
+            href={`/dashboard/${guildId}/sticky`}
+            className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] space-y-1 group transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Pin className="w-4 h-4 text-[#949aa2] group-hover:text-[#ededed]" />
+              <div className="text-xs font-medium text-[#ededed]">Sticky Notices</div>
+            </div>
+            <div className="text-[11px] text-[#6e747c]">Persistent channel messages</div>
+          </Link>
+
+          <Link
+            href={`/dashboard/${guildId}/media`}
+            className="p-3.5 rounded-lg bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] space-y-1 group transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-[#949aa2] group-hover:text-[#ededed]" />
+              <div className="text-xs font-medium text-[#ededed]">Media Channels</div>
+            </div>
+            <div className="text-[11px] text-[#6e747c]">Auto-moderated media feeds & auto-threads</div>
           </Link>
         </div>
       </div>

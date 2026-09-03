@@ -1,46 +1,28 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { animatePageEnter, createScope, prefersReducedMotion } from '@/lib/animations';
+import { animatePageEnter, prefersReducedMotion } from '@/lib/animations';
 
 /**
- * Hook to trigger a smooth page entrance sequence when mounting.
+ * Hook to trigger a smooth, calm page entrance sequence.
+ * Takes optional `isReady` flag so entrance animation can trigger when data is ready.
  */
-export function usePageEntrance() {
+export function usePageEntrance(isReady = true) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const animatedRef = useRef(false);
 
   useEffect(() => {
+    if (!isReady || animatedRef.current || prefersReducedMotion()) return;
+
     if (containerRef.current) {
-      animatePageEnter(containerRef.current);
+      animatedRef.current = true;
+      // Slight frame delay to ensure React DOM commit before animation
+      const raf = requestAnimationFrame(() => {
+        animatePageEnter(containerRef.current);
+      });
+      return () => cancelAnimationFrame(raf);
     }
-  }, []);
+  }, [isReady]);
 
   return containerRef;
-}
-
-/**
- * Hook for scoping Anime.js animations to a component root and automatically cleaning them up on unmount.
- */
-export function useScopedAnimation(callback: (scope: any) => void, deps: any[] = []) {
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!rootRef.current || prefersReducedMotion()) return;
-
-    let scope: any = null;
-    try {
-      scope = createScope({ root: rootRef.current });
-      callback(scope);
-    } catch {
-      // Fallback
-    }
-
-    return () => {
-      if (scope && typeof scope.revert === 'function') {
-        scope.revert();
-      }
-    };
-  }, deps);
-
-  return rootRef;
 }

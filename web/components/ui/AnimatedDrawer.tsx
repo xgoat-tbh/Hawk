@@ -48,30 +48,30 @@ export function AnimatedDrawer({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end select-none">
       {/* Backdrop */}
       <div
         ref={backdropRef}
         onClick={handleClose}
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
       />
 
       {/* Drawer Body with Independent Internal Scroll */}
       <div
         ref={drawerRef}
-        className={`relative z-10 w-full ${width} bg-[#0d0e10] border-l border-[#24272b] shadow-2xl flex flex-col h-full overflow-hidden`}
+        className={`relative z-10 w-full ${width} bg-[#0d0e10] border-l border-[#1f2226] shadow-drawer-clean flex flex-col h-full overflow-hidden`}
       >
         {/* Drawer Header (Fixed) */}
-        <div className="px-5 py-4 border-b border-[#1c1f23] flex items-center justify-between shrink-0 bg-[#08090a]">
+        <div className="px-5 py-3.5 border-b border-[#17191c] flex items-center justify-between shrink-0 bg-[#0a0b0d]">
           <div className="space-y-0.5 overflow-hidden">
-            <h2 className="text-sm font-semibold text-[#f1f2f3] tracking-tight truncate">{title}</h2>
-            {subtitle && <p className="text-[11px] text-[#7e8389] truncate">{subtitle}</p>}
+            <h2 className="text-sm font-semibold text-[#ededed] tracking-tight truncate">{title}</h2>
+            {subtitle && <p className="text-[11px] text-[#6e747c] truncate">{subtitle}</p>}
           </div>
 
           <button
             type="button"
             onClick={handleClose}
-            className="p-1.5 rounded-md text-[#7e8389] hover:text-[#f1f2f3] hover:bg-white/[0.05] transition-colors"
+            className="p-1 rounded-md text-[#6e747c] hover:text-[#ededed] hover:bg-white/5 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

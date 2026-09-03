@@ -2,14 +2,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { ChannelSelect } from '@/components/ChannelSelect';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { Radio, Clock, LayoutTemplate, Loader2, Plus, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Radio, Clock, LayoutTemplate, Loader2, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface PvcFormData {
   pvcHourlyRate: number;
@@ -21,8 +21,8 @@ interface PvcFormData {
 
 export default function PvcSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const containerRef = usePageEntrance();
-  const { channels, config, updateConfigLocally, refreshData } = useGuildData();
+  const { channels, config, updateConfigLocally, refreshData, loading } = useGuildData();
+  const containerRef = usePageEntrance(!loading);
 
   const initialFormData = useMemo<PvcFormData>(() => {
     const eco = config?.economy || {};
@@ -99,13 +99,13 @@ export default function PvcSettingsPage() {
 
       setField('pvcCategoryId', data.categoryId);
       setField('pvcJtcChannelId', data.jtcChannelId);
+      if (data.panelChannelId) setField('pvcPanelChannelId', data.panelChannelId);
 
       await refreshData();
-      setAutoCreateStatus('Voice Category & Join-to-Create voice channel generated.');
+      setAutoCreateStatus('Channels provisioned directly in Discord!');
       setTimeout(() => setAutoCreateStatus(null), 5000);
     } catch (err: any) {
-      setAutoCreateError(err.message || 'Failed to auto-create PVC channels.');
-      setTimeout(() => setAutoCreateError(null), 5000);
+      setAutoCreateError(err.message || 'Auto setup encountered an error.');
     } finally {
       setIsAutoCreating(false);
     }
@@ -113,145 +113,144 @@ export default function PvcSettingsPage() {
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
-            <Radio className="w-4 h-4 text-[#a9adb2]" />
+          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
+            <Radio className="w-4 h-4 text-[#949aa2]" />
             <span>Private Voice Channels (PVC)</span>
           </h1>
-          <p className="text-xs text-[#7e8389] mt-0.5">
-            Configure automated temporary voice rooms, hourly rental rates, and master control panels.
+          <p className="text-xs text-[#6e747c] mt-0.5">
+            Configure Join-to-Create dynamic temporary voice rooms and hourly rental rates.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => save()}
-          disabled={saveState === 'saving' || !isDirty}
-          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={handleAutoCreatePvc}
+            disabled={isAutoCreating}
+            className="btn-outline-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+            title="Auto-provision Discord category and Join-To-Create channel"
+          >
+            {isAutoCreating ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5 text-warning" />
+            )}
+            <span>{isAutoCreating ? 'Provisioning...' : 'Auto-Setup in Discord'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => save()}
+            disabled={saveState === 'saving' || !isDirty}
+            className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
+          </button>
+        </div>
       </div>
 
+      {/* Auto Provisioning Feedback Banners */}
       {autoCreateStatus && (
-        <div className="p-3 rounded-md bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
-          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+        <div className="p-3.5 rounded-lg bg-success-soft border border-success-border text-xs text-success-text flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{autoCreateStatus}</span>
         </div>
       )}
+
       {autoCreateError && (
-        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
-          <AlertCircle className="w-4 h-4 text-critical shrink-0" />
+        <div className="p-3.5 rounded-lg bg-critical-soft border border-critical-border text-xs text-critical-text flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{autoCreateError}</span>
         </div>
       )}
 
-      {/* Auto Channel Setup Banner */}
-      <div className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-0.5">
-          <h3 className="text-xs font-semibold text-[#f1f2f3] uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#a9adb2]" />
-            <span>1-Click Auto Setup</span>
-          </h3>
-          <p className="text-[11px] text-[#7e8389]">
-            Automatically create the dedicated Discord category and Join-to-Create master channel.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleAutoCreatePvc}
-          disabled={isAutoCreating}
-          className="btn-outline-primary text-xs py-1.5 px-3 flex items-center gap-1.5 shrink-0"
-        >
-          {isAutoCreating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-          <span>Generate Channels</span>
-        </button>
-      </div>
-
       <div className="space-y-8">
-        {/* Voice Infrastructure */}
+        {/* Generator & Category Channels */}
         <div className="space-y-1" data-animate-section>
           <SectionHeader
-            title="Voice Container Routing"
-            description="Channels and categories where temporary private rooms are created."
-            icon={<LayoutTemplate className="w-4 h-4" />}
+            title="Voice Room Routing & Hierarchy"
+            description="Discord category and trigger channel for automated voice spawning."
+            icon={<LayoutTemplate className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
             <SettingRow
-              label="Join-to-Create Voice Channel"
-              description="Members who connect to this voice channel will instantly be moved to a newly created private room."
-              badge="Trigger"
+              label="Join-To-Create Trigger Channel"
+              description="Members who connect to this voice channel are instantly moved into their own private room."
+              badge="Voice"
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
+                  allowedTypes={[2, 13]} // Voice and Stage channels
                   value={current.pvcJtcChannelId}
                   onChange={(val) => setField('pvcJtcChannelId', val)}
-                  placeholder="Select Join-to-Create channel..."
-                  allowedTypes={[2, 13]}
+                  placeholder="Select JTC voice channel..."
                 />
               </div>
             </SettingRow>
 
             <SettingRow
-              label="Parent Voice Category"
-              description="Discord category container where dynamic private voice rooms are placed."
+              label="Target Category Container"
+              description="The Discord category under which dynamically generated voice channels are created."
+              badge="Category"
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
+                  allowedTypes={[4]} // Category channels only
                   value={current.pvcCategoryId}
                   onChange={(val) => setField('pvcCategoryId', val)}
-                  placeholder="Select Category container..."
-                  allowedTypes={[4]}
+                  placeholder="Select category..."
                 />
               </div>
             </SettingRow>
 
             <SettingRow
-              label="Persistent Control Panel Channel"
-              description="Text channel containing interactive button controls for room management."
+              label="PVC Control Panel Channel"
+              description="Dedicated text channel where the interactive PVC button control panel is posted."
+              badge="Text"
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
+                  allowedTypes={[0, 5]} // Text and Announcement
                   value={current.pvcPanelChannelId}
                   onChange={(val) => setField('pvcPanelChannelId', val)}
-                  placeholder="Select Panel channel..."
-                  allowedTypes={[0, 5]}
+                  placeholder="Select panel channel..."
                 />
               </div>
             </SettingRow>
           </div>
         </div>
 
-        {/* Economy Rates */}
+        {/* Pricing & Rental Rates */}
         <div className="space-y-1" data-animate-section>
           <SectionHeader
-            title="Rental Rates & Pricing"
-            description="Economy fees for voice room ownership."
-            icon={<Clock className="w-4 h-4" />}
+            title="Rental Economics"
+            description="Fee deducted from the channel owner's wallet for keeping a private channel open."
+            icon={<Clock className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
             <SettingRow
-              label="Hourly Voice Rental Rate"
-              description="Amount deducted from the voice channel owner's wallet per hour of active voice rental."
+              label="Hourly Channel Rental Fee"
+              description="Currency deducted every hour while the private room remains active. Set to 0 for free rooms."
+              badge="Fee"
             >
-              <div className="relative w-36">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-[#6e747c]">{currencySymbol}</span>
                 <input
                   type="number"
                   min={0}
+                  max={1000000000}
                   value={current.pvcHourlyRate}
-                  onChange={(e) => setField('pvcHourlyRate', parseInt(e.target.value, 10) || 0)}
-                  className="glass-input font-mono text-xs pl-8"
+                  onChange={(e) => setField('pvcHourlyRate', Number(e.target.value))}
+                  className="glass-input font-mono text-xs w-36"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-[#7e8389]">
-                  {currencySymbol}
-                </span>
+                <span className="text-[11px] text-[#6e747c]">/ hour</span>
               </div>
             </SettingRow>
           </div>

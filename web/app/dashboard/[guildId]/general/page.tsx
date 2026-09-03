@@ -2,15 +2,15 @@
 
 import React, { useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { ChannelSelect } from '@/components/ChannelSelect';
-import { RoleSelect } from '@/components/RoleSelect';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
+import { RolePicker } from '@/components/ui/RolePicker';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { usePageEntrance } from '@/hooks/useAnimation';
 import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { Sliders, Terminal, FileText } from 'lucide-react';
+import { Sliders, Terminal, FileText, Globe } from 'lucide-react';
 
 interface GeneralFormData {
   prefix: string;
@@ -21,8 +21,8 @@ interface GeneralFormData {
 
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const containerRef = usePageEntrance();
-  const { channels, roles, config, updateConfigLocally } = useGuildData();
+  const { channels, roles, config, updateConfigLocally, loading } = useGuildData();
+  const containerRef = usePageEntrance(!loading);
 
   const initialFormData = useMemo<GeneralFormData>(() => {
     const gen = config?.general || {};
@@ -46,7 +46,7 @@ export default function GeneralSettingsPage() {
     initialData: initialFormData,
     onSave: async (formValues) => {
       const payload = {
-        prefix: formValues.prefix,
+        prefix: formValues.prefix.trim() || '!',
         log_channel_id: formValues.logChannelId,
         audit_channel_id: formValues.auditChannelId,
         bot_commander_role_id: formValues.botCommanderRoleId,
@@ -75,13 +75,14 @@ export default function GeneralSettingsPage() {
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-[#a9adb2]" />
+          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-[#949aa2]" />
             <span>General Server Settings</span>
           </h1>
-          <p className="text-xs text-[#7e8389] mt-0.5">
+          <p className="text-xs text-[#6e747c] mt-0.5">
             Configure bot command prefix, administrator authority role, and server audit logging channels.
           </p>
         </div>
@@ -90,7 +91,7 @@ export default function GeneralSettingsPage() {
           type="button"
           onClick={() => save()}
           disabled={saveState === 'saving' || !isDirty}
-          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
+          className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto"
         >
           <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
         </button>
@@ -102,7 +103,7 @@ export default function GeneralSettingsPage() {
           <SectionHeader
             title="Core Bot Configuration"
             description="Fundamental prefix and elevated role settings."
-            icon={<Terminal className="w-4 h-4" />}
+            icon={<Terminal className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
@@ -128,7 +129,7 @@ export default function GeneralSettingsPage() {
               badgeVariant="warning"
             >
               <div className="w-64">
-                <RoleSelect
+                <RolePicker
                   roles={roles}
                   value={current.botCommanderRoleId}
                   onChange={(val) => setField('botCommanderRoleId', val)}
@@ -139,43 +140,64 @@ export default function GeneralSettingsPage() {
           </div>
         </div>
 
-        {/* Logging Channels Section */}
+        {/* Logging & Audit Channels */}
         <div className="space-y-1" data-animate-section>
           <SectionHeader
-            title="Audit & Activity Logging"
-            description="Routing channels for moderation events and economy transaction logs."
-            icon={<FileText className="w-4 h-4" />}
+            title="Logging & Audit Channels"
+            description="Dedicated channels where Hawk dispatches moderation, system, and economy logs."
+            icon={<FileText className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
             <SettingRow
-              label="Server Moderation Log"
-              description="Receives message purge notifications, kick/ban audit logs, and timeout reports."
+              label="Audit Log Channel"
+              description="Dispatches member joins, leaves, role updates, and administrative command invocations."
+              badge="Routing"
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
                   value={current.logChannelId}
                   onChange={(val) => setField('logChannelId', val)}
-                  placeholder="Select log channel..."
-                  allowedTypes={[0, 5]}
+                  placeholder="Select audit channel..."
                 />
               </div>
             </SettingRow>
 
             <SettingRow
-              label="Economy Transaction Log"
-              description="Receives salary disbursements, shop purchase audits, and currency transfer receipts."
+              label="Economy & Mod Log Channel"
+              description="Dispatches store purchases, balance transfers, role salaries, and economy audit actions."
+              badge="Routing"
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
                   value={current.auditChannelId}
                   onChange={(val) => setField('auditChannelId', val)}
-                  placeholder="Select economy log..."
-                  allowedTypes={[0, 5]}
+                  placeholder="Select economy log channel..."
                 />
               </div>
+            </SettingRow>
+          </div>
+        </div>
+
+        {/* Regional & System Standards */}
+        <div className="space-y-1" data-animate-section>
+          <SectionHeader
+            title="System Standards"
+            description="Timestamps, audit standards, and regional format."
+            icon={<Globe className="w-3.5 h-3.5 text-[#6e747c]" />}
+          />
+
+          <div className="pt-2">
+            <SettingRow
+              label="Audit Timezone Standard"
+              description="All server events, voice logs, and database records use standard UTC ISO 8601 formatting."
+              badge="Standard"
+            >
+              <span className="text-xs font-mono text-[#949aa2] bg-[#121417] px-2.5 py-1 rounded border border-[#1f2226]">
+                UTC (Universal Coordinated Time)
+              </span>
             </SettingRow>
           </div>
         </div>

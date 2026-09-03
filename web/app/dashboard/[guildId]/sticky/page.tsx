@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ChannelSelect } from '@/components/ChannelSelect';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
 import { usePageEntrance } from '@/hooks/useAnimation';
@@ -16,14 +16,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Send,
   Sparkles,
 } from 'lucide-react';
 
 export default function StickyMessagesPage() {
   const { guildId } = useParams() as { guildId: string };
-  const containerRef = usePageEntrance();
-  const { channels, config, refreshData } = useGuildData();
+  const { channels, config, refreshData, loading } = useGuildData();
+  const containerRef = usePageEntrance(!loading);
 
   const stickyMessages = config?.stickyMessages || [];
 
@@ -32,7 +31,7 @@ export default function StickyMessagesPage() {
   const [newMessage, setNewMessage] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  // Edit Form State (for editing existing stickies)
+  // Edit Form State
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -168,26 +167,26 @@ export default function StickyMessagesPage() {
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
-            <Pin className="w-4 h-4 text-[#a9adb2]" />
+          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
+            <Pin className="w-4 h-4 text-[#949aa2]" />
             <span>Persistent Sticky Messages</span>
           </h1>
-          <p className="text-xs text-[#7e8389] mt-0.5">
+          <p className="text-xs text-[#6e747c] mt-0.5">
             Keep important guidelines, rule reminders, or announcements continuously visible at the bottom of active channels.
           </p>
         </div>
       </div>
 
       {actionSuccess && (
-        <div className="p-3 rounded-md bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text animate-in fade-in duration-150">
+        <div className="p-3.5 rounded-lg bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
           <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text animate-in fade-in duration-150">
+        <div className="p-3.5 rounded-lg bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
           <AlertCircle className="w-4 h-4 text-critical shrink-0" />
           <span>{actionError}</span>
         </div>
@@ -196,11 +195,12 @@ export default function StickyMessagesPage() {
       {/* Create New Sticky Form Bar */}
       <form
         onSubmit={handleAddSticky}
-        className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] space-y-3"
+        className="p-4 sm:p-5 rounded-lg bg-[#0d0e10] border border-[#1f2226] space-y-4 shadow-sm"
+        data-animate-section
       >
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-[#f1f2f3] flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#a9adb2]" />
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-[#ededed] flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#6e747c]" />
             <span>Add New Sticky Notice</span>
           </h4>
           <div className="flex items-center gap-1.5">
@@ -209,7 +209,7 @@ export default function StickyMessagesPage() {
                 key={v}
                 type="button"
                 onClick={() => insertVariable(v)}
-                className="px-2 py-0.5 rounded-sm bg-[#121417] hover:bg-[#17191c] border border-[#24272b] text-[10px] font-mono text-[#a9adb2] hover:text-[#f1f2f3] transition-colors"
+                className="px-2 py-0.5 rounded bg-[#121417] hover:bg-[#17191c] border border-[#1f2226] text-[10px] font-mono text-[#949aa2] hover:text-[#ededed] transition-colors"
               >
                 {v}
               </button>
@@ -219,8 +219,8 @@ export default function StickyMessagesPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
           <div className="sm:col-span-4 space-y-1">
-            <label className="text-[10px] font-mono uppercase text-[#7e8389]">Target Channel</label>
-            <ChannelSelect
+            <label className="text-[10px] font-mono uppercase text-[#6e747c]">Target Channel</label>
+            <ChannelPicker
               channels={channels}
               value={newChannelId}
               onChange={setNewChannelId}
@@ -231,8 +231,8 @@ export default function StickyMessagesPage() {
 
           <div className="sm:col-span-8 space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-[10px] font-mono uppercase text-[#7e8389]">Notice Text</label>
-              <span className="text-[10px] font-mono text-[#7e8389]">{newMessage.length}/4000</span>
+              <label className="text-[10px] font-mono uppercase text-[#6e747c]">Notice Text</label>
+              <span className="text-[10px] font-mono text-[#6e747c]">{newMessage.length}/4000</span>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -242,12 +242,12 @@ export default function StickyMessagesPage() {
                 placeholder="⚠️ Remember to stay respectful and follow server guidelines."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                className="glass-input font-sans text-xs flex-1"
+                className="glass-input text-xs flex-1"
               />
               <button
                 type="submit"
                 disabled={isAdding}
-                className="btn-primary py-2 px-4 text-xs flex items-center justify-center gap-1.5 shrink-0"
+                className="btn-primary py-1.5 px-3.5 text-xs flex items-center justify-center gap-1.5 shrink-0"
               >
                 {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                 <span>Set Sticky</span>
@@ -258,26 +258,26 @@ export default function StickyMessagesPage() {
       </form>
 
       {/* Active Sticky Notices Section */}
-      <div className="space-y-2" data-animate-section>
+      <div className="space-y-3" data-animate-section>
         <SectionHeader
           title={`Active Sticky Notices (${stickyMessages.length})`}
           description="The bot automatically repositions these notices as chat messages arrive."
         />
 
-        <div className="border border-[#24272b] rounded-md overflow-hidden bg-[#0d0e10]">
+        <div className="border border-[#1f2226] rounded-lg overflow-hidden bg-[#0d0e10] shadow-sm">
           <HawkScrollArea maxHeight="55vh">
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
+              <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#17191c] text-[10px] font-mono uppercase tracking-wider text-[#6e747c]">
                 <tr>
                   <th className="py-2.5 px-4 w-48">Channel</th>
                   <th className="py-2.5 px-4">Persistent Notice Content</th>
                   <th className="py-2.5 px-4 text-right w-36">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1c1f23]">
+              <tbody className="divide-y divide-[#17191c]">
                 {stickyMessages.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-8 text-center text-[#7e8389] text-xs">
+                    <td colSpan={3} className="py-12 text-center text-[#6e747c] text-xs">
                       No sticky messages configured. Choose a channel and enter a message above.
                     </td>
                   </tr>
@@ -295,20 +295,51 @@ export default function StickyMessagesPage() {
                           }`}
                         >
                           <td className="py-3 px-4 whitespace-nowrap align-top">
-                            <span className="inline-flex items-center gap-1.5 text-xs text-[#f1f2f3] font-medium">
-                              <Hash className="w-3.5 h-3.5 text-[#7e8389]" />
+                            <span className="inline-flex items-center gap-1.5 text-xs text-[#ededed] font-medium">
+                              <Hash className="w-3.5 h-3.5 text-[#6e747c]" />
                               <span>#{targetChannel?.name || `Channel ${item.channel_id}`}</span>
                             </span>
                           </td>
+                          <td className="py-3 px-4">
+                            <p className="text-xs text-[#ededed] leading-relaxed break-words whitespace-pre-wrap">
+                              {noticeText}
+                            </p>
+                          </td>
+                          <td className="py-3 px-4 text-right align-top whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  isEditing
+                                    ? cancelEditing()
+                                    : startEditing(item.channel_id, noticeText)
+                                }
+                                className="p-1 rounded text-[#6e747c] hover:text-[#ededed] hover:bg-white/5 transition-colors"
+                                title="Edit Notice"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSticky(item.channel_id)}
+                                className="p-1 rounded text-[#6e747c] hover:text-critical-text hover:bg-critical-soft transition-colors"
+                                title="Delete Notice"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
 
-                          <td className="py-3 px-4 text-xs text-[#d5d7da] align-top">
-                            {isEditing ? (
-                              <div className="space-y-2 py-1">
+                        {isEditing && (
+                          <tr className="bg-[#121417]">
+                            <td colSpan={3} className="px-4 py-3 border-t border-[#17191c]">
+                              <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[10px] font-mono uppercase text-[#7e8389]">
-                                    Editing Notice
+                                  <span className="text-[10px] font-mono uppercase text-[#6e747c]">
+                                    Editing notice for #{targetChannel?.name}
                                   </span>
-                                  <span className="text-[10px] font-mono text-[#7e8389]">
+                                  <span className="text-[10px] font-mono text-[#6e747c]">
                                     {editContent.length}/4000
                                   </span>
                                 </div>
@@ -317,82 +348,32 @@ export default function StickyMessagesPage() {
                                   maxLength={4000}
                                   value={editContent}
                                   onChange={(e) => setEditContent(e.target.value)}
-                                  placeholder="Enter sticky notice content..."
-                                  className="glass-input font-sans text-xs leading-relaxed resize-y w-full"
+                                  className="glass-input text-xs w-full resize-y"
                                 />
-                                <div className="flex items-center justify-between gap-2 pt-1">
-                                  <div className="flex items-center gap-1">
-                                    {variables.map((v) => (
-                                      <button
-                                        key={v}
-                                        type="button"
-                                        onClick={() => insertVariable(v)}
-                                        className="px-1.5 py-0.5 rounded-sm bg-[#17191c] border border-[#24272b] text-[10px] font-mono text-[#a9adb2] hover:text-[#f1f2f3]"
-                                      >
-                                        {v}
-                                      </button>
-                                    ))}
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={cancelEditing}
-                                      disabled={isSavingEdit}
-                                      className="btn-outline-secondary text-[11px] py-1 px-2.5"
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSaveEdit(item.channel_id)}
-                                      disabled={isSavingEdit}
-                                      className="btn-primary text-[11px] py-1 px-3 flex items-center gap-1.5"
-                                    >
-                                      {isSavingEdit ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                      ) : (
-                                        <Send className="w-3 h-3" />
-                                      )}
-                                      <span>{isSavingEdit ? 'Pushing...' : 'Save & Push to Server'}</span>
-                                    </button>
-                                  </div>
+                                <div className="flex items-center justify-end gap-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={cancelEditing}
+                                    className="btn-outline-secondary text-xs py-1 px-2.5"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveEdit(item.channel_id)}
+                                    disabled={isSavingEdit}
+                                    className="btn-primary text-xs py-1 px-3 flex items-center gap-1.5"
+                                  >
+                                    {isSavingEdit ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : null}
+                                    <span>Save & Push</span>
+                                  </button>
                                 </div>
                               </div>
-                            ) : (
-                              <p className="whitespace-pre-wrap leading-relaxed">
-                                {noticeText || (
-                                  <span className="text-[#7e8389] italic">Empty message</span>
-                                )}
-                              </p>
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-right align-top whitespace-nowrap">
-                            {!isEditing && (
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => startEditing(item.channel_id, noticeText)}
-                                  className="btn-outline-secondary text-[11px] py-1 px-2.5 flex items-center gap-1"
-                                  title="Edit notice text"
-                                >
-                                  <Edit2 className="w-3 h-3 text-[#a9adb2]" />
-                                  <span>Edit</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteSticky(item.channel_id)}
-                                  className="p-1.5 rounded-md text-[#7e8389] hover:text-critical-text hover:bg-critical-soft transition-colors"
-                                  title="Delete notice"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
+                        )}
                       </React.Fragment>
                     );
                   })

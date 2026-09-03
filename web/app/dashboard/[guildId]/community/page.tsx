@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { ChannelSelect } from '@/components/ChannelSelect';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -19,8 +19,8 @@ interface CommunityFormData {
 
 export default function CommunitySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const containerRef = usePageEntrance();
-  const { channels, config, updateConfigLocally } = useGuildData();
+  const { channels, config, updateConfigLocally, loading } = useGuildData();
+  const containerRef = usePageEntrance(!loading);
 
   const initialFormData = useMemo<CommunityFormData>(() => {
     const sug = config?.suggestion || {};
@@ -78,13 +78,13 @@ export default function CommunitySettingsPage() {
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-[#a9adb2]" />
+          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-[#949aa2]" />
             <span>Community Feedback & Tools</span>
           </h1>
-          <p className="text-xs text-[#7e8389] mt-0.5">
+          <p className="text-xs text-[#6e747c] mt-0.5">
             Configure server suggestion boards, voting workflows, and anonymous confession channels.
           </p>
         </div>
@@ -93,7 +93,7 @@ export default function CommunitySettingsPage() {
           type="button"
           onClick={() => save()}
           disabled={saveState === 'saving' || !isDirty}
-          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 self-start sm:self-auto"
+          className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto"
         >
           <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
         </button>
@@ -105,7 +105,7 @@ export default function CommunitySettingsPage() {
           <SectionHeader
             title="Suggestion Board"
             description="Automated member feedback with upvote & downvote reaction buttons."
-            icon={<Lightbulb className="w-4 h-4" />}
+            icon={<Lightbulb className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
@@ -114,7 +114,7 @@ export default function CommunitySettingsPage() {
               description="Text channel where new member suggestions are formatted and posted for voting."
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
                   value={current.sugSubmission}
                   onChange={(val) => setField('sugSubmission', val)}
@@ -131,7 +131,7 @@ export default function CommunitySettingsPage() {
           <SectionHeader
             title="Anonymous Confessions"
             description="Modal-based anonymous confessions feed with administrative audit tracking."
-            icon={<Lock className="w-4 h-4" />}
+            icon={<Lock className="w-3.5 h-3.5 text-[#6e747c]" />}
           />
 
           <div className="pt-2">
@@ -140,7 +140,7 @@ export default function CommunitySettingsPage() {
               description="Channel where approved anonymous confessions are posted publicly."
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
                   value={current.confSubmission}
                   onChange={(val) => setField('confSubmission', val)}
@@ -157,7 +157,7 @@ export default function CommunitySettingsPage() {
               badgeVariant="warning"
             >
               <div className="w-64">
-                <ChannelSelect
+                <ChannelPicker
                   channels={channels}
                   value={current.confLog}
                   onChange={(val) => setField('confLog', val)}

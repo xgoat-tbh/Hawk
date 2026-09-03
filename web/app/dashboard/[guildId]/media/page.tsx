@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ChannelSelect } from '@/components/ChannelSelect';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
@@ -12,8 +12,8 @@ import { Image as ImageIcon, Plus, Trash2, Hash, MessageSquare, CheckCircle2, Al
 
 export default function MediaChannelsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const containerRef = usePageEntrance();
-  const { channels, config, refreshData, updateConfigLocally } = useGuildData();
+  const { channels, config, refreshData, updateConfigLocally, loading } = useGuildData();
+  const containerRef = usePageEntrance(!loading);
 
   const mediaChannels = config?.mediaChannels || [];
   const autoThread = config?.mediaAutoThread ?? true;
@@ -49,6 +49,7 @@ export default function MediaChannelsPage() {
       setNewChannelId(null);
       setActionSuccess('Channel designated as media-only.');
       await refreshData();
+      setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
       setActionError(err.message || 'Error configuring media channel');
     } finally {
@@ -67,6 +68,8 @@ export default function MediaChannelsPage() {
         }),
       });
       await refreshData();
+      setActionSuccess('Media filter removed from channel.');
+      setTimeout(() => setActionSuccess(null), 4000);
     } catch (err) {
       console.error('Failed to remove media channel:', err);
     }
@@ -92,26 +95,26 @@ export default function MediaChannelsPage() {
 
   return (
     <div ref={containerRef} className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
         <div>
-          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
-            <ImageIcon className="w-4 h-4 text-[#a9adb2]" />
+          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-[#949aa2]" />
             <span>Media-Only Channels</span>
           </h1>
-          <p className="text-xs text-[#7e8389] mt-0.5">
+          <p className="text-xs text-[#6e747c] mt-0.5">
             Designate gallery channels that require attachments and automatically spawn comment discussion threads.
           </p>
         </div>
       </div>
 
       {actionSuccess && (
-        <div className="p-3 rounded-md bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
+        <div className="p-3.5 rounded-lg bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
           <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
+        <div className="p-3.5 rounded-lg bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
           <AlertCircle className="w-4 h-4 text-critical shrink-0" />
           <span>{actionError}</span>
         </div>
@@ -122,7 +125,7 @@ export default function MediaChannelsPage() {
         <SectionHeader
           title="Thread Automation"
           description="Spawns discussion threads under image and video uploads."
-          icon={<MessageSquare className="w-4 h-4" />}
+          icon={<MessageSquare className="w-3.5 h-3.5 text-[#6e747c]" />}
         />
 
         <div className="pt-2">
@@ -139,7 +142,7 @@ export default function MediaChannelsPage() {
                 onChange={(e) => handleToggleAutoThread(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-10 h-5 bg-[#17191c] border border-[#24272b] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#f1f2f3] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success peer-checked:after:bg-black"></div>
+              <div className="w-9 h-5 bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#ededed] after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success border border-[#1f2226]"></div>
             </label>
           </SettingRow>
         </div>
@@ -148,10 +151,11 @@ export default function MediaChannelsPage() {
       {/* Designate Channel Form Bar */}
       <form
         onSubmit={handleAddMediaChannel}
-        className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+        className="p-4 sm:p-5 rounded-lg bg-[#0d0e10] border border-[#1f2226] flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shadow-sm"
+        data-animate-section
       >
         <div className="flex-1">
-          <ChannelSelect
+          <ChannelPicker
             channels={channels}
             value={newChannelId}
             onChange={setNewChannelId}
@@ -163,7 +167,7 @@ export default function MediaChannelsPage() {
         <button
           type="submit"
           disabled={!newChannelId || isAdding}
-          className="btn-primary py-2 px-4 text-xs flex items-center justify-center gap-1.5 shrink-0"
+          className="btn-primary py-1.5 px-3.5 text-xs flex items-center justify-center gap-1.5 shrink-0"
         >
           {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
           <span>Designate Gallery</span>
@@ -171,26 +175,26 @@ export default function MediaChannelsPage() {
       </form>
 
       {/* Media Channels Data Table with HawkScrollArea */}
-      <div className="space-y-2" data-animate-section>
+      <div className="space-y-3" data-animate-section>
         <SectionHeader
           title={`Designated Media Channels (${mediaChannels.length})`}
           description="Messages lacking image or video attachments in these channels will be filtered."
         />
 
-        <div className="border border-[#24272b] rounded-md overflow-hidden bg-[#0d0e10]">
+        <div className="border border-[#1f2226] rounded-lg overflow-hidden bg-[#0d0e10] shadow-sm">
           <HawkScrollArea maxHeight="50vh">
             <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
+              <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#17191c] text-[10px] font-mono uppercase tracking-wider text-[#6e747c]">
                 <tr>
                   <th className="py-2.5 px-4">Channel</th>
                   <th className="py-2.5 px-4">Enforcement Rule</th>
                   <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1c1f23]">
+              <tbody className="divide-y divide-[#17191c]">
                 {mediaChannels.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="py-8 text-center text-[#7e8389] text-xs">
+                    <td colSpan={3} className="py-12 text-center text-[#6e747c] text-xs">
                       No media-only channels designated. Select a channel above to enforce media attachments.
                     </td>
                   </tr>
@@ -199,22 +203,22 @@ export default function MediaChannelsPage() {
                     const targetChannel = channels.find((c) => c.id === item.channel_id);
                     return (
                       <tr key={item.channel_id} className="hover:bg-[#121417]/50 transition-colors">
-                        <td className="py-2.5 px-4">
-                          <span className="inline-flex items-center gap-1.5 text-xs text-[#f1f2f3] font-medium">
-                            <Hash className="w-3.5 h-3.5 text-[#7e8389]" />
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-[#ededed] font-medium">
+                            <Hash className="w-3.5 h-3.5 text-[#6e747c]" />
                             <span>#{targetChannel?.name || `Channel ${item.channel_id}`}</span>
                           </span>
                         </td>
 
-                        <td className="py-2.5 px-4 text-xs text-[#a9adb2]">
-                          Attachment Required (Images/Videos only)
+                        <td className="py-3 px-4 text-xs text-[#949aa2]">
+                          Attachment Required (Images / Videos only)
                         </td>
 
-                        <td className="py-2.5 px-4 text-right">
+                        <td className="py-3 px-4 text-right">
                           <button
                             type="button"
                             onClick={() => handleDeleteMediaChannel(item.channel_id)}
-                            className="p-1.5 rounded-md text-[#7e8389] hover:text-critical-text hover:bg-critical-soft transition-colors"
+                            className="p-1 rounded text-[#6e747c] hover:text-critical-text hover:bg-critical-soft transition-colors"
                             title="Remove media filter"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
