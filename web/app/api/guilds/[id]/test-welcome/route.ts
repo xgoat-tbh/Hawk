@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const footer = embed.footer_text ? replacePlaceholders(embed.footer_text) : null;
 
     // Plain Text Mode (No Embed)
-    if (is_embed === false) {
+    if (is_embed === false || is_embed === 'false') {
       const res = await fetch(`https://discord.com/api/v10/channels/${cleanChannelId}/messages`, {
         method: 'POST',
         headers: {
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
         body: JSON.stringify({
           content: description,
-          allowed_mentions: { parse: [] }, // Prevent accidental mass pings
+          allowed_mentions: { parse: ['users'] },
         }),
       });
 

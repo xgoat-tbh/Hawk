@@ -48,7 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     pvc_command_channel_id: null,
     pvc_panel_channel_id: null,
   };
-  const welcomeConfig: any = { channel_id: null, enabled: false };
+  const welcomeConfig: any = { channel_id: null, enabled: false, is_embed: true };
   let welcomeEmbed: any = {
     title: 'Welcome to {server}!',
     description: 'Hey {user}, welcome to the server! Make sure to read the rules and enjoy your stay.',
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const rows = await db`
-      SELECT guild_id, greet_channel_id, greet_payload, greet_enabled, leave_channel_id, leave_payload, leave_enabled
+      SELECT greet_channel_id, greet_payload, greet_enabled
       FROM welcome_configs WHERE guild_id = ${guildId}
     `;
     if (rows[0]) {
@@ -103,6 +103,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           if (parsed.enabled !== undefined && row.greet_enabled === undefined) {
             welcomeConfig.enabled = Boolean(parsed.enabled);
           }
+          if (parsed.is_embed !== undefined) {
+            welcomeConfig.is_embed = Boolean(parsed.is_embed);
+          } else if (parsed.content && (!parsed.embeds || parsed.embeds.length === 0)) {
+            welcomeConfig.is_embed = false;
+          }
           const emb = Array.isArray(parsed.embeds) ? parsed.embeds[0] : parsed.embed;
           if (emb) {
             welcomeEmbed = {
@@ -113,11 +118,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
               thumbnail_url: emb.thumbnail?.url || '{user.avatar}',
               footer_text: emb.footer?.text || null,
             };
-          } else if (parsed.content) {
+          }
+          if (parsed.content) {
             welcomeEmbed.description = parsed.content;
           }
         } catch {
           welcomeEmbed.description = row.greet_payload;
+          welcomeConfig.is_embed = false;
         }
       }
     }

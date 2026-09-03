@@ -181,6 +181,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       case 'welcome': {
         const { config = {}, embed = {} } = data;
+        const is_embed = data.is_embed !== undefined ? Boolean(data.is_embed) : true;
 
         let embedColorInt = 0x2b2d31;
         let colorHex = '#ffffff';
@@ -197,26 +198,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const image_url = embed.image_url && typeof embed.image_url === 'string' && embed.image_url.startsWith('http') ? embed.image_url.trim() : null;
         const thumbnail_url = embed.thumbnail_url && typeof embed.thumbnail_url === 'string' ? embed.thumbnail_url.trim() : null;
 
-        const greetPayloadObj = {
-          embeds: [
-            {
-              title,
-              description,
-              color: embedColorInt,
-              image: image_url ? { url: image_url } : undefined,
-              thumbnail: thumbnail_url ? { url: thumbnail_url } : undefined,
-              footer: footer_text ? { text: footer_text } : undefined,
-            },
-          ],
-        };
+        const greetPayloadObj = is_embed
+          ? {
+              embeds: [
+                {
+                  title,
+                  description,
+                  color: embedColorInt,
+                  image: image_url ? { url: image_url } : undefined,
+                  thumbnail: thumbnail_url ? { url: thumbnail_url } : undefined,
+                  footer: footer_text ? { text: footer_text } : undefined,
+                },
+              ],
+            }
+          : {
+              content: description,
+              embeds: [],
+            };
 
         const channelId = cleanSnowflake(config.channel_id);
         const enabled = Boolean(config.enabled);
         const greetPayloadObjWithMeta = {
           ...greetPayloadObj,
+          content: description,
           channel_id: channelId,
           enabled,
-          is_embed: Boolean(data.is_embed),
+          is_embed,
         };
         const payloadStr = JSON.stringify(greetPayloadObjWithMeta);
 

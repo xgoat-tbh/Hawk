@@ -70,7 +70,7 @@ export default function WelcomeGreetingsPage() {
     return {
       enabled: Boolean(wConf.enabled),
       channelId: wConf.channel_id || null,
-      isEmbed: true,
+      isEmbed: wConf.is_embed !== undefined ? Boolean(wConf.is_embed) : true,
       sendAsDm: false,
       title: wEmb.title || 'Welcome to {server}!',
       description:
@@ -169,6 +169,7 @@ export default function WelcomeGreetingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           channelId: current.channelId,
+          is_embed: current.isEmbed,
           embed: {
             title: current.title,
             description: current.description,
