@@ -1,9 +1,7 @@
 import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import '@/lib/env';
 import { createToken, isBotOwner, isBotAdmin, COOKIE_NAME } from '@/lib/auth';
-
-const BOT_TOKEN = process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
-const ADMIN_PASSCODE = process.env.DASHBOARD_PASSCODE || process.env.ADMIN_KEY || '';
 
 // In-memory rate limiting map for login attempts: ip -> { count, lastAttempt }
 const loginAttempts = new Map<string, { count: number; lockUntil: number }>();
@@ -20,6 +18,9 @@ export async function POST(req: NextRequest) {
       { status: 429 }
     );
   }
+
+  const BOT_TOKEN = process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
+  const ADMIN_PASSCODE = process.env.DASHBOARD_PASSCODE || process.env.ADMIN_KEY || '';
 
   try {
     const body = await req.json();
