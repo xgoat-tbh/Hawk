@@ -38,8 +38,7 @@ export interface DiscordEmoji {
   url?: string;
 }
 
-import dotenv from 'dotenv';
-dotenv.config();
+import '@/lib/env';
 
 function getBotToken(): string {
   return process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';

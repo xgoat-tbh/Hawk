@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, canManageGuild } from '@/lib/auth';
 import { db } from '@/lib/db';
-import dotenv from 'dotenv';
-dotenv.config();
+import '@/lib/env';
 
 function getBotToken(): string {
   return process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
