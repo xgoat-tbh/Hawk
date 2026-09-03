@@ -24,6 +24,53 @@ function extractAllCustomEmojis(text: string): ExtractedMedia[] {
   });
 }
 
+export function isSafeMediaUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'https:') return false;
+
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Block localhost, link-local, and cloud metadata
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname === '169.254.169.254' ||
+      hostname.endsWith('.localhost') ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.local')
+    ) {
+      return false;
+    }
+
+    // Block private IPv4 ranges
+    const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const ipMatch = ipv4Regex.exec(hostname);
+    if (ipMatch) {
+      const b1 = parseInt(ipMatch[1], 10);
+      const b2 = parseInt(ipMatch[2], 10);
+      if (b1 === 10) return false;
+      if (b1 === 127) return false;
+      if (b1 === 169 && b2 === 254) return false;
+      if (b1 === 172 && b2 >= 16 && b2 <= 31) return false;
+      if (b1 === 192 && b2 === 168) return false;
+      if (b1 === 100 && b2 >= 64 && b2 <= 127) return false;
+      if (b1 === 0) return false;
+    }
+
+    // Must have a supported image file extension
+    const pathname = parsed.pathname.toLowerCase();
+    const hasImageExt = /\.(png|jpg|jpeg|gif|webp)$/i.test(pathname);
+    if (!hasImageExt) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function extractMediaFromText(text: string): ExtractedMedia | null {
   if (!text) return null;
 
@@ -62,11 +109,13 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
   const attachmentMatch = discordAttachmentRegex.exec(text);
   if (attachmentMatch) {
     const mediaUrl = attachmentMatch[1];
-    const cleanUrl = mediaUrl.split('?')[0];
-    const urlParts = cleanUrl.split('/');
-    const rawFilename = urlParts[urlParts.length - 1].split('.')[0].replace(/[^a-zA-Z0-9_]/g, '_');
-    const defaultName = rawFilename.length >= 2 ? rawFilename : 'stolen_media';
-    return { mediaUrl, defaultName };
+    if (isSafeMediaUrl(mediaUrl)) {
+      const cleanUrl = mediaUrl.split('?')[0];
+      const urlParts = cleanUrl.split('/');
+      const rawFilename = urlParts[urlParts.length - 1].split('.')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+      const defaultName = rawFilename.length >= 2 ? rawFilename : 'stolen_media';
+      return { mediaUrl, defaultName };
+    }
   }
 
   // 5. Masked Markdown Link: [text](https://url)
@@ -75,8 +124,10 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
   if (maskedMatch) {
     const rawText = maskedMatch[1].trim().replace(/[^a-zA-Z0-9_]/g, '_');
     const mediaUrl = maskedMatch[2];
-    const defaultName = rawText.length >= 2 ? rawText : 'stolen_media';
-    return { mediaUrl, defaultName };
+    if (isSafeMediaUrl(mediaUrl)) {
+      const defaultName = rawText.length >= 2 ? rawText : 'stolen_media';
+      return { mediaUrl, defaultName };
+    }
   }
 
   // 6. Generic Raw Image URL
@@ -84,11 +135,13 @@ function extractMediaFromText(text: string): ExtractedMedia | null {
   const urlMatch = rawUrlRegex.exec(text);
   if (urlMatch) {
     const mediaUrl = urlMatch[0];
-    const cleanUrl = mediaUrl.split('?')[0];
-    const urlParts = cleanUrl.split('/');
-    const filename = urlParts[urlParts.length - 1].split('.')[0].replace(/[^a-zA-Z0-9_]/g, '_');
-    const defaultName = filename.length >= 2 ? filename : 'stolen_media';
-    return { mediaUrl, defaultName };
+    if (isSafeMediaUrl(mediaUrl)) {
+      const cleanUrl = mediaUrl.split('?')[0];
+      const urlParts = cleanUrl.split('/');
+      const filename = urlParts[urlParts.length - 1].split('.')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+      const defaultName = filename.length >= 2 ? filename : 'stolen_media';
+      return { mediaUrl, defaultName };
+    }
   }
 
   return null;

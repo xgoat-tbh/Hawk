@@ -15,9 +15,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/?error=Missing authorization code`);
   }
 
-  // Verify state protection if cookie was set
-  if (savedState && state !== savedState) {
-    return NextResponse.redirect(`${origin}/?error=Invalid OAuth state parameter`);
+  // Mandatory CSRF state parameter validation
+  if (!savedState || !state || state !== savedState) {
+    return NextResponse.redirect(`${origin}/?error=Invalid+or+missing+OAuth+state+parameter`);
   }
 
   const tokenData = await exchangeOAuthCode(code, redirectUri);

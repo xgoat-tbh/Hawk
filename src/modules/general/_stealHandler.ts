@@ -11,6 +11,7 @@ import { getStateAnyUser, deleteState } from '../../core/interactions/Interactio
 import { ui } from '../../core/ui/index.js';
 import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
+import { isSafeMediaUrl } from './steal.js';
 
 export interface StealStateData {
   mediaUrl: string;
@@ -107,6 +108,15 @@ export async function handleStealModal(interaction: ModalSubmitInteraction): Pro
   await interaction.deferUpdate();
 
   try {
+    if (!isSafeMediaUrl(state.mediaUrl)) {
+      deleteState(fullStateKey);
+      await interaction.editReply({
+        content: 'The media URL is invalid or points to a restricted address.',
+        components: [],
+      });
+      return;
+    }
+
     if (action === 'emoji') {
       let cleanName = rawName.replace(/[^a-zA-Z0-9_]/g, '_');
       if (cleanName.length < 2) cleanName = `emoji_${cleanName}`;

@@ -224,7 +224,15 @@ export class Bootstrap {
 
     // 8. Register Unified Interaction Routing
     client.on(Events.InteractionCreate, async (interaction) => {
-      await interactionRouter.dispatch(interaction);
+      const handled = await interactionRouter.dispatch(interaction);
+      if (!handled && (interaction.isButton() || interaction.isAnySelectMenu())) {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'This interaction has expired or is unrecognized.',
+            ephemeral: true,
+          }).catch(() => {});
+        }
+      }
     });
 
     // Gateway diagnostics
@@ -246,7 +254,7 @@ export class Bootstrap {
 
     // 9. Login & Setup Process Signals
     const token = env.botToken;
-    const maskedToken = token ? `${token.slice(0, 10)}...${token.slice(-5)} (len=${token.length})` : 'EMPTY/UNDEFINED';
+    const maskedToken = token ? `${token.slice(0, 6)}...[REDACTED] (len=${token.length})` : 'EMPTY/UNDEFINED';
     consoleLog('info', 'startup', `Connecting to Discord gateway... token=${maskedToken}`);
     try {
       const loginPromise = client.login(token);
@@ -259,7 +267,7 @@ export class Bootstrap {
       const msg = loginError instanceof Error ? loginError.message : String(loginError);
       consoleLog('critical', 'startup', `FATAL: client.login() failed — ${msg}`);
       console.error('LOGIN FAILED:', loginError);
-      // Keep process alive so Render logs are visible
+      process.exit(1);
     }
     this.setupProcessHandlers();
 

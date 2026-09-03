@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createToken, isBotOwner, isBotAdmin, COOKIE_NAME } from '@/lib/auth';
 
@@ -33,18 +34,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid User ID format. Discord Snowflake IDs are 17-20 digits.' }, { status: 400 });
     }
 
-    // Require passcode if DASHBOARD_PASSCODE or ADMIN_KEY is configured
-    if (ADMIN_PASSCODE) {
-      if (!passcode || passcode !== ADMIN_PASSCODE) {
-        const count = (attemptInfo?.count || 0) + 1;
-        const lockUntil = count >= 5 ? now + 60_000 : 0; // Lock for 60s after 5 failed attempts
-        loginAttempts.set(ip, { count, lockUntil });
+    // Require passcode to be configured in environment
+    if (!ADMIN_PASSCODE) {
+      return NextResponse.json(
+        { error: 'Developer passcode login is disabled because DASHBOARD_PASSCODE is not configured. Please use Discord OAuth2.' },
+        { status: 403 }
+      );
+    }
 
-        return NextResponse.json(
-          { error: 'Invalid authentication key / developer passcode.' },
-          { status: 401 }
-        );
-      }
+    // Verify passcode with timing-safe comparison to prevent timing attacks
+    const userBuffer = Buffer.from(String(passcode || ''));
+    const expectedBuffer = Buffer.from(ADMIN_PASSCODE);
+    const isPasscodeValid =
+      userBuffer.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(userBuffer, expectedBuffer);
+
+    if (!isPasscodeValid) {
+      const count = (attemptInfo?.count || 0) + 1;
+      const lockUntil = count >= 5 ? now + 60_000 : 0; // Lock for 60s after 5 failed attempts
+      loginAttempts.set(ip, { count, lockUntil });
+
+      return NextResponse.json(
+        { error: 'Invalid authentication key / developer passcode.' },
+        { status: 401 }
+      );
     }
 
     // Reset failed attempts upon successful authentication

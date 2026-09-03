@@ -6,9 +6,17 @@ let server: http.Server | null = null;
 export function startHealthServer(): void {
   if (server) return;
 
-  // Use HEALTH_PORT if explicitly set; otherwise default to 10000
-  // Note: Primary PORT is reserved for the Next.js Web Dashboard.
-  const port = process.env.HEALTH_PORT ? parseInt(process.env.HEALTH_PORT, 10) : 10000;
+  // Primary PORT is reserved for the Next.js Web Dashboard.
+  const dashboardPort = parseInt(String(process.env.SERVER_PORT || process.env.PORT || process.env.DASHBOARD_PORT || '3000'), 10);
+  const healthPortEnv = process.env.HEALTH_PORT;
+
+  // Avoid EADDRINUSE on platforms like Render where PORT is assigned to 10000
+  if (!healthPortEnv && dashboardPort === 10000) {
+    consoleLog('info', 'startup', 'Web dashboard is configured on port 10000; health checks are served via Next.js /api/health.');
+    return;
+  }
+
+  const port = healthPortEnv ? parseInt(healthPortEnv, 10) : (dashboardPort === 10000 ? 10001 : 10000);
   const host = '0.0.0.0';
 
   server = http.createServer((_req, res) => {

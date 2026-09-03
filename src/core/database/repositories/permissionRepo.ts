@@ -181,3 +181,42 @@ function mapPermitRow(row: Record<string, unknown>): PermitRecord {
     createdAt: row.created_at as Date,
   };
 }
+
+export async function hasPolicyPermit(
+  guildId: string,
+  userId: string,
+  roleIds: string[],
+  moduleName: string,
+): Promise<boolean> {
+  try {
+    const db = getDb();
+
+    // 1. Check explicit user override
+    const userOverride = await db`
+      SELECT effect FROM user_overrides
+      WHERE guild_id = ${guildId} AND user_id = ${userId} AND (module = ${moduleName} OR module = 'all')
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    if (userOverride.length > 0) {
+      return userOverride[0].effect === 'ALLOW';
+    }
+
+    // 2. Check role policies if member has roles
+    if (roleIds.length > 0) {
+      const policies = await db`
+        SELECT profile_id FROM role_policies
+        WHERE guild_id = ${guildId} AND role_id = ANY(${roleIds}) AND status = 'active'
+      `;
+      for (const p of policies) {
+        const profId = (String(p.profile_id || '')).toLowerCase();
+        if (profId === 'administrator') return true;
+        if (profId === 'moderator' && ['moderation', 'sticky', 'media', 'community', 'suggestion', 'confession'].includes(moduleName)) return true;
+        if (profId === 'economy_manager' && ['economy', 'store', 'income'].includes(moduleName)) return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}

@@ -180,7 +180,7 @@ export async function handleMessage(message: Message): Promise<void> {
   }
 
   if (command.botPermissions.length > 0) {
-    const botMember = message.guild.members.me;
+    const botMember = message.guild.members.me ?? (await message.guild.members.fetchMe().catch(() => null));
     if (botMember) {
       const botPerms = checkBotPermissions(botMember, command.botPermissions);
       if (!botPerms.hasAll) {

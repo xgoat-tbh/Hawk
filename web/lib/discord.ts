@@ -23,6 +23,7 @@ export interface DiscordRole {
   color: number;
   position: number;
   managed: boolean;
+  permissions?: string;
 }
 
 export interface DiscordEmoji {
@@ -44,12 +45,13 @@ function getBotToken(): string {
   return process.env.DISCORD_TOKEN || process.env.BOT_TOKEN || '';
 }
 
-// In-Memory Cache Store to prevent Discord 429 Rate Limits
+// In-Memory Cache Store to prevent Discord 429 Rate Limits (capped at 500 entries)
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
 }
 
+const MAX_MEMORY_CACHE_SIZE = 500;
 const memoryCache = new Map<string, CacheEntry<any>>();
 
 function getFromCache<T>(key: string, maxAgeMs: number): T | null {
@@ -67,12 +69,33 @@ function getStaleFallback<T>(key: string): T | null {
 }
 
 function setToCache<T>(key: string, data: T) {
+  if (memoryCache.size >= MAX_MEMORY_CACHE_SIZE) {
+    const firstKey = memoryCache.keys().next().value;
+    if (firstKey) memoryCache.delete(firstKey);
+  }
   memoryCache.set(key, { data, timestamp: Date.now() });
 }
 
 export async function fetchBotGuilds(): Promise<DiscordGuild[]> {
   const cached = getFromCache<DiscordGuild[]>('bot_guilds', 60_000); // 60s cache
   if (cached) return cached;
+
+  // 1. Fast path: Use in-process hawkClient if available
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.guilds?.cache?.size) {
+    const mapped: DiscordGuild[] = Array.from(hawkClient.guilds.cache.values()).map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      icon: g.icon,
+      owner: false,
+      hasBot: true,
+      iconUrl: g.icon
+        ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=128`
+        : null,
+    }));
+    setToCache('bot_guilds', mapped);
+    return mapped;
+  }
 
   const token = getBotToken();
   if (!token) return getStaleFallback<DiscordGuild[]>('bot_guilds') || [];
@@ -114,6 +137,23 @@ export async function fetchGuildChannels(guildId: string): Promise<DiscordChanne
   const cached = getFromCache<DiscordChannel[]>(cacheKey, 30_000); // 30s cache
   if (cached) return cached;
 
+  // 1. Fast path: Use in-process hawkClient if available
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.guilds?.cache) {
+    const g = hawkClient.guilds.cache.get(guildId);
+    if (g && g.channels?.cache?.size > 0) {
+      const channels: DiscordChannel[] = Array.from(g.channels.cache.values()).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        parentId: c.parentId || null,
+        position: c.rawPosition ?? c.position ?? 0,
+      }));
+      setToCache(cacheKey, channels);
+      return channels;
+    }
+  }
+
   const token = getBotToken();
   if (!token) return getStaleFallback<DiscordChannel[]>(cacheKey) || [];
 
@@ -146,6 +186,24 @@ export async function fetchGuildRoles(guildId: string): Promise<DiscordRole[]> {
   const cached = getFromCache<DiscordRole[]>(cacheKey, 30_000); // 30s cache
   if (cached) return cached;
 
+  // 1. Fast path: Use in-process hawkClient if available
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.guilds?.cache) {
+    const g = hawkClient.guilds.cache.get(guildId);
+    if (g && g.roles?.cache?.size > 0) {
+      const roles: DiscordRole[] = Array.from(g.roles.cache.values()).map((r: any) => ({
+        id: r.id,
+        name: r.name,
+        color: r.color,
+        position: r.position,
+        managed: r.managed,
+        permissions: r.permissions?.bitfield !== undefined ? String(r.permissions.bitfield) : undefined,
+      }));
+      setToCache(cacheKey, roles);
+      return roles;
+    }
+  }
+
   const token = getBotToken();
   if (!token) return getStaleFallback<DiscordRole[]>(cacheKey) || [];
 
@@ -177,6 +235,22 @@ export async function fetchGuildEmojis(guildId: string): Promise<DiscordEmoji[]>
   const cacheKey = `emojis_${guildId}`;
   const cached = getFromCache<DiscordEmoji[]>(cacheKey, 60_000); // 60s cache
   if (cached) return cached;
+
+  // 1. Fast path: Use in-process hawkClient if available
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.guilds?.cache) {
+    const g = hawkClient.guilds.cache.get(guildId);
+    if (g && g.emojis?.cache?.size > 0) {
+      const emojis: DiscordEmoji[] = Array.from(g.emojis.cache.values()).map((e: any) => ({
+        id: e.id,
+        name: e.name,
+        animated: Boolean(e.animated),
+        url: `https://cdn.discordapp.com/emojis/${e.id}.${e.animated ? 'gif' : 'png'}?size=64&quality=lossless`,
+      }));
+      setToCache(cacheKey, emojis);
+      return emojis;
+    }
+  }
 
   const token = getBotToken();
   if (!token) return getStaleFallback<DiscordEmoji[]>(cacheKey) || [];
@@ -215,6 +289,24 @@ export async function fetchGuildMember(guildId: string, userId: string): Promise
   const cached = getFromCache<{ roles: string[]; permissions?: string; user?: any }>(cacheKey, 30_000);
   if (cached) return cached;
 
+  // 1. Fast path: Use in-process hawkClient if available
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.guilds?.cache) {
+    const g = hawkClient.guilds.cache.get(guildId);
+    if (g) {
+      const m = g.members.cache.get(userId);
+      if (m) {
+        const memberData = {
+          roles: Array.from(m.roles.cache.keys()) as string[],
+          permissions: m.permissions?.bitfield !== undefined ? String(m.permissions.bitfield) : undefined,
+          user: { id: m.user.id, username: m.user.username, avatar: m.user.avatar },
+        };
+        setToCache(cacheKey, memberData);
+        return memberData;
+      }
+    }
+  }
+
   const token = getBotToken();
   if (!token) return null;
 
@@ -237,6 +329,22 @@ export async function fetchGuildDetails(guildId: string): Promise<{ id: string; 
   const cacheKey = `guild_details_${guildId}`;
   const cached = getFromCache<{ id: string; name: string; icon: string | null; owner_id: string }>(cacheKey, 60_000);
   if (cached) return cached;
+
+  // 1. Fast path: Use in-process hawkClient if available
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.guilds?.cache) {
+    const g = hawkClient.guilds.cache.get(guildId);
+    if (g) {
+      const details = {
+        id: g.id,
+        name: g.name,
+        icon: g.icon,
+        owner_id: g.ownerId,
+      };
+      setToCache(cacheKey, details);
+      return details;
+    }
+  }
 
   const token = getBotToken();
   if (!token) return null;
