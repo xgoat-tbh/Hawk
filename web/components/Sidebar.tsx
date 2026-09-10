@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
 
+import { useGuildData } from '@/context/GuildContext';
+
 interface SidebarProps {
   guildId: string;
   guildName: string;
@@ -38,48 +40,57 @@ export function Sidebar({
   onCloseMobile,
 }: SidebarProps) {
   const pathname = usePathname();
+  const { userPermissions } = useGuildData();
+
+  const isModuleAllowed = (moduleId?: string) => {
+    if (!moduleId) return true;
+    if (!userPermissions) return true;
+    if (userPermissions.isOwner || userPermissions.isAdmin) return true;
+    const perm = userPermissions.modules[moduleId];
+    return perm ? perm.view : false;
+  };
 
   const navGroups = [
     {
       group: 'SERVER',
       items: [
         { label: 'Overview', href: `/dashboard/${guildId}`, icon: Sliders },
-        { label: 'General Settings', href: `/dashboard/${guildId}/general`, icon: Sliders },
-        { label: 'Permissions & Rules', href: `/dashboard/${guildId}/permissions`, icon: ShieldCheck },
-      ],
+        { label: 'General Settings', href: `/dashboard/${guildId}/general`, icon: Sliders, module: 'general' },
+        { label: 'Permissions & Rules', href: `/dashboard/${guildId}/permissions`, icon: ShieldCheck, module: 'permissions' },
+      ].filter((item) => isModuleAllowed(item.module)),
     },
     {
       group: 'ECONOMY',
       items: [
-        { label: 'Economy & Rewards', href: `/dashboard/${guildId}/economy`, icon: Coins },
-        { label: 'Role Salaries', href: `/dashboard/${guildId}/income`, icon: Briefcase },
-        { label: 'Store Catalog', href: `/dashboard/${guildId}/store`, icon: ShoppingBag },
-      ],
+        { label: 'Economy & Rewards', href: `/dashboard/${guildId}/economy`, icon: Coins, module: 'economy' },
+        { label: 'Role Salaries', href: `/dashboard/${guildId}/income`, icon: Briefcase, module: 'economy' },
+        { label: 'Store Catalog', href: `/dashboard/${guildId}/store`, icon: ShoppingBag, module: 'economy' },
+      ].filter((item) => isModuleAllowed(item.module)),
     },
     {
       group: 'VOICE',
       items: [
-        { label: 'Private Voice (PVC)', href: `/dashboard/${guildId}/pvc`, icon: Radio },
-        { label: 'Gaming LFG', href: `/dashboard/${guildId}/gaming`, icon: Gamepad2 },
-      ],
+        { label: 'Private Voice (PVC)', href: `/dashboard/${guildId}/pvc`, icon: Radio, module: 'pvc' },
+        { label: 'Gaming LFG', href: `/dashboard/${guildId}/gaming`, icon: Gamepad2, module: 'gaming' },
+      ].filter((item) => isModuleAllowed(item.module)),
     },
     {
       group: 'COMMUNITY',
       items: [
         { label: 'Welcome Greetings', href: `/dashboard/${guildId}/welcome`, icon: HeartHandshake },
-        { label: 'Community Tools', href: `/dashboard/${guildId}/community`, icon: MessageSquare },
-        { label: 'Media Channels', href: `/dashboard/${guildId}/media`, icon: ImageIcon },
-        { label: 'Sticky Notices', href: `/dashboard/${guildId}/sticky`, icon: Pin },
-      ],
+        { label: 'Community Tools', href: `/dashboard/${guildId}/community`, icon: MessageSquare, module: 'community' },
+        { label: 'Media Channels', href: `/dashboard/${guildId}/media`, icon: ImageIcon, module: 'media' },
+        { label: 'Sticky Notices', href: `/dashboard/${guildId}/sticky`, icon: Pin, module: 'sticky' },
+      ].filter((item) => isModuleAllowed(item.module)),
     },
     {
       group: 'INSIGHTS & SYSTEM',
       items: [
-        { label: 'Audit Log', href: `/dashboard/${guildId}/permissions?tab=audit`, icon: FileText },
-        { label: 'Access Simulator', href: `/dashboard/${guildId}/permissions?tab=simulator`, icon: Activity },
-      ],
+        { label: 'Audit Log', href: `/dashboard/${guildId}/permissions?tab=audit`, icon: FileText, module: 'permissions' },
+        { label: 'Access Simulator', href: `/dashboard/${guildId}/permissions?tab=preview`, icon: Activity, module: 'permissions' },
+      ].filter((item) => isModuleAllowed(item.module)),
     },
-  ];
+  ].filter((g) => g.items.length > 0);
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[#08090a] border-r border-[#17191c]">

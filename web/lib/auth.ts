@@ -88,6 +88,18 @@ function setGuildAuthCache(key: string, authorized: boolean): void {
   guildAuthCache.set(key, { authorized, timestamp: Date.now() });
 }
 
+export async function isGuildOwner(userId: string, guildId: string): Promise<boolean> {
+  const cleanUserId = userId.trim();
+  const cleanGuildId = guildId.trim();
+  if (isBotOwner(cleanUserId)) return true;
+  try {
+    const guild = await fetchGuildDetails(cleanGuildId);
+    return Boolean(guild && guild.owner_id === cleanUserId);
+  } catch {
+    return false;
+  }
+}
+
 export async function canManageGuild(userId: string, guildId: string): Promise<boolean> {
   const cleanUserId = userId.trim();
   const cleanGuildId = guildId.trim();
@@ -141,10 +153,84 @@ export async function canManageGuild(userId: string, guildId: string): Promise<b
         }
       }
     }
+
+    // 4. Check user_overrides in PostgreSQL database
+    const overrides = await db`
+      SELECT 1 FROM user_overrides
+      WHERE guild_id = ${cleanGuildId}
+        AND user_id = ${cleanUserId}
+        AND effect = 'ALLOW'
+      LIMIT 1
+    `;
+    if (overrides.length > 0) {
+      setGuildAuthCache(cacheKey, true);
+      return true;
+    }
   } catch (error) {
     console.error(`Error checking guild authorization for user ${cleanUserId} on ${cleanGuildId}:`, error);
   }
 
   setGuildAuthCache(cacheKey, false);
   return false;
+}
+
+export async function getUserModulePermissions(userId: string, guildId: string): Promise<{
+  isOwner: boolean;
+  isAdmin: boolean;
+  modules: Record<string, { view: boolean; manage: boolean }>;
+}> {
+  const cleanUserId = userId.trim();
+  const cleanGuildId = guildId.trim();
+  const isOwner = await isGuildOwner(cleanUserId, cleanGuildId);
+  const isGlobalAdmin = await isAuthorizedUser(cleanUserId);
+
+  const allModulesList = ['general', 'economy', 'pvc', 'gaming', 'media', 'sticky', 'permissions', 'community'];
+
+  if (isOwner || isGlobalAdmin) {
+    const modules: Record<string, { view: boolean; manage: boolean }> = {};
+    for (const m of allModulesList) {
+      modules[m] = { view: true, manage: true };
+    }
+    return { isOwner: true, isAdmin: true, modules };
+  }
+
+  // Check Discord admin
+  let isDiscordAdmin = false;
+  try {
+    const member = await fetchGuildMember(cleanGuildId, cleanUserId);
+    if (member?.permissions) {
+      const perms = BigInt(member.permissions);
+      if ((perms & 0x8n) === 0x8n || (perms & 0x20n) === 0x20n) isDiscordAdmin = true;
+    }
+  } catch (error) {
+    console.debug('Could not fetch guild member permissions:', error);
+  }
+
+  // Fetch overrides
+  let userOverrides: { module: string; action: string; effect: string }[] = [];
+  try {
+    userOverrides = await db`
+      SELECT module, action, effect FROM user_overrides
+      WHERE guild_id = ${cleanGuildId} AND user_id = ${cleanUserId}
+    `;
+  } catch (error) {
+    console.debug('Could not fetch user_overrides:', error);
+  }
+
+  const modules: Record<string, { view: boolean; manage: boolean }> = {};
+
+  for (const m of allModulesList) {
+    if (userOverrides.length > 0) {
+      const viewOv = userOverrides.find((o) => o.module === m && o.action === 'view');
+      const manageOv = userOverrides.find((o) => o.module === m && o.action === 'manage');
+      const canManage = manageOv?.effect === 'ALLOW';
+      const canView = canManage || viewOv?.effect === 'ALLOW';
+      modules[m] = { view: canView, manage: canManage };
+    } else {
+      // Default to discord admin access if no explicit overrides
+      modules[m] = { view: isDiscordAdmin, manage: isDiscordAdmin };
+    }
+  }
+
+  return { isOwner, isAdmin: isDiscordAdmin, modules };
 }

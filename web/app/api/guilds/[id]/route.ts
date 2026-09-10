@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, canManageGuild } from '@/lib/auth';
+import { getSession, canManageGuild, isGuildOwner, getUserModulePermissions } from '@/lib/auth';
 import { fetchBotGuilds, fetchGuildChannels, fetchGuildRoles, fetchGuildEmojis, fetchBotProfile } from '@/lib/discord';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 
@@ -203,6 +203,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     bot_commander_role_id: economyConfig.bot_commander_role_id || null,
   };
 
+  const isOwner = await isGuildOwner(session.id, guildId);
+  const userPermissions = await getUserModulePermissions(session.id, guildId);
+
   return NextResponse.json({
     guild: targetGuild
       ? {
@@ -213,6 +216,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         }
       : { id: guildId, name: 'Discord Server', iconUrl: null },
     bot: botProfile,
+    isOwner,
+    userPermissions,
     channels,
     roles: roles.filter((r) => r.name !== '@everyone'),
     emojis,

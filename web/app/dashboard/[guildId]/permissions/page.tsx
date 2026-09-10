@@ -51,6 +51,7 @@ export default function PermissionsMasterPage() {
 
   const [commandSearch, setCommandSearch] = useState('');
   const [commandFilter, setCommandFilter] = useState<'ALL' | 'OVERRIDDEN' | 'CRITICAL'>('ALL');
+  const [isOwner, setIsOwner] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export default function PermissionsMasterPage() {
           if (data.rolePolicies) setRolePolicies(data.rolePolicies);
           if (data.userOverrides) setUserOverrides(data.userOverrides);
           if (data.commandAcls) setCommandAcls(data.commandAcls);
+          if (data.isOwner !== undefined) setIsOwner(Boolean(data.isOwner));
         }
       } catch (err) {
         console.error('Failed to load permissions:', err);
@@ -409,6 +411,8 @@ export default function PermissionsMasterPage() {
           <UserOverridesList
             overrides={userOverrides}
             onSaveOverrides={handleSaveUserOverrides}
+            isOwner={isOwner}
+            profiles={profiles}
           />
         </div>
       )}

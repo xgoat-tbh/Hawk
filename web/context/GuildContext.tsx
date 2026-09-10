@@ -18,6 +18,12 @@ interface GuildContextValue {
   roles: DiscordRole[];
   emojis: DiscordEmoji[];
   config: any;
+  isOwner: boolean;
+  userPermissions: {
+    isOwner: boolean;
+    isAdmin: boolean;
+    modules: Record<string, { view: boolean; manage: boolean }>;
+  } | null;
   loading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
@@ -65,6 +71,12 @@ export function GuildProvider({
   const [roles, setRoles] = useState<DiscordRole[]>([]);
   const [emojis, setEmojis] = useState<DiscordEmoji[]>([]);
   const [config, setConfig] = useState<any>({});
+  const [isOwner, setIsOwner] = useState(false);
+  const [userPermissions, setUserPermissions] = useState<{
+    isOwner: boolean;
+    isAdmin: boolean;
+    modules: Record<string, { view: boolean; manage: boolean }>;
+  } | null>(null);
   const [loadingStep, setLoadingStep] = useState(1);
 
   const fetchGuildBundle = useCallback(async () => {
@@ -90,6 +102,8 @@ export function GuildProvider({
       if (data.roles) setRoles(data.roles);
       if (data.emojis) setEmojis(data.emojis);
       if (data.config) setConfig(data.config);
+      setIsOwner(Boolean(data.isOwner));
+      if (data.userPermissions) setUserPermissions(data.userPermissions);
     } catch (err: any) {
       console.error('Failed to fetch guild bundle:', err);
       setError(err.message || 'Error loading server data.');
@@ -123,6 +137,8 @@ export function GuildProvider({
         roles,
         emojis,
         config,
+        isOwner,
+        userPermissions,
         loading,
         error,
         refreshData: fetchGuildBundle,

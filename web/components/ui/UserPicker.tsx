@@ -94,8 +94,11 @@ export function UserPicker({
     handleClose();
   };
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleManualSubmit = (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const clean = customIdInput.trim().replace(/[<@!>]/g, '');
     if (clean) {
       onChange(clean, `User ${clean.slice(-4)}`);
@@ -154,7 +157,7 @@ export function UserPicker({
           className="absolute top-full left-0 mt-1.5 w-full bg-[#0d0e10] border border-[#2b2f34] rounded-md shadow-2xl z-[100] overflow-hidden"
         >
           {/* Direct ID Input Form */}
-          <form onSubmit={handleManualSubmit} className="p-2 border-b border-[#24272b] bg-[#0a0b0d] flex items-center gap-2">
+          <div className="p-2 border-b border-[#24272b] bg-[#0a0b0d] flex items-center gap-2">
             <Search className="w-3.5 h-3.5 text-[#7e8389] shrink-0 ml-1" />
             <input
               ref={searchInputRef}
@@ -164,18 +167,30 @@ export function UserPicker({
                 setCustomIdInput(e.target.value);
                 setSearch(e.target.value);
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleManualSubmit(e);
+                }
+              }}
               placeholder="Paste Discord User ID or search..."
               className="w-full bg-transparent text-xs text-[#f1f2f3] placeholder:text-[#7e8389] focus:outline-none font-mono"
             />
             {customIdInput.trim() && (
               <button
-                type="submit"
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleManualSubmit(e);
+                }}
                 className="px-2 py-0.5 rounded bg-[#17191c] border border-[#24272b] text-[10px] font-mono text-[#f1f2f3] hover:bg-[#25282c] shrink-0"
               >
                 Use ID
               </button>
             )}
-          </form>
+          </div>
 
           {/* User Suggestions List */}
           <HawkScrollArea maxHeight="200px" className="p-1 space-y-0.5">

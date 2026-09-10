@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, canManageGuild } from '@/lib/auth';
+import { getSession, canManageGuild, isGuildOwner } from '@/lib/auth';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 import { logAuditEvent } from '@/lib/audit';
 import { BOT_COMMAND_CATALOG } from '@/lib/commands';
@@ -133,8 +133,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
+  const isOwner = await isGuildOwner(session.id, guildId);
   const permissions = await fetchGuildPermissions(guildId);
-  return NextResponse.json(permissions);
+  return NextResponse.json({
+    ...permissions,
+    isOwner,
+  });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -219,6 +223,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         source: 'DASHBOARD',
       });
     } else if (action === 'save_user_overrides') {
+      const isOwner = await isGuildOwner(session.id, guildId);
+      if (!isOwner) {
+        return NextResponse.json(
+          { error: 'Only the Server Owner or Bot Superadmins can modify user overrides.' },
+          { status: 403 }
+        );
+      }
       const overrides = data.userOverrides || [];
       await db.begin(async (tx) => {
         await tx`DELETE FROM user_overrides WHERE guild_id = ${guildId}`;
