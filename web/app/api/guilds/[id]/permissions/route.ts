@@ -3,6 +3,7 @@ import { getSession, canManageGuild, isGuildOwner } from '@/lib/auth';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 import { logAuditEvent } from '@/lib/audit';
 import { BOT_COMMAND_CATALOG } from '@/lib/commands';
+import { fetchGuildMember, fetchDiscordUser } from '@/lib/discord';
 import {
   DEFAULT_PRESET_PROFILES,
   PermissionProfile,
@@ -52,7 +53,7 @@ export async function fetchGuildPermissions(guildId: string): Promise<{
     console.warn('role_policies query error:', err);
   }
 
-  // 3. Fetch user overrides from PostgreSQL
+  // 3. Fetch user overrides from PostgreSQL & sync with dashboard_access
   let userOverrides: UserOverride[] = [];
   try {
     const overrideRows = await db`SELECT * FROM user_overrides WHERE guild_id = ${guildId} ORDER BY created_at ASC`;
@@ -63,8 +64,72 @@ export async function fetchGuildPermissions(guildId: string): Promise<{
       action: r.action as 'view' | 'manage' | 'delete',
       effect: r.effect as 'ALLOW' | 'DENY',
     }));
+
+    // Fetch users authorized in dashboard_access table
+    const dashRows = await db`SELECT user_id, granted_by, granted_at, notes FROM dashboard_access ORDER BY granted_at ASC`;
+    const userIdsWithOverrides = new Set(userOverrides.map((uo) => uo.userId));
+
+    // For any user who has dashboard_access but doesn't have custom user_overrides saved for this guild yet:
+    for (const d of dashRows) {
+      if (!userIdsWithOverrides.has(d.user_id)) {
+        // Resolve Discord member/user display name and avatar
+        const member = await fetchGuildMember(guildId, d.user_id);
+        const user = member?.user || (await fetchDiscordUser(d.user_id));
+        const resolvedName =
+          member?.user?.global_name ||
+          member?.user?.username ||
+          user?.global_name ||
+          user?.username ||
+          `User ${d.user_id}`;
+
+        const avatarHash = member?.user?.avatar || user?.avatar;
+        const avatarUrl = avatarHash
+          ? `https://cdn.discordapp.com/avatars/${d.user_id}/${avatarHash}.png?size=128`
+          : null;
+
+        // Default to Standard Moderator preset for all dashboard modules except owner-only permissions
+        const standardModules = ['general', 'economy', 'pvc', 'gaming', 'media', 'sticky'];
+        for (const mod of standardModules) {
+          userOverrides.push({
+            userId: d.user_id,
+            userName: resolvedName,
+            avatarUrl,
+            module: mod,
+            action: 'view',
+            effect: 'ALLOW',
+          });
+          userOverrides.push({
+            userId: d.user_id,
+            userName: resolvedName,
+            avatarUrl,
+            module: mod,
+            action: 'manage',
+            effect: 'ALLOW',
+          });
+        }
+      }
+    }
+
+    // Enrich all distinct userIds with avatarUrl
+    const distinctUserIds = Array.from(new Set(userOverrides.map((uo) => uo.userId)));
+    const avatarMap = new Map<string, string | null>();
+    await Promise.all(
+      distinctUserIds.map(async (uid) => {
+        const member = await fetchGuildMember(guildId, uid);
+        const user = member?.user || (await fetchDiscordUser(uid));
+        const avatarHash = member?.user?.avatar || user?.avatar;
+        if (avatarHash) {
+          avatarMap.set(uid, `https://cdn.discordapp.com/avatars/${uid}/${avatarHash}.png?size=128`);
+        }
+      })
+    );
+
+    userOverrides = userOverrides.map((uo) => ({
+      ...uo,
+      avatarUrl: uo.avatarUrl || avatarMap.get(uo.userId) || null,
+    }));
   } catch (err) {
-    console.warn('user_overrides query error:', err);
+    console.warn('user_overrides / dashboard_access query error:', err);
   }
 
   // 4. Construct command ACLs synced with PostgreSQL 'permits' table
@@ -230,8 +295,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           { status: 403 }
         );
       }
-      const overrides = data.userOverrides || [];
+      const overrides: UserOverride[] = data.userOverrides || [];
+      const updatedUserIds = new Set(overrides.map((uo) => uo.userId));
+
       await db.begin(async (tx) => {
+        // 1. Fetch previously existing users for this guild to detect deleted/revoked users
+        const prevUsers = await tx`SELECT DISTINCT user_id FROM user_overrides WHERE guild_id = ${guildId}`;
+        const prevUserIds = new Set(prevUsers.map((r: any) => r.user_id));
+
+        // 2. Full revocation: if an owner deleted a user from user_overrides, remove them from dashboard_access
+        const removedUserIds = Array.from(prevUserIds).filter((uid) => !updatedUserIds.has(uid));
+        for (const remUid of removedUserIds) {
+          await tx`DELETE FROM dashboard_access WHERE user_id = ${remUid}`;
+        }
+
+        // 3. Clear and rewrite user_overrides for this guild
         await tx`DELETE FROM user_overrides WHERE guild_id = ${guildId}`;
         for (const uo of overrides) {
           await tx`
@@ -244,6 +322,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               updated_at = NOW()
           `;
         }
+
+        // 4. Ensure all active users in updated list are synced to dashboard_access
+        for (const uid of Array.from(updatedUserIds)) {
+          await tx`
+            INSERT INTO dashboard_access (user_id, granted_by, notes)
+            VALUES (${uid}, ${session.id}, 'Granted via Web Dashboard')
+            ON CONFLICT (user_id) DO NOTHING
+          `;
+        }
       });
 
       await logAuditEvent({
@@ -252,7 +339,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         userName: session.username,
         action: 'Updated User Permission Overrides',
         module: 'permissions',
-        newValue: `${overrides.length} user overrides saved to database`,
+        newValue: `${overrides.length} user overrides saved to database (${updatedUserIds.size} users)`,
         severity: 'WARNING',
         source: 'DASHBOARD',
       });

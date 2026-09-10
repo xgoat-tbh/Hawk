@@ -32,6 +32,7 @@ export interface RolePolicy {
 export interface UserOverride {
   userId: string;
   userName: string;
+  avatarUrl?: string | null;
   module: string;
   action: ActionType;
   effect: 'ALLOW' | 'DENY';

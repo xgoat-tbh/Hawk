@@ -521,3 +521,41 @@ export async function deleteChannelMessage(channelId: string, messageId: string)
     return false;
   }
 }
+
+export async function fetchDiscordUser(userId: string): Promise<{ id: string; username: string; global_name?: string | null; avatar: string | null } | null> {
+  const cleanId = userId.trim();
+  const cacheKey = `user_${cleanId}`;
+  const cached = getFromCache<{ id: string; username: string; global_name?: string | null; avatar: string | null }>(cacheKey, 60_000);
+  if (cached) return cached;
+
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.users?.cache) {
+    const u = hawkClient.users.cache.get(cleanId);
+    if (u) {
+      const userData = {
+        id: u.id,
+        username: u.username,
+        global_name: u.globalName || u.displayName,
+        avatar: u.avatar,
+      };
+      setToCache(cacheKey, userData);
+      return userData;
+    }
+  }
+
+  const token = getBotToken();
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`https://discord.com/api/v10/users/${cleanId}`, {
+      headers: { Authorization: `Bot ${token}` },
+    });
+    if (!res.ok) return null;
+    const userData = await res.json();
+    setToCache(cacheKey, userData);
+    return userData;
+  } catch (error) {
+    console.error(`Error fetching Discord user ${cleanId}:`, error);
+    return null;
+  }
+}

@@ -32,6 +32,7 @@ interface UserOverridesListProps {
 interface UserAccessEntry {
   userId: string;
   userName: string;
+  avatarUrl?: string | null;
   modules: Record<string, { view: boolean; manage: boolean }>;
 }
 
@@ -66,12 +67,15 @@ export function UserOverridesList({
         entry = {
           userId: o.userId,
           userName: o.userName || `User ${o.userId.slice(-4)}`,
+          avatarUrl: o.avatarUrl || null,
           modules: {},
         };
         DASHBOARD_MODULES.forEach((m) => {
           entry!.modules[m.id] = { view: false, manage: false };
         });
         map.set(o.userId, entry);
+      } else if (!entry.avatarUrl && o.avatarUrl) {
+        entry.avatarUrl = o.avatarUrl;
       }
 
       if (entry.modules[o.module]) {
@@ -96,6 +100,7 @@ export function UserOverridesList({
           list.push({
             userId: u.userId,
             userName: u.userName,
+            avatarUrl: u.avatarUrl,
             module: mod,
             action: 'manage',
             effect: 'ALLOW',
@@ -103,6 +108,7 @@ export function UserOverridesList({
           list.push({
             userId: u.userId,
             userName: u.userName,
+            avatarUrl: u.avatarUrl,
             module: mod,
             action: 'view',
             effect: 'ALLOW',
@@ -111,6 +117,7 @@ export function UserOverridesList({
           list.push({
             userId: u.userId,
             userName: u.userName,
+            avatarUrl: u.avatarUrl,
             module: mod,
             action: 'view',
             effect: 'ALLOW',
@@ -120,6 +127,7 @@ export function UserOverridesList({
     });
     return list;
   };
+
 
   const handleAddUser = async () => {
     if (!newUserId.trim() || isSaving || !isOwner) return;
@@ -377,9 +385,17 @@ export function UserOverridesList({
                   {/* User Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1c1f23] pb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#17191c] border border-[#2b2f34] flex items-center justify-center shrink-0">
-                        <User className="w-4 h-4 text-[#a9adb2]" />
-                      </div>
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt=""
+                          className="w-8 h-8 rounded-full object-cover border border-[#2b2f34] shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-[#17191c] border border-[#2b2f34] flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4 text-[#a9adb2]" />
+                        </div>
+                      )}
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-[#f1f2f3]">{user.userName}</span>
