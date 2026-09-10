@@ -109,10 +109,11 @@ export function GuildProvider({
       setError(err.message || 'Error loading server data.');
     } finally {
       clearInterval(stepTimer);
-      // Brief pause to allow sleek transition
+      // Complete 360 circuit upon data resolution
+      setLoadingStep(4);
       setTimeout(() => {
         setLoading(false);
-      }, 150);
+      }, 350);
     }
   }, [guildId]);
 
@@ -126,6 +127,9 @@ export function GuildProvider({
       [moduleName]: data,
     }));
   }, []);
+
+  const progressPercent =
+    loadingStep === 1 ? 30 : loadingStep === 2 ? 65 : loadingStep === 3 ? 90 : 100;
 
   return (
     <GuildContext.Provider
@@ -147,52 +151,61 @@ export function GuildProvider({
     >
       {loading ? (
         <div className="fixed inset-0 z-50 bg-[#050505] flex flex-col items-center justify-center p-6 select-none animate-in fade-in duration-200">
-          <div className="max-w-md w-full glass-card p-8 flex flex-col items-center text-center space-y-6">
-            {/* Server Icon or Bot Icon */}
-            <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center relative overflow-hidden shadow-2xl">
-              {guild?.iconUrl ? (
-                <img
-                  src={guild.iconUrl}
-                  alt={guild.name}
-                  className="w-full h-full object-cover"
+          <div className="max-w-xs w-full flex flex-col items-center text-center space-y-5">
+            {/* Server Icon with 360° Perimeter Loading Bar */}
+            <div className="relative w-16 h-16 flex items-center justify-center">
+              {/* SVG 360 Square Edge Loader */}
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                viewBox="0 0 64 64"
+                fill="none"
+              >
+                {/* Subtle background track */}
+                <path
+                  d="M 32 1 H 48 A 15 15 0 0 1 63 16 V 48 A 15 15 0 0 1 48 63 H 16 A 15 15 0 0 1 1 48 V 16 A 15 15 0 0 1 16 1 Z"
+                  stroke="rgba(255, 255, 255, 0.08)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                 />
-              ) : (
-                <span className="text-base font-bold text-white font-mono">
-                  {initialGuildName ? initialGuildName.slice(0, 2).toUpperCase() : 'HK'}
-                </span>
-              )}
-              <div className="absolute inset-0 border border-white/20 rounded-2xl animate-pulse" />
+                {/* Animated Loading Stroke */}
+                <path
+                  d="M 32 1 H 48 A 15 15 0 0 1 63 16 V 48 A 15 15 0 0 1 48 63 H 16 A 15 15 0 0 1 1 48 V 16 A 15 15 0 0 1 16 1 Z"
+                  stroke="#ededed"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  pathLength={100}
+                  strokeDasharray="100"
+                  strokeDashoffset={100 - progressPercent}
+                  style={{
+                    transition: 'stroke-dashoffset 350ms cubic-bezier(0.4, 0, 0.2, 1)',
+                    filter: 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))',
+                  }}
+                />
+              </svg>
+
+              {/* Inner Logo Image / Fallback */}
+              <div className="w-[56px] h-[56px] rounded-[13px] bg-white/[0.04] flex items-center justify-center overflow-hidden shadow-2xl">
+                {guild?.iconUrl ? (
+                  <img
+                    src={guild.iconUrl}
+                    alt={guild.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-base font-bold text-white font-mono">
+                    {initialGuildName ? initialGuildName.slice(0, 2).toUpperCase() : 'HK'}
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-1.5">
-              <h2 className="text-base font-semibold text-white tracking-tight">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold text-white tracking-tight">
                 {guild?.name || initialGuildName || 'Discord Server'}
               </h2>
-              <p className="text-xs text-white/40">
+              <p className="text-[11px] text-white/40">
                 Synchronizing live configuration modules & Discord API state...
               </p>
-            </div>
-
-            {/* Stepped Progress Indicator */}
-            <div className="w-full space-y-3 pt-2">
-              <div className="h-1 w-full bg-white/[0.06] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-white transition-all duration-300 rounded-full"
-                  style={{ width: `${loadingStep * 33.3}%` }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] font-mono text-white/40">
-                <span className={loadingStep >= 1 ? 'text-white font-medium' : ''}>
-                  1. Server Info
-                </span>
-                <span className={loadingStep >= 2 ? 'text-white font-medium' : ''}>
-                  2. Channels & Roles
-                </span>
-                <span className={loadingStep >= 3 ? 'text-white font-medium' : ''}>
-                  3. Modules
-                </span>
-              </div>
             </div>
           </div>
         </div>
