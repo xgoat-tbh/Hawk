@@ -103,3 +103,40 @@ test('groupPermits correctly aggregates commands, modules, and target types', as
   assert.equal(grouped[1].commands.size, 2);
 });
 
+test('Owner module routes access_dash_ button and select interactions', async () => {
+  const { default: ownerManifest } = await import('../src/modules/owner/_module.js');
+  const router = new InteractionRouter();
+  router.registerModule(ownerManifest);
+
+  const fakeDashButton = {
+    isButton: () => true,
+    isAnySelectMenu: () => false,
+    isStringSelectMenu: () => false,
+    isChannelSelectMenu: () => false,
+    isModalSubmit: () => false,
+    customId: 'access_dash_page_next:1',
+    guild: null,
+  } as any;
+
+  const handledBtn = await router.dispatch(fakeDashButton);
+  assert.equal(handledBtn, true);
+
+  const fakeDashSelect = {
+    isButton: () => false,
+    isAnySelectMenu: () => true,
+    isStringSelectMenu: () => true,
+    isChannelSelectMenu: () => false,
+    isModalSubmit: () => false,
+    customId: 'access_dash_select_inspect:0',
+    values: ['dash_inspect:12345:0'],
+    guild: null,
+    user: { tag: 'test', id: '1' },
+    channel: null,
+    client: {} as any,
+  } as any;
+
+  const handledSelect = await router.dispatch(fakeDashSelect);
+  assert.equal(handledSelect, true);
+});
+
+

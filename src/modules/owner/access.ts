@@ -20,17 +20,20 @@ import { logEvent } from '../../core/logging/WebhookLogger.js';
 import { logAuditAction } from '../../core/logging/AuditLogger.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
-import { buildAccessListPayload } from './_accessHandler.js';
+import { buildAccessListPayload, buildDashboardListPayload } from './_accessHandler.js';
 
 export default defineCommand({
   name: 'access',
   aliases: ['permit'],
   module: 'owner',
-  description: 'Manage custom command & module permits (list, add, remove, fix) for users or roles.',
-  usage: 'access list | access fix | access add <target> <command|module|all> | access remove <target> <command|module|all>',
+  description: 'Manage custom permits and private dashboard access for users or roles.',
+  usage: 'access list [dashboard] | access fix | access add <target> <command|module|dashboard|all> | access remove <target> <command|module|dashboard|all>',
   examples: [
     'access list',
+    'access list dashboard',
     'access fix',
+    'access add @User dashboard',
+    'access remove @User dashboard',
     'access add @User wv',
     'access add @Role voice',
     'access add ?all voice',
@@ -51,11 +54,12 @@ export default defineCommand({
     }
 
     if (parsed.args.length === 0) {
-      await respond.error('Usage: `access list` | `access fix` | `access add <@user|@role|?all> <scope>` | `access remove <@user|@role|?all> <scope>`');
+      await respond.error('Usage: `access list [dashboard]` | `access fix` | `access add <@user|@role|?all> <scope>` | `access remove <@user|@role|?all> <scope>`');
       return;
     }
 
     const firstArg = parsed.args[0].toLowerCase();
+    const secondArg = parsed.args[1]?.toLowerCase();
 
     // ── Subcommand: fix / clean / prune (Ghost Permit Cleanup) ──
     if (firstArg === 'fix' || firstArg === 'clean' || firstArg === 'prune') {
@@ -139,6 +143,20 @@ export default defineCommand({
 
     // ── Subcommand: list ──────────────────────────────────────
     if (firstArg === 'list' || firstArg === 'show') {
+      if (secondArg === 'dashboard' || secondArg === 'dash') {
+        const dashData = await buildDashboardListPayload(guild, 0);
+        if (!dashData) {
+          await respond.info('No users currently have private Dashboard access.');
+          return;
+        }
+
+        await respond.raw({
+          components: dashData.components,
+          flags: dashData.payload.flags as any,
+        });
+        return;
+      }
+
       const listData = await buildAccessListPayload(guild, 0);
       if (!listData) {
         await respond.info('No custom permits have been granted in this server.');
@@ -148,6 +166,21 @@ export default defineCommand({
       await respond.raw({
         components: listData.components,
         flags: listData.payload.flags as any,
+      });
+      return;
+    }
+
+    // ── Direct Subcommand: dashboard / dash ──────────────────
+    if (firstArg === 'dashboard' || firstArg === 'dash') {
+      const dashData = await buildDashboardListPayload(guild, 0);
+      if (!dashData) {
+        await respond.info('No users currently have private Dashboard access.');
+        return;
+      }
+
+      await respond.raw({
+        components: dashData.components,
+        flags: dashData.payload.flags as any,
       });
       return;
     }
