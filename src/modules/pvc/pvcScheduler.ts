@@ -71,7 +71,21 @@ export async function checkPvcExpirations(client: Client): Promise<void> {
 
 export function startPvcScheduler(client: Client): NodeJS.Timeout {
   return setInterval(() => {
-    checkPvcExpirations(client).catch(err => console.error('PVC Scheduler Error:', err));
+    checkPvcExpirations(client).catch((err: any) => {
+      const code = err?.code || err?.name || '';
+      const msg = String(err?.message || '');
+      const isTimeout =
+        code === 'CONNECT_TIMEOUT' ||
+        code === 'ETIMEDOUT' ||
+        msg.includes('CONNECT_TIMEOUT') ||
+        msg.includes('ETIMEDOUT');
+
+      if (isTimeout) {
+        console.warn('[PVC Scheduler] Transient database timeout (Neon waking up or network reconnect). Retrying on next tick...');
+      } else {
+        console.error('PVC Scheduler Error:', err);
+      }
+    });
   }, 30000);
 }
 

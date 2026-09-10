@@ -24,9 +24,11 @@ export function getDb(): postgres.Sql {
       max: constants.dbPoolMax,
       idle_timeout: constants.dbIdleTimeout,
       connect_timeout: constants.dbConnectTimeout,
+      max_lifetime: constants.dbMaxLifetime,
       ssl: sslMode,
       prepare: false,
       onnotice: () => {},
+      keep_alive: 10,
     });
   }
   return sql;

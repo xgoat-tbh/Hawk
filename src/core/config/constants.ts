@@ -1,8 +1,9 @@
 export const constants = {
   defaultPrefix: '!',
-  dbPoolMax: 3,
-  dbIdleTimeout: 20,
-  dbConnectTimeout: 10,
+  dbPoolMax: 10,
+  dbIdleTimeout: 15,
+  dbConnectTimeout: 30,
+  dbMaxLifetime: 600,
   maxCooldownEntries: 500,
   cooldownCleanupInterval: 60_000,
   maxInteractionStates: 100,

@@ -29,11 +29,13 @@ export const db =
   globalForDb.db ??
   postgres(rawUrl, {
     max: 10,
-    idle_timeout: 20,
-    connect_timeout: 10,
+    idle_timeout: 15,
+    connect_timeout: 30,
+    max_lifetime: 600,
     ssl: sslMode,
     prepare: false,
     onnotice: () => {},
+    keep_alive: 10,
   });
 
 if (process.env.NODE_ENV !== 'production') globalForDb.db = db;
