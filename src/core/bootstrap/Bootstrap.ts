@@ -226,6 +226,8 @@ export class Bootstrap {
     client.on(Events.InteractionCreate, async (interaction) => {
       const handled = await interactionRouter.dispatch(interaction);
       if (!handled && (interaction.isButton() || interaction.isAnySelectMenu())) {
+        // Allow in-memory message component collectors a grace period to acknowledge or defer
+        await new Promise((resolve) => setTimeout(resolve, 800));
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: 'This interaction has expired or is unrecognized.',
