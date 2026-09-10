@@ -1,15 +1,16 @@
 import { getDb } from '../pool.js';
 import type { RestrictionRecord, RestrictionEffect } from '../../../types/permission.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
-const restrictionCache = new Map<string, RestrictionRecord[]>(); // guildId -> RestrictionRecord[]
+const restrictionCache = new TTLCache<string, RestrictionRecord[]>(30_000); // guildId -> RestrictionRecord[]
 
 export function invalidateRestrictionCache(guildId: string): void {
-  restrictionCache.delete(guildId);
+  restrictionCache.invalidate(guildId);
 }
 
 export async function getRestrictionsForGuild(guildId: string): Promise<RestrictionRecord[]> {
   const cached = restrictionCache.get(guildId);
-  if (cached) return cached;
+  if (cached !== undefined) return cached;
 
   try {
     const db = getDb();

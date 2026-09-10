@@ -1,24 +1,24 @@
 import { getDb } from '../pool.js';
 import type { PermitRecord } from '../../../types/permission.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
-const permitCache = new Map<string, { permits: PermitRecord[]; timestamp: number }>();
-const CACHE_TTL_MS = 5000;
+const permitCache = new TTLCache<string, PermitRecord[]>(30_000);
 
 export function invalidatePermitCache(guildId: string): void {
-  permitCache.delete(guildId);
+  permitCache.invalidate(guildId);
 }
 
 export async function getPermitsForGuild(guildId: string): Promise<PermitRecord[]> {
   const cached = permitCache.get(guildId);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.permits;
+  if (cached !== undefined) {
+    return cached;
   }
 
   try {
     const db = getDb();
     const rows = await db`SELECT * FROM permits WHERE guild_id = ${guildId}`;
     const mapped = rows.map(mapPermitRow);
-    permitCache.set(guildId, { permits: mapped, timestamp: Date.now() });
+    permitCache.set(guildId, mapped);
     return mapped;
   } catch {
     return [];

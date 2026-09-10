@@ -1,4 +1,5 @@
 import { getDb } from '../pool.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
 export interface VConfigRule {
   id: number;
@@ -11,15 +12,15 @@ export interface VConfigRule {
   updatedAt: Date;
 }
 
-const vconfigCache = new Map<string, VConfigRule[]>(); // guildId -> VConfigRule[]
+const vconfigCache = new TTLCache<string, VConfigRule[]>(300_000); // guildId -> VConfigRule[]
 
 export function invalidateVConfigCache(guildId: string): void {
-  vconfigCache.delete(guildId);
+  vconfigCache.invalidate(guildId);
 }
 
 export async function getVConfigRulesForGuild(guildId: string): Promise<VConfigRule[]> {
   const cached = vconfigCache.get(guildId);
-  if (cached) return cached;
+  if (cached !== undefined) return cached;
 
   try {
     const db = getDb();

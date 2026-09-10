@@ -22,6 +22,308 @@ import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
 import { buildAccessListPayload, buildDashboardListPayload } from './_accessHandler.js';
 
+interface ResolvedTarget {
+  targetType: 'user' | 'role';
+  targetId: string;
+  targetDisplay: string;
+}
+
+interface ParsedScope {
+  commandName: string | null;
+  moduleName: string | null;
+  scopeDisplay: string;
+}
+
+/**
+ * Prunes orphaned or invalid permits (deleted roles, non-existent commands/modules).
+ */
+async function handleFixSubcommand(ctx: CommandContext): Promise<void> {
+  const { guild, member, respond } = ctx;
+  const permits = await getPermitsForGuild(guild.id);
+  if (permits.length === 0) {
+    await respond.info('No permits exist in this server to clean.');
+    return;
+  }
+
+  const availableModules = getModules();
+  const ghostIds: number[] = [];
+  let invalidCmdCount = 0;
+  let deletedRoleCount = 0;
+  let invalidModCount = 0;
+
+  for (const p of permits) {
+    let isGhost = false;
+
+    if (p.targetType === 'role') {
+      if (!guild.roles.cache.has(p.targetId)) {
+        isGhost = true;
+        deletedRoleCount++;
+      }
+    }
+
+    if (!isGhost && p.commandName) {
+      const cmd = resolveCommand(p.commandName);
+      if (!cmd) {
+        isGhost = true;
+        invalidCmdCount++;
+      }
+    }
+
+    if (!isGhost && p.moduleName) {
+      if (!availableModules.includes(p.moduleName.toLowerCase())) {
+        isGhost = true;
+        invalidModCount++;
+      }
+    }
+
+    if (isGhost) {
+      ghostIds.push(p.id);
+    }
+  }
+
+  if (ghostIds.length === 0) {
+    await respond.success('All active permits are clean and valid. No ghost permits found.');
+    return;
+  }
+
+  const deletedCount = await deletePermitsByIds(guild.id, ghostIds);
+  const summary = `Cleaned **${deletedCount}** ghost permit(s) [Invalid commands: **${invalidCmdCount}** | Deleted roles: **${deletedRoleCount}** | Invalid modules: **${invalidModCount}**].`;
+  await respond.transientSuccess(summary, 8000);
+
+  logAuditAction({
+    guild,
+    action: 'Access Ghost Permits Cleaned',
+    executor: member,
+    details: [
+      `• **Total Removed:** ${deletedCount}`,
+      `• **Non-existent Commands:** ${invalidCmdCount}`,
+      `• **Deleted Roles:** ${deletedRoleCount}`,
+      `• **Invalid Modules:** ${invalidModCount}`,
+    ],
+  });
+
+  logEvent('info', 'command_execution', `Ghost permits fixed by ${member.user.tag}`, {
+    executor: member.user.tag,
+    guild: guild.name,
+    cleanedCount: deletedCount,
+    invalidCmdCount,
+    deletedRoleCount,
+    invalidModCount,
+  });
+}
+
+/**
+ * Lists active server permits or dashboard access entries.
+ */
+async function handleListSubcommand(ctx: CommandContext, isDashboard: boolean): Promise<void> {
+  const { guild, respond } = ctx;
+
+  if (isDashboard) {
+    const dashData = await buildDashboardListPayload(guild, 0);
+    if (!dashData) {
+      await respond.info('No users currently have private Dashboard access.');
+      return;
+    }
+    await respond.raw({
+      components: dashData.components,
+      flags: dashData.payload.flags as any,
+    });
+    return;
+  }
+
+  const listData = await buildAccessListPayload(guild, 0);
+  if (!listData) {
+    await respond.info('No custom permits have been granted in this server.');
+    return;
+  }
+
+  await respond.raw({
+    components: listData.components,
+    flags: listData.payload.flags as any,
+  });
+}
+
+/**
+ * Resolves a user or role identifier.
+ */
+async function resolveTarget(targetArg: string, guild: CommandContext['guild']): Promise<ResolvedTarget | null> {
+  const userResult = await resolveUser(targetArg, guild);
+  if (userResult.success) {
+    return {
+      targetType: 'user',
+      targetId: userResult.value.id,
+      targetDisplay: mentionUser(userResult.value.member ?? userResult.value.user, guild),
+    };
+  }
+
+  const roleResult = resolveRole(targetArg, guild);
+  if (roleResult.success) {
+    return {
+      targetType: 'role',
+      targetId: roleResult.value.id,
+      targetDisplay: mentionRole(roleResult.value.role, guild),
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Parses scope argument into command, module, or all.
+ */
+function parseScope(scopeArg: string, isRemoveMode: boolean): { scope?: ParsedScope; error?: string } {
+  if (scopeArg === 'all' || scopeArg === '*') {
+    return {
+      scope: {
+        commandName: null,
+        moduleName: null,
+        scopeDisplay: '**ALL commands & modules**',
+      },
+    };
+  }
+
+  if (scopeArg.startsWith('module:')) {
+    const modName = scopeArg.slice(7).trim().toLowerCase();
+    if (modName === 'owner' && !isRemoveMode) {
+      return { error: 'The **owner** module cannot be permitted or distributed to any user or role.' };
+    }
+    const allModules = getModules();
+    if (!allModules.includes(modName)) {
+      return { error: `Unknown module \`${modName}\`. Available modules: ${allModules.join(', ')}` };
+    }
+    return {
+      scope: {
+        commandName: null,
+        moduleName: modName,
+        scopeDisplay: `module **${modName}**`,
+      },
+    };
+  }
+
+  const cmd = resolveCommand(scopeArg);
+  if (cmd) {
+    if ((cmd.module === 'owner' || cmd.ownerOnly) && !isRemoveMode) {
+      return { error: `Owner command \`${cmd.name}\` cannot be permitted or distributed to any user or role.` };
+    }
+    return {
+      scope: {
+        commandName: cmd.name,
+        moduleName: cmd.module,
+        scopeDisplay: `command **${cmd.name}**`,
+      },
+    };
+  }
+
+  const allModules = getModules();
+  if (allModules.includes(scopeArg)) {
+    if (scopeArg === 'owner' && !isRemoveMode) {
+      return { error: 'The **owner** module cannot be permitted or distributed to any user or role.' };
+    }
+    return {
+      scope: {
+        commandName: null,
+        moduleName: scopeArg,
+        scopeDisplay: `module **${scopeArg}**`,
+      },
+    };
+  }
+
+  return { error: `Unknown command or module \`${scopeArg}\`.` };
+}
+
+/**
+ * Handles granting or revoking command permits or dashboard access.
+ */
+async function handleGrantOrRevokeSubcommand(ctx: CommandContext, firstArg: string): Promise<void> {
+  const { parsed, guild, member, respond } = ctx;
+
+  let isRemoveMode = false;
+  let targetIndex = 0;
+
+  if (firstArg === 'remove' || firstArg === 'revoke' || firstArg === 'delete') {
+    isRemoveMode = true;
+    targetIndex = 1;
+  } else if (firstArg === 'add' || firstArg === 'grant') {
+    targetIndex = 1;
+  }
+
+  const remainingArgs = parsed.args.slice(targetIndex);
+  if (remainingArgs.length < 2) {
+    await respond.error(
+      `Usage: \`access ${isRemoveMode ? 'remove' : 'add'} <@user|@role> <command|module|all>\``,
+    );
+    return;
+  }
+
+  const targetArg = remainingArgs[0];
+  const scopeArg = remainingArgs.slice(1).join(' ').trim().toLowerCase();
+
+  const target = await resolveTarget(targetArg, guild);
+  if (!target) {
+    await respond.error(`Could not resolve user or role \`${targetArg}\`.`);
+    return;
+  }
+
+  // Dashboard access flow
+  if (scopeArg === 'dashboard' || scopeArg === 'dash') {
+    if (target.targetType !== 'user') {
+      await respond.error('Dashboard access can only be granted to specific users, not roles.');
+      return;
+    }
+
+    if (isRemoveMode) {
+      const revoked = await revokeDashboardAccess(target.targetId);
+      if (revoked) {
+        await respond.success(`Revoked ${target.targetDisplay}'s private Dashboard access.`);
+      } else {
+        await respond.info(`User ${target.targetDisplay} did not have active Dashboard access.`);
+      }
+    } else {
+      await grantDashboardAccess(target.targetId, member.id, 'Granted via Discord access command');
+      await respond.success(`Granted ${target.targetDisplay} private Dashboard access. They can now log in using their Discord User ID!`);
+    }
+    return;
+  }
+
+  // General scope parsing
+  const parsedScopeResult = parseScope(scopeArg, isRemoveMode);
+  if (parsedScopeResult.error || !parsedScopeResult.scope) {
+    await respond.error(parsedScopeResult.error || 'Invalid scope.');
+    return;
+  }
+
+  const { commandName, moduleName, scopeDisplay } = parsedScopeResult.scope;
+
+  if (isRemoveMode) {
+    const sanitizedStaffName = sanitize(member.displayName || member.user.tag);
+    const removed = await removePermit(guild.id, target.targetType, target.targetId, commandName, moduleName, member.id, sanitizedStaffName);
+    if (removed) {
+      await respond.success(`Revoked ${target.targetDisplay} access to ${scopeDisplay}.`);
+      logEvent('info', 'command_execution', `Permit removed by ${member.user.tag}`, {
+        executor: member.user.tag,
+        target: target.targetId,
+        targetType: target.targetType,
+        commandName,
+        moduleName,
+        guild: guild.name,
+      });
+    } else {
+      await respond.info(`No active permit was found for ${target.targetDisplay} on ${scopeDisplay}.`);
+    }
+  } else {
+    await addPermit(guild.id, target.targetType, target.targetId, commandName, moduleName);
+    await respond.success(`Granted ${target.targetDisplay} access to ${scopeDisplay}.`);
+    logEvent('info', 'command_execution', `Permit granted by ${member.user.tag}`, {
+      executor: member.user.tag,
+      target: target.targetId,
+      targetType: target.targetType,
+      commandName,
+      moduleName,
+      guild: guild.name,
+    });
+  }
+}
+
 export default defineCommand({
   name: 'access',
   aliases: ['permit'],
@@ -61,271 +363,18 @@ export default defineCommand({
     const firstArg = parsed.args[0].toLowerCase();
     const secondArg = parsed.args[1]?.toLowerCase();
 
-    // ── Subcommand: fix / clean / prune (Ghost Permit Cleanup) ──
     if (firstArg === 'fix' || firstArg === 'clean' || firstArg === 'prune') {
-      const permits = await getPermitsForGuild(guild.id);
-      if (permits.length === 0) {
-        await respond.info('No permits exist in this server to clean.');
-        return;
-      }
-
-      const availableModules = getModules();
-      const ghostIds: number[] = [];
-      let invalidCmdCount = 0;
-      let deletedRoleCount = 0;
-      let invalidModCount = 0;
-
-      for (const p of permits) {
-        let isGhost = false;
-
-        // Check if target role was deleted
-        if (p.targetType === 'role') {
-          if (!guild.roles.cache.has(p.targetId)) {
-            isGhost = true;
-            deletedRoleCount++;
-          }
-        }
-
-        // Check if command no longer exists in bot
-        if (!isGhost && p.commandName) {
-          const cmd = resolveCommand(p.commandName);
-          if (!cmd) {
-            isGhost = true;
-            invalidCmdCount++;
-          }
-        }
-
-        // Check if module no longer exists
-        if (!isGhost && p.moduleName) {
-          if (!availableModules.includes(p.moduleName.toLowerCase())) {
-            isGhost = true;
-            invalidModCount++;
-          }
-        }
-
-        if (isGhost) {
-          ghostIds.push(p.id);
-        }
-      }
-
-      if (ghostIds.length === 0) {
-        await respond.success('All active permits are clean and valid. No ghost permits found.');
-        return;
-      }
-
-      const deletedCount = await deletePermitsByIds(guild.id, ghostIds);
-
-      const summary = `Cleaned **${deletedCount}** ghost permit(s) [Invalid commands: **${invalidCmdCount}** | Deleted roles: **${deletedRoleCount}** | Invalid modules: **${invalidModCount}**].`;
-      await respond.transientSuccess(summary, 8000);
-
-      logAuditAction({
-        guild,
-        action: 'Access Ghost Permits Cleaned',
-        executor: member,
-        details: [
-          `• **Total Removed:** ${deletedCount}`,
-          `• **Non-existent Commands:** ${invalidCmdCount}`,
-          `• **Deleted Roles:** ${deletedRoleCount}`,
-          `• **Invalid Modules:** ${invalidModCount}`,
-        ],
-      });
-
-      logEvent('info', 'command_execution', `Ghost permits fixed by ${member.user.tag}`, {
-        executor: member.user.tag,
-        guild: guild.name,
-        cleanedCount: deletedCount,
-        invalidCmdCount,
-        deletedRoleCount,
-        invalidModCount,
-      });
-      return;
+      return handleFixSubcommand(ctx);
     }
 
-    // ── Subcommand: list ──────────────────────────────────────
     if (firstArg === 'list' || firstArg === 'show') {
-      if (secondArg === 'dashboard' || secondArg === 'dash') {
-        const dashData = await buildDashboardListPayload(guild, 0);
-        if (!dashData) {
-          await respond.info('No users currently have private Dashboard access.');
-          return;
-        }
-
-        await respond.raw({
-          components: dashData.components,
-          flags: dashData.payload.flags as any,
-        });
-        return;
-      }
-
-      const listData = await buildAccessListPayload(guild, 0);
-      if (!listData) {
-        await respond.info('No custom permits have been granted in this server.');
-        return;
-      }
-
-      await respond.raw({
-        components: listData.components,
-        flags: listData.payload.flags as any,
-      });
-      return;
+      return handleListSubcommand(ctx, secondArg === 'dashboard' || secondArg === 'dash');
     }
 
-    // ── Direct Subcommand: dashboard / dash ──────────────────
     if (firstArg === 'dashboard' || firstArg === 'dash') {
-      const dashData = await buildDashboardListPayload(guild, 0);
-      if (!dashData) {
-        await respond.info('No users currently have private Dashboard access.');
-        return;
-      }
-
-      await respond.raw({
-        components: dashData.components,
-        flags: dashData.payload.flags as any,
-      });
-      return;
+      return handleListSubcommand(ctx, true);
     }
 
-    // ── Subcommand: remove / revoke / delete ──────────────────
-    let isRemoveMode = false;
-    let targetIndex = 0;
-
-    if (firstArg === 'remove' || firstArg === 'revoke' || firstArg === 'delete') {
-      isRemoveMode = true;
-      targetIndex = 1;
-    } else if (firstArg === 'add' || firstArg === 'grant') {
-      targetIndex = 1;
-    }
-
-    const remainingArgs = parsed.args.slice(targetIndex);
-    if (remainingArgs.length < 2) {
-      await respond.error(
-        `Usage: \`access ${isRemoveMode ? 'remove' : 'add'} <@user|@role> <command|module|all>\``,
-      );
-      return;
-    }
-
-    const targetArg = remainingArgs[0];
-    const scopeArg = remainingArgs.slice(1).join(' ').trim().toLowerCase();
-
-    // 1. Resolve target (user or role)
-    let targetType: 'user' | 'role';
-    let targetId: string;
-    let targetDisplay: string;
-
-    const userResult = await resolveUser(targetArg, guild);
-    if (userResult.success) {
-      targetType = 'user';
-      targetId = userResult.value.id;
-      targetDisplay = mentionUser(userResult.value.member ?? userResult.value.user, guild);
-    } else {
-      const roleResult = resolveRole(targetArg, guild);
-      if (roleResult.success) {
-        targetType = 'role';
-        targetId = roleResult.value.id;
-        targetDisplay = mentionRole(roleResult.value.role, guild);
-      } else {
-        await respond.error(`Could not resolve user or role \`${targetArg}\`.`);
-        return;
-      }
-    }
-
-    // 2. Parse scope (dashboard, all, module:name, or command/module name)
-    let commandName: string | null = null;
-    let moduleName: string | null = null;
-
-    if (scopeArg === 'dashboard' || scopeArg === 'dash') {
-      if (targetType !== 'user') {
-        await respond.error('Dashboard access can only be granted to specific users, not roles.');
-        return;
-      }
-
-      if (isRemoveMode) {
-        const revoked = await revokeDashboardAccess(targetId);
-        if (revoked) {
-          await respond.success(`Revoked ${targetDisplay}'s private Dashboard access.`);
-        } else {
-          await respond.info(`User ${targetDisplay} did not have active Dashboard access.`);
-        }
-      } else {
-        await grantDashboardAccess(targetId, member.id, 'Granted via Discord access command');
-        await respond.success(`Granted ${targetDisplay} private Dashboard access. They can now log in using their Discord User ID!`);
-      }
-      return;
-    }
-
-    if (scopeArg === 'all' || scopeArg === '*') {
-      commandName = null;
-      moduleName = null;
-    } else if (scopeArg.startsWith('module:')) {
-      const modName = scopeArg.slice(7).trim().toLowerCase();
-      if (modName === 'owner' && !isRemoveMode) {
-        await respond.error('The **owner** module cannot be permitted or distributed to any user or role.');
-        return;
-      }
-      const allModules = getModules();
-      if (!allModules.includes(modName)) {
-        await respond.error(`Unknown module \`${modName}\`. Available modules: ${allModules.join(', ')}`);
-        return;
-      }
-      moduleName = modName;
-    } else {
-      const cmd = resolveCommand(scopeArg);
-      if (cmd) {
-        if ((cmd.module === 'owner' || cmd.ownerOnly) && !isRemoveMode) {
-          await respond.error(`Owner command \`${cmd.name}\` cannot be permitted or distributed to any user or role.`);
-          return;
-        }
-        commandName = cmd.name;
-        moduleName = cmd.module;
-      } else {
-        const allModules = getModules();
-        if (allModules.includes(scopeArg)) {
-          if (scopeArg === 'owner' && !isRemoveMode) {
-            await respond.error('The **owner** module cannot be permitted or distributed to any user or role.');
-            return;
-          }
-          moduleName = scopeArg;
-        } else {
-          await respond.error(`Unknown command or module \`${scopeArg}\`.`);
-          return;
-        }
-      }
-    }
-
-    const scopeDisplay = commandName
-      ? `command **${commandName}**`
-      : moduleName
-      ? `module **${moduleName}**`
-      : '**ALL commands & modules**';
-
-    // 3. Execute add or remove
-    if (isRemoveMode) {
-      const sanitizedStaffName = sanitize(member.displayName || member.user.tag);
-      const removed = await removePermit(guild.id, targetType, targetId, commandName, moduleName, member.id, sanitizedStaffName);
-      if (removed) {
-        await respond.success(`Revoked ${targetDisplay} access to ${scopeDisplay}.`);
-        logEvent('info', 'command_execution', `Permit removed by ${member.user.tag}`, {
-          executor: member.user.tag,
-          target: targetId,
-          targetType,
-          commandName,
-          moduleName,
-          guild: guild.name,
-        });
-      } else {
-        await respond.info(`No active permit was found for ${targetDisplay} on ${scopeDisplay}.`);
-      }
-    } else {
-      await addPermit(guild.id, targetType, targetId, commandName, moduleName);
-      await respond.success(`Granted ${targetDisplay} access to ${scopeDisplay}.`);
-      logEvent('info', 'command_execution', `Permit granted by ${member.user.tag}`, {
-        executor: member.user.tag,
-        target: targetId,
-        targetType,
-        commandName,
-        moduleName,
-        guild: guild.name,
-      });
-    }
+    return handleGrantOrRevokeSubcommand(ctx, firstArg);
   },
 });

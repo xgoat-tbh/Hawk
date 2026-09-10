@@ -1,4 +1,5 @@
 import { getDb } from '../pool.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
 export interface MaintenanceState {
   enabled: boolean;
@@ -7,10 +8,11 @@ export interface MaintenanceState {
   enabledBy: string | null;
 }
 
-let cachedMaintenance: MaintenanceState | null = null;
+const cache = new TTLCache<string, MaintenanceState>(300_000);
 
 export async function getMaintenanceState(): Promise<MaintenanceState> {
-  if (cachedMaintenance !== null) return cachedMaintenance;
+  const cached = cache.get('maintenance');
+  if (cached !== undefined) return cached;
 
   try {
     const db = getDb();
@@ -26,23 +28,25 @@ export async function getMaintenanceState(): Promise<MaintenanceState> {
     });
 
     if (rows.length === 0) {
-      cachedMaintenance = {
+      const state = {
         enabled: false,
         reason: 'Scheduled maintenance in progress.',
         enabledAt: null,
         enabledBy: null,
       };
-      return cachedMaintenance;
+      cache.set('maintenance', state);
+      return state;
     }
 
     const val = rows[0].value as any;
-    cachedMaintenance = {
+    const state = {
       enabled: Boolean(val?.enabled),
       reason: val?.reason || 'Scheduled maintenance in progress.',
       enabledAt: val?.enabledAt ? new Date(val.enabledAt) : null,
       enabledBy: val?.enabledBy || null,
     };
-    return cachedMaintenance;
+    cache.set('maintenance', state);
+    return state;
   } catch {
     return {
       enabled: false,
@@ -93,14 +97,14 @@ export async function setMaintenanceState(
     }
   }
 
-  cachedMaintenance = {
+  cache.set('maintenance', {
     enabled,
     reason,
     enabledAt: enabled ? new Date() : null,
     enabledBy,
-  };
+  });
 }
 
 export function invalidateMaintenanceCache(): void {
-  cachedMaintenance = null;
+  cache.invalidate('maintenance');
 }

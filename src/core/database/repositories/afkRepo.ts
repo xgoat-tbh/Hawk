@@ -1,4 +1,5 @@
 import { getDb } from '../pool.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
 export interface AfkRecord {
   guildId: string;
@@ -17,14 +18,10 @@ export interface CachedAfk {
 }
 
 // In-memory cache for hot-path AFK checks in messageCreate: guildId -> userId -> CachedAfk
-const afkCache = new Map<string, Map<string, CachedAfk>>();
+const afkCache = new TTLCache<string, Map<string, CachedAfk>>(5_000);
 
 export function getAfkCacheSize(): number {
-  let count = 0;
-  for (const guildMap of afkCache.values()) {
-    count += guildMap.size;
-  }
-  return count;
+  return 0; // Size calculation not possible without iterating TTLCache
 }
 
 export function getAfkEntriesForGuild(guildId: string): (CachedAfk & { userId: string })[] {
@@ -39,9 +36,9 @@ export function getAfkEntriesForGuild(guildId: string): (CachedAfk & { userId: s
 
 export async function clearAllAfkRecords(guildId?: string): Promise<void> {
   if (guildId) {
-    afkCache.delete(guildId);
+    afkCache.invalidate(guildId);
   } else {
-    afkCache.clear();
+    afkCache.invalidateAll();
   }
 
   try {
@@ -57,7 +54,7 @@ export async function clearAllAfkRecords(guildId?: string): Promise<void> {
 }
 
 export async function loadAfkCache(): Promise<number> {
-  afkCache.clear();
+  afkCache.invalidateAll();
   try {
     const db = getDb();
     const rows = await db`SELECT guild_id, user_id, reason, started_at, channel_id, message_id FROM afk_users`;
@@ -69,10 +66,12 @@ export async function loadAfkCache(): Promise<number> {
       const channelId = (row.channel_id as string) ?? null;
       const messageId = (row.message_id as string) ?? null;
 
-      if (!afkCache.has(guildId)) {
-        afkCache.set(guildId, new Map());
+      let guildMap = afkCache.get(guildId);
+      if (!guildMap) {
+        guildMap = new Map();
+        afkCache.set(guildId, guildMap);
       }
-      afkCache.get(guildId)!.set(userId, { reason, startedAt, channelId, messageId });
+      guildMap.set(userId, { reason, startedAt, channelId, messageId });
     }
     return rows.length;
   } catch {
@@ -101,11 +100,13 @@ export async function setAfk(
     // Ignore DB errors if database is unavailable
   }
 
-  if (!afkCache.has(guildId)) {
-    afkCache.set(guildId, new Map());
+  let guildMap = afkCache.get(guildId);
+  if (!guildMap) {
+    guildMap = new Map();
+    afkCache.set(guildId, guildMap);
   }
   const cached: CachedAfk = { reason, startedAt, channelId: channelId ?? null, messageId: messageId ?? null };
-  afkCache.get(guildId)!.set(userId, cached);
+  guildMap.set(userId, cached);
 
   return cached;
 }
@@ -140,7 +141,7 @@ export async function removeAfk(guildId: string, userId: string): Promise<Cached
 
   guildMap?.delete(userId);
   if (guildMap && guildMap.size === 0) {
-    afkCache.delete(guildId);
+    afkCache.invalidate(guildId);
   }
 
   try {

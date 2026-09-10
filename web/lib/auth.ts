@@ -74,9 +74,6 @@ export async function createSession(payload: UserSession, durationHours = 24): P
   return token;
 }
 
-/** Backward compatibility alias for createSession */
-export const createToken = createSession;
-
 /**
  * Validates session from cookie against PostgreSQL dashboard_sessions table.
  */

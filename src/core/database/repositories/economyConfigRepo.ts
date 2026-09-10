@@ -1,4 +1,5 @@
 import { getDb } from '../pool.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -30,9 +31,7 @@ export interface EconomyConfig {
 
 // ── Cache ─────────────────────────────────────────────────────
 
-const configCache = new Map<string, { config: EconomyConfig; timestamp: number }>();
-const CACHE_TTL_MS = 5000;
-
+const configCache = new TTLCache<string, EconomyConfig>(30_000);
 
 const DEFAULTS: Omit<EconomyConfig, 'guildId'> = {
   currencySymbol: '$',
@@ -93,8 +92,8 @@ function mapRow(row: Record<string, unknown>): EconomyConfig {
 
 export async function getEconomyConfig(guildId: string): Promise<EconomyConfig> {
   const cached = configCache.get(guildId);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.config;
+  if (cached !== undefined) {
+    return cached;
   }
 
   const db = getDb();
@@ -102,16 +101,12 @@ export async function getEconomyConfig(guildId: string): Promise<EconomyConfig> 
 
   if (rows.length === 0) {
     const config: EconomyConfig = { guildId, ...DEFAULTS };
-    configCache.set(guildId, { config, timestamp: Date.now() });
+    configCache.set(guildId, config);
     return config;
   }
 
   const config = mapRow(rows[0]);
-  if (configCache.size >= 5000) {
-    const firstKey = configCache.keys().next().value;
-    if (firstKey !== undefined) configCache.delete(firstKey);
-  }
-  configCache.set(guildId, { config, timestamp: Date.now() });
+  configCache.set(guildId, config);
   return config;
 }
 
@@ -161,7 +156,7 @@ export async function setEconomyConfigField(
 }
 
 export function invalidateEconomyConfigCache(guildId: string): void {
-  configCache.delete(guildId);
+  configCache.invalidate(guildId);
 }
 
 export { DEFAULTS as ECONOMY_DEFAULTS };

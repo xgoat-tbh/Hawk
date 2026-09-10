@@ -1,15 +1,16 @@
 import { getDb } from '../pool.js';
 import type { IgnoreRecord } from '../../../types/permission.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
-const ignoreCache = new Map<string, IgnoreRecord[]>(); // guildId -> IgnoreRecord[]
+const ignoreCache = new TTLCache<string, IgnoreRecord[]>(30_000); // guildId -> IgnoreRecord[]
 
 export function invalidateIgnoreCache(guildId: string): void {
-  ignoreCache.delete(guildId);
+  ignoreCache.invalidate(guildId);
 }
 
 export async function getIgnoresForGuild(guildId: string): Promise<IgnoreRecord[]> {
   const cached = ignoreCache.get(guildId);
-  if (cached) return cached;
+  if (cached !== undefined) return cached;
 
   try {
     const db = getDb();

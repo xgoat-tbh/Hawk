@@ -1,1 +1,0 @@
-export { SearchableChannelSelect, ChannelSelect } from './ChannelSelect';

@@ -1,15 +1,15 @@
 import { getDb } from '../pool.js';
 import type { GuildConfig } from '../../../types/config.js';
 import { constants } from '../../config/constants.js';
+import { TTLCache } from '../../utils/TTLCache.js';
 
-const prefixCache = new Map<string, { prefix: string; timestamp: number }>();
-const logChannelCache = new Map<string, { channelId: string | null; timestamp: number }>();
-const CACHE_TTL_MS = 5000;
+const prefixCache = new TTLCache<string, string>(300_000);
+const logChannelCache = new TTLCache<string, string | null>(300_000);
 
 export async function getPrefix(guildId: string): Promise<string> {
   const cached = prefixCache.get(guildId);
-  if (cached !== undefined && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.prefix;
+  if (cached !== undefined) {
+    return cached;
   }
 
   try {
@@ -17,11 +17,7 @@ export async function getPrefix(guildId: string): Promise<string> {
     const rows = await db`SELECT prefix FROM guild_config WHERE guild_id = ${guildId}`;
     const prefix = rows[0]?.prefix ?? constants.defaultPrefix;
 
-    if (prefixCache.size >= 10000) {
-      const firstKey = prefixCache.keys().next().value;
-      if (firstKey !== undefined) prefixCache.delete(firstKey);
-    }
-    prefixCache.set(guildId, { prefix, timestamp: Date.now() });
+    prefixCache.set(guildId, prefix);
     return prefix;
   } catch {
     return constants.defaultPrefix;
@@ -36,13 +32,13 @@ export async function setPrefix(guildId: string, prefix: string): Promise<void> 
     ON CONFLICT (guild_id)
     DO UPDATE SET prefix = ${prefix}, updated_at = NOW()
   `;
-  prefixCache.set(guildId, { prefix, timestamp: Date.now() });
+  prefixCache.set(guildId, prefix);
 }
 
 export async function getLogChannel(guildId: string): Promise<string | null> {
   const cached = logChannelCache.get(guildId);
-  if (cached !== undefined && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.channelId;
+  if (cached !== undefined) {
+    return cached;
   }
 
   try {
@@ -53,11 +49,7 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
     });
     const channelId = (rows[0]?.log_channel_id as string) ?? null;
 
-    if (logChannelCache.size >= 10000) {
-      const firstKey = logChannelCache.keys().next().value;
-      if (firstKey !== undefined) logChannelCache.delete(firstKey);
-    }
-    logChannelCache.set(guildId, { channelId, timestamp: Date.now() });
+    logChannelCache.set(guildId, channelId);
     return channelId;
   } catch {
     return null;
@@ -86,7 +78,7 @@ export async function setLogChannel(guildId: string, channelId: string | null): 
       throw err;
     }
   }
-  logChannelCache.set(guildId, { channelId, timestamp: Date.now() });
+  logChannelCache.set(guildId, channelId);
 }
 
 export async function getGuildConfig(guildId: string): Promise<GuildConfig | null> {
@@ -113,9 +105,9 @@ export async function ensureGuildConfig(guildId: string): Promise<void> {
 }
 
 export function invalidatePrefixCache(guildId: string): void {
-  prefixCache.delete(guildId);
+  prefixCache.invalidate(guildId);
 }
 
 export function invalidateLogChannelCache(guildId: string): void {
-  logChannelCache.delete(guildId);
+  logChannelCache.invalidate(guildId);
 }
