@@ -559,3 +559,94 @@ export async function fetchDiscordUser(userId: string): Promise<{ id: string; us
     return null;
   }
 }
+
+export async function sendDirectMessage(
+  userId: string,
+  content: string,
+): Promise<{ success: boolean; error?: string }> {
+  const cleanId = userId.trim();
+
+  // 1. Fast path: Use in-process hawkClient if running in the same node process
+  const hawkClient = (globalThis as any).hawkClient;
+  if (hawkClient?.users) {
+    try {
+      const user = await hawkClient.users.fetch(cleanId).catch(() => null);
+      if (user) {
+        await user.send({
+          content,
+          allowedMentions: { parse: [] },
+        });
+        return { success: true };
+      }
+    } catch (err: any) {
+      if (err?.code === 50007) {
+        return {
+          success: false,
+          error: 'Cannot send DM. Please enable "Allow direct messages from server members" in your Discord Privacy Settings.',
+        };
+      }
+      console.warn(`hawkClient DM error for user ${cleanId}:`, err);
+    }
+  }
+
+  // 2. Fallback: Discord REST API via Bot Token
+  const token = getBotToken();
+  if (!token) {
+    return { success: false, error: 'Bot token is not configured on the server.' };
+  }
+
+  try {
+    // Open DM channel: POST /users/@me/channels
+    const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ recipient_id: cleanId }),
+    });
+
+    if (!dmRes.ok) {
+      const errJson = await dmRes.json().catch(() => ({}));
+      if (dmRes.status === 403 || errJson.code === 50007) {
+        return {
+          success: false,
+          error: 'Cannot send DM. Please enable "Allow direct messages from server members" in your Discord Privacy Settings.',
+        };
+      }
+      return { success: false, error: `Failed to open DM channel with Discord (HTTP ${dmRes.status}).` };
+    }
+
+    const dmChannel = await dmRes.json();
+    const dmChannelId = dmChannel.id;
+
+    // Send Message: POST /channels/{channel.id}/messages
+    const msgRes = await fetch(`https://discord.com/api/v10/channels/${dmChannelId}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bot ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content,
+        allowed_mentions: { parse: [] },
+      }),
+    });
+
+    if (!msgRes.ok) {
+      const errJson = await msgRes.json().catch(() => ({}));
+      if (msgRes.status === 403 || errJson.code === 50007) {
+        return {
+          success: false,
+          error: 'Cannot send DM. Please enable "Allow direct messages from server members" in your Discord Privacy Settings.',
+        };
+      }
+      return { success: false, error: `Failed to deliver verification code (HTTP ${msgRes.status}).` };
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Error sending Discord DM to ${cleanId}:`, error);
+    return { success: false, error: error?.message || 'Failed to send Discord direct message.' };
+  }
+}

@@ -1,18 +1,7 @@
-import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
 import { db } from './db';
 import { fetchGuildDetails, fetchGuildMember, fetchGuildRoles } from './discord';
-
-function getJwtSecret(): string {
-  const secret = process.env.JWT_SECRET || process.env.BOT_TOKEN;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('FATAL: Neither JWT_SECRET nor BOT_TOKEN is configured in production environment.');
-    }
-    return 'hawk-dev-secret-unsafe-for-prod';
-  }
-  return secret;
-}
 
 export const COOKIE_NAME = 'hawk_session';
 
@@ -25,24 +14,120 @@ export interface UserSession {
   isBotOwner?: boolean;
 }
 
-export function createToken(payload: UserSession): string {
-  return jwt.sign(payload, getJwtSecret(), { expiresIn: '7d' });
+let authSchemaEnsured = false;
+export async function ensureAuthTables(): Promise<void> {
+  if (authSchemaEnsured) return;
+  try {
+    await db`
+      CREATE TABLE IF NOT EXISTS dashboard_sessions (
+        token VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(32) NOT NULL,
+        username VARCHAR(64) NOT NULL,
+        discriminator VARCHAR(8) NOT NULL DEFAULT '0',
+        avatar TEXT,
+        is_bot_owner BOOLEAN NOT NULL DEFAULT FALSE,
+        is_bot_admin BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL
+      )
+    `;
+    await db`
+      CREATE TABLE IF NOT EXISTS dashboard_otps (
+        user_id VARCHAR(32) PRIMARY KEY,
+        otp_code VARCHAR(8) NOT NULL,
+        attempts INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NOT NULL,
+        locked_until TIMESTAMPTZ
+      )
+    `;
+    authSchemaEnsured = true;
+  } catch (err) {
+    console.warn('Could not auto-ensure auth tables:', err);
+  }
 }
 
-export function verifyToken(token: string): UserSession | null {
+/**
+ * Creates a server-side session in PostgreSQL with a cryptographically random 64-char token.
+ * Defaults to 24-hour expiration.
+ */
+export async function createSession(payload: UserSession, durationHours = 24): Promise<string> {
+  await ensureAuthTables();
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
+
+  await db`
+    INSERT INTO dashboard_sessions (
+      token, user_id, username, discriminator, avatar, is_bot_owner, is_bot_admin, expires_at
+    ) VALUES (
+      ${token},
+      ${payload.id},
+      ${payload.username},
+      ${payload.discriminator || '0'},
+      ${payload.avatar || null},
+      ${Boolean(payload.isBotOwner)},
+      ${Boolean(payload.isBotAdmin)},
+      ${expiresAt}
+    )
+  `;
+
+  return token;
+}
+
+/** Backward compatibility alias for createSession */
+export const createToken = createSession;
+
+/**
+ * Validates session from cookie against PostgreSQL dashboard_sessions table.
+ */
+export async function getSession(): Promise<UserSession | null> {
+  await ensureAuthTables();
+  const cookieStore = await cookies();
+  const token = cookieStore.get(COOKIE_NAME)?.value;
+  if (!token || typeof token !== 'string' || token.length !== 64) {
+    return null;
+  }
+
   try {
-    return jwt.verify(token, getJwtSecret()) as UserSession;
-  } catch {
+    const rows = await db`
+      SELECT user_id, username, discriminator, avatar, is_bot_owner, is_bot_admin, expires_at
+      FROM dashboard_sessions
+      WHERE token = ${token}
+        AND expires_at > NOW()
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    const row = rows[0];
+    return {
+      id: row.user_id,
+      username: row.username,
+      discriminator: row.discriminator,
+      avatar: row.avatar,
+      isBotOwner: row.is_bot_owner,
+      isBotAdmin: row.is_bot_admin,
+    };
+  } catch (err) {
+    console.error('Error querying dashboard_sessions:', err);
     return null;
   }
 }
 
-export async function getSession(): Promise<UserSession | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifyToken(token);
+/**
+ * Destroys a session token in PostgreSQL.
+ */
+export async function deleteSession(token: string): Promise<void> {
+  if (!token) return;
+  try {
+    await db`DELETE FROM dashboard_sessions WHERE token = ${token}`;
+  } catch (err) {
+    console.error('Error deleting session:', err);
+  }
 }
+
 
 export function isBotOwner(userId: string): boolean {
   const cleanId = userId.trim();

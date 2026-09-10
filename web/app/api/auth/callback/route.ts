@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeOAuthCode, fetchUserProfile } from '@/lib/discord';
-import { createToken, isBotAdmin, isBotOwner, COOKIE_NAME } from '@/lib/auth';
+import { createSession, isBotAdmin, isBotOwner, COOKIE_NAME } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     isBotAdmin: isBotAdmin(profile.id),
   };
 
-  const sessionToken = createToken(userSession);
+  const sessionToken = await createSession(userSession, 24);
 
   const res = NextResponse.redirect(`${origin}/dashboard`);
   const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     httpOnly: true,
     secure: isHttps,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24, // 24 hours
     path: '/',
   });
 
