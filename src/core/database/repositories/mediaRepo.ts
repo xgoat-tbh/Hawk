@@ -1,7 +1,12 @@
 import { getDb } from '../pool.js';
 import type { MediaChannelRecord } from '../../../types/media.js';
 
-const mediaChannelsCache = new Map<string, Set<string>>(); // guildId -> Set<channelId>
+const mediaChannelsCache = new Map<string, { channels: Set<string>; timestamp: number }>();
+const CACHE_TTL_MS = 5000;
+
+export function invalidateMediaCache(guildId: string): void {
+  mediaChannelsCache.delete(guildId);
+}
 
 export async function addMediaChannel(guildId: string, channelId: string): Promise<boolean> {
   const db = getDb();
@@ -13,7 +18,7 @@ export async function addMediaChannel(guildId: string, channelId: string): Promi
   `;
   if (result.length > 0) {
     const cached = mediaChannelsCache.get(guildId);
-    if (cached) cached.add(channelId);
+    if (cached) cached.channels.add(channelId);
     return true;
   }
   return false;
@@ -27,7 +32,7 @@ export async function removeMediaChannel(guildId: string, channelId: string): Pr
   `;
   if (result.count > 0) {
     const cached = mediaChannelsCache.get(guildId);
-    if (cached) cached.delete(channelId);
+    if (cached) cached.channels.delete(channelId);
     return true;
   }
   return false;
@@ -47,17 +52,22 @@ export async function getMediaChannels(guildId: string): Promise<MediaChannelRec
     createdAt: r.created_at as Date,
   }));
 
-  mediaChannelsCache.set(guildId, new Set(records.map(r => r.channelId)));
+  mediaChannelsCache.set(guildId, {
+    channels: new Set(records.map(r => r.channelId)),
+    timestamp: Date.now(),
+  });
   return records;
 }
 
 export async function isMediaChannel(guildId: string, channelId: string): Promise<boolean> {
-  let cached = mediaChannelsCache.get(guildId);
-  if (!cached) {
-    await getMediaChannels(guildId);
-    cached = mediaChannelsCache.get(guildId);
+  const cached = mediaChannelsCache.get(guildId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.channels.has(channelId);
   }
-  return cached ? cached.has(channelId) : false;
+  const records = await getMediaChannels(guildId);
+  const set = new Set(records.map(r => r.channelId));
+  mediaChannelsCache.set(guildId, { channels: set, timestamp: Date.now() });
+  return set.has(channelId);
 }
 
 export async function setMediaAutoThread(guildId: string, enabled: boolean): Promise<void> {

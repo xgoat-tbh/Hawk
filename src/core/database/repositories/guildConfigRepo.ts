@@ -2,12 +2,15 @@ import { getDb } from '../pool.js';
 import type { GuildConfig } from '../../../types/config.js';
 import { constants } from '../../config/constants.js';
 
-const prefixCache = new Map<string, string>();
-const logChannelCache = new Map<string, string | null>();
+const prefixCache = new Map<string, { prefix: string; timestamp: number }>();
+const logChannelCache = new Map<string, { channelId: string | null; timestamp: number }>();
+const CACHE_TTL_MS = 5000;
 
 export async function getPrefix(guildId: string): Promise<string> {
   const cached = prefixCache.get(guildId);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.prefix;
+  }
 
   try {
     const db = getDb();
@@ -18,7 +21,7 @@ export async function getPrefix(guildId: string): Promise<string> {
       const firstKey = prefixCache.keys().next().value;
       if (firstKey !== undefined) prefixCache.delete(firstKey);
     }
-    prefixCache.set(guildId, prefix);
+    prefixCache.set(guildId, { prefix, timestamp: Date.now() });
     return prefix;
   } catch {
     return constants.defaultPrefix;
@@ -33,12 +36,14 @@ export async function setPrefix(guildId: string, prefix: string): Promise<void> 
     ON CONFLICT (guild_id)
     DO UPDATE SET prefix = ${prefix}, updated_at = NOW()
   `;
-  prefixCache.set(guildId, prefix);
+  prefixCache.set(guildId, { prefix, timestamp: Date.now() });
 }
 
 export async function getLogChannel(guildId: string): Promise<string | null> {
   const cached = logChannelCache.get(guildId);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.channelId;
+  }
 
   try {
     const db = getDb();
@@ -52,7 +57,7 @@ export async function getLogChannel(guildId: string): Promise<string | null> {
       const firstKey = logChannelCache.keys().next().value;
       if (firstKey !== undefined) logChannelCache.delete(firstKey);
     }
-    logChannelCache.set(guildId, channelId);
+    logChannelCache.set(guildId, { channelId, timestamp: Date.now() });
     return channelId;
   } catch {
     return null;
@@ -81,7 +86,7 @@ export async function setLogChannel(guildId: string, channelId: string | null): 
       throw err;
     }
   }
-  logChannelCache.set(guildId, channelId);
+  logChannelCache.set(guildId, { channelId, timestamp: Date.now() });
 }
 
 export async function getGuildConfig(guildId: string): Promise<GuildConfig | null> {

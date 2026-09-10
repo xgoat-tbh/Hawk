@@ -30,7 +30,9 @@ export interface EconomyConfig {
 
 // ── Cache ─────────────────────────────────────────────────────
 
-const configCache = new Map<string, EconomyConfig>();
+const configCache = new Map<string, { config: EconomyConfig; timestamp: number }>();
+const CACHE_TTL_MS = 5000;
+
 
 const DEFAULTS: Omit<EconomyConfig, 'guildId'> = {
   currencySymbol: '$',
@@ -91,14 +93,16 @@ function mapRow(row: Record<string, unknown>): EconomyConfig {
 
 export async function getEconomyConfig(guildId: string): Promise<EconomyConfig> {
   const cached = configCache.get(guildId);
-  if (cached) return cached;
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.config;
+  }
 
   const db = getDb();
   const rows = await db`SELECT * FROM economy_config WHERE guild_id = ${guildId}`;
 
   if (rows.length === 0) {
     const config: EconomyConfig = { guildId, ...DEFAULTS };
-    configCache.set(guildId, config);
+    configCache.set(guildId, { config, timestamp: Date.now() });
     return config;
   }
 
@@ -107,7 +111,7 @@ export async function getEconomyConfig(guildId: string): Promise<EconomyConfig> 
     const firstKey = configCache.keys().next().value;
     if (firstKey !== undefined) configCache.delete(firstKey);
   }
-  configCache.set(guildId, config);
+  configCache.set(guildId, { config, timestamp: Date.now() });
   return config;
 }
 
