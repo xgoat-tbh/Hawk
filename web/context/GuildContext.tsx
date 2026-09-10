@@ -152,39 +152,39 @@ export function GuildProvider({
       {loading ? (
         <div className="fixed inset-0 z-50 bg-[#050505] flex flex-col items-center justify-center p-6 select-none animate-in fade-in duration-200">
           <div className="max-w-xs w-full flex flex-col items-center text-center space-y-5">
-            {/* Server Icon with 360° Perimeter Loading Bar */}
-            <div className="relative w-16 h-16 flex items-center justify-center">
-              {/* SVG 360 Square Edge Loader */}
+            {/* Square Photo Frame with Logo Mounted Inside */}
+            <div className="relative w-[88px] h-[88px] bg-[#0b0c0e] border border-white/10 shadow-2xl flex items-center justify-center">
+              {/* SVG 360 Sharp Square Edge Loader */}
               <svg
                 className="absolute inset-0 w-full h-full pointer-events-none"
-                viewBox="0 0 64 64"
+                viewBox="0 0 88 88"
                 fill="none"
               >
-                {/* Subtle background track */}
+                {/* Background track along the square frame edge */}
                 <path
-                  d="M 32 1 H 48 A 15 15 0 0 1 63 16 V 48 A 15 15 0 0 1 48 63 H 16 A 15 15 0 0 1 1 48 V 16 A 15 15 0 0 1 16 1 Z"
+                  d="M 44 1 L 87 1 L 87 87 L 1 87 L 1 1 Z"
                   stroke="rgba(255, 255, 255, 0.08)"
                   strokeWidth="2"
-                  strokeLinecap="round"
+                  strokeLinejoin="miter"
                 />
-                {/* Animated Loading Stroke */}
+                {/* Animated 360° Loading Stroke along the square frame */}
                 <path
-                  d="M 32 1 H 48 A 15 15 0 0 1 63 16 V 48 A 15 15 0 0 1 48 63 H 16 A 15 15 0 0 1 1 48 V 16 A 15 15 0 0 1 16 1 Z"
+                  d="M 44 1 L 87 1 L 87 87 L 1 87 L 1 1 Z"
                   stroke="#ededed"
                   strokeWidth="2.5"
-                  strokeLinecap="round"
+                  strokeLinejoin="miter"
                   pathLength={100}
                   strokeDasharray="100"
                   strokeDashoffset={100 - progressPercent}
                   style={{
                     transition: 'stroke-dashoffset 350ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    filter: 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.7))',
+                    filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.85))',
                   }}
                 />
               </svg>
 
-              {/* Inner Logo Image / Fallback */}
-              <div className="w-[56px] h-[56px] rounded-[13px] bg-white/[0.04] flex items-center justify-center overflow-hidden shadow-2xl">
+              {/* Logo mounted inside the square photo frame */}
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-white/[0.04] border border-white/5 flex items-center justify-center shadow-md">
                 {guild?.iconUrl ? (
                   <img
                     src={guild.iconUrl}
