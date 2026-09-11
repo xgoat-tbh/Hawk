@@ -12,6 +12,10 @@ export function createClient(): Client {
       GatewayIntentBits.GuildMessageReactions,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+    rest: {
+      timeout: 30_000,
+      retries: 5,
+    },
     makeCache: Options.cacheWithLimits({
       ...Options.DefaultMakeCacheSettings,
       MessageManager: 25,

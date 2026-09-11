@@ -1,3 +1,6 @@
+// Expand libuv worker threadpool from default 4 to 32 to prevent DNS/crypto thread starvation
+process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || '32';
+
 import { Bootstrap } from './core/bootstrap/Bootstrap.js';
 
 Bootstrap.start().catch((error) => {

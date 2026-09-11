@@ -5,7 +5,6 @@ import { getGamePing, getGameTestChannel } from '../../core/database/repositorie
 import { checkVcCooldown, setVcCooldown, removeVcCooldown } from './GameVcCooldownManager.js';
 import { mentionChannel } from '../../core/utils/formatters.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
-import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 
 export default defineCommand({
   name: 'rp',
@@ -64,10 +63,8 @@ export default defineCommand({
       }
     }
 
-    // Auto-delete original command message
-    await message.delete().catch((err) => {
-      consoleLog('warning', 'command_execution', `rp: failed to delete command message: ${err instanceof Error ? err.message : String(err)}`);
-    });
+    // Auto-delete original command message (non-blocking, ignore transient network drops)
+    message.delete().catch(() => {});
 
     // Construct announcement skeleton: Role Mention -> User Message -> VC Mention
     const announcementText = `<@&${pingConfig.roleId}> ${userMessageContent} ${mentionChannel(pingConfig.vcId)}`;

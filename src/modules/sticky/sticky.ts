@@ -10,7 +10,6 @@ import {
   getStickiesForGuild,
 } from '../../core/database/repositories/stickyRepo.js';
 import { logEvent } from '../../core/logging/WebhookLogger.js';
-import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { mentionChannel } from '../../core/utils/formatters.js';
 import { ui } from '../../core/ui/index.js';
 
@@ -126,10 +125,8 @@ export default defineCommand({
       }
     }
 
-    // 2. Auto-delete command invocation message
-    await message.delete().catch((err) => {
-      consoleLog('warning', 'command_execution', `sticky: failed to delete command message: ${err instanceof Error ? err.message : String(err)}`);
-    });
+    // 2. Auto-delete command invocation message (non-blocking)
+    message.delete().catch(() => {});
 
     // 3. Post new sticky message
     const stickyMsg = await textChannel.send({

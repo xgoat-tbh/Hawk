@@ -74,14 +74,27 @@ export function startPvcScheduler(client: Client): NodeJS.Timeout {
     checkPvcExpirations(client).catch((err: any) => {
       const code = err?.code || err?.name || '';
       const msg = String(err?.message || '');
-      const isTimeout =
+      const isTransient =
         code === 'CONNECT_TIMEOUT' ||
         code === 'ETIMEDOUT' ||
+        code === 'EAI_AGAIN' ||
+        code === 'ENOTFOUND' ||
+        code === 'ECONNRESET' ||
+        code === 'ECONNREFUSED' ||
+        code === 'EPIPE' ||
+        code === 'ENETUNREACH' ||
+        code === '57P01' ||
+        code === '57P02' ||
+        code === '57P03' ||
         msg.includes('CONNECT_TIMEOUT') ||
-        msg.includes('ETIMEDOUT');
+        msg.includes('ETIMEDOUT') ||
+        msg.includes('EAI_AGAIN') ||
+        msg.includes('getaddrinfo') ||
+        msg.includes('Connection terminated') ||
+        msg.includes('Connection closed');
 
-      if (isTimeout) {
-        console.warn('[PVC Scheduler] Transient database timeout (Neon waking up or network reconnect). Retrying on next tick...');
+      if (isTransient) {
+        console.warn(`[PVC Scheduler] Transient database network glitch (${code || 'timeout'}). Retrying on next tick...`);
       } else {
         console.error('PVC Scheduler Error:', err);
       }

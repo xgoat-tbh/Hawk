@@ -253,6 +253,9 @@ export class Bootstrap {
     client.on(Events.ShardReconnecting, (shardId) => {
       consoleLog('info', 'gateway', `Shard ${shardId} reconnecting to gateway...`);
     });
+    client.on(Events.ShardResume, (shardId, replayedEvents) => {
+      consoleLog('info', 'gateway', `Shard ${shardId} resumed connection (${replayedEvents} events replayed).`);
+    });
 
     // 9. Login & Setup Process Signals
     const token = env.botToken;
