@@ -14,7 +14,8 @@
     "start": "node dist/index.js",
     "lint": "eslint src/",
     "test": "tsx --test tests/**/*.test.ts",
-    "migrate": "tsx src/core/database/migrations/runner.ts"
+    "migrate": "tsx src/core/database/migrations/runner.ts",
+    "db:transfer": "tsx scripts/transfer_db.ts"
   },
   "dependencies": {
     "@discordjs/rest": "^2.4.0",
