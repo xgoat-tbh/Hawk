@@ -22,7 +22,6 @@ import {
   CheckCircle2,
   Wrench,
   HeartHandshake,
-  Image as ImageIcon,
   Gamepad2,
   ShoppingBag,
   Dice5,
@@ -116,13 +115,6 @@ export default function GuildOverviewPage() {
       description: 'Custom purchasable items and role rewards',
       path: `/dashboard/${guildId}/store`,
       icon: ShoppingBag,
-    },
-    {
-      name: 'Media-Only Channels',
-      active: (config?.mediaChannels || []).length > 0,
-      description: 'Enforces media attachments & auto-threads',
-      path: `/dashboard/${guildId}/media`,
-      icon: ImageIcon,
     },
     {
       name: 'Sticky Notices',

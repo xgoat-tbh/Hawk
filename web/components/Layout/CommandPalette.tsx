@@ -12,7 +12,6 @@ import {
   Gamepad2,
   Briefcase,
   MessageSquare,
-  Image,
   Pin,
   Lock,
   ArrowRight,
@@ -61,7 +60,6 @@ export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps
     { label: 'Store Catalog', path: `/dashboard/${guildId}/store`, icon: ShoppingBag, category: 'Navigation' },
     { label: 'Gaming LFG Alerts', path: `/dashboard/${guildId}/gaming`, icon: Gamepad2, category: 'Navigation' },
     { label: 'Community Tools', path: `/dashboard/${guildId}/community`, icon: MessageSquare, category: 'Navigation' },
-    { label: 'Media Channels', path: `/dashboard/${guildId}/media`, icon: Image, category: 'Navigation' },
     { label: 'Sticky Notices', path: `/dashboard/${guildId}/sticky`, icon: Pin, category: 'Navigation' },
   ];
 

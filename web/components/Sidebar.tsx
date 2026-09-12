@@ -14,7 +14,6 @@ import {
   ShoppingBag,
   Briefcase,
   Pin,
-  Image as ImageIcon,
   ShieldCheck,
   FileText,
   Activity,
@@ -95,7 +94,6 @@ export function Sidebar({
       items: [
         { label: 'Welcome Greetings', href: `/dashboard/${guildId}/welcome`, icon: HeartHandshake },
         { label: 'Community Tools', href: `/dashboard/${guildId}/community`, icon: MessageSquare, module: 'community' },
-        { label: 'Media Channels', href: `/dashboard/${guildId}/media`, icon: ImageIcon, module: 'media' },
         { label: 'Sticky Notices', href: `/dashboard/${guildId}/sticky`, icon: Pin, module: 'sticky' },
       ].filter((item) => isModuleAllowed(item.module)),
     },
