@@ -15,7 +15,7 @@ export async function POST(
 
   try {
     const body = await req.json();
-    const { action, channelId, autoPay, balance } = body;
+    const { action, channelId, autoPay } = body;
 
     if (!channelId) {
       return NextResponse.json({ error: 'channelId is required' }, { status: 400 });
@@ -33,8 +33,7 @@ export async function POST(
       await db`
         UPDATE pvc_sessions
         SET
-          auto_pay = COALESCE(${autoPay !== undefined ? Boolean(autoPay) : null}, auto_pay),
-          balance = COALESCE(${balance !== undefined ? parseInt(balance, 10) : null}, balance)
+          auto_pay_enabled = COALESCE(${autoPay !== undefined ? Boolean(autoPay) : null}, auto_pay_enabled)
         WHERE guild_id = ${guildId} AND channel_id = ${channelId}
       `;
       return NextResponse.json({ success: true, message: 'PVC session updated.' });

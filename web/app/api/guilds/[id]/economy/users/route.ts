@@ -71,7 +71,7 @@ export async function POST(
       `;
 
       await db`
-        INSERT INTO economy_transactions (guild_id, user_id, action_type, amount, target_type, target_id, reason)
+        INSERT INTO economy_transactions (guild_id, user_id, type, amount, source, target_id, note)
         VALUES (${guildId}, ${session.id}, 'admin_reset_all', 0, 'economy', 'all', 'Admin reset all server balances')
       `;
 
@@ -97,7 +97,7 @@ export async function POST(
       `;
 
       await db`
-        INSERT INTO economy_transactions (guild_id, user_id, action_type, amount, target_type, target_id, reason)
+        INSERT INTO economy_transactions (guild_id, user_id, type, amount, source, target_id, note)
         VALUES (${guildId}, ${userId}, 'admin_set', ${parsedCash + parsedBank}, 'economy', ${session.id}, 'Admin updated balance from dashboard')
       `;
 
@@ -112,7 +112,7 @@ export async function POST(
       `;
 
       await db`
-        INSERT INTO economy_transactions (guild_id, user_id, action_type, amount, target_type, target_id, reason)
+        INSERT INTO economy_transactions (guild_id, user_id, type, amount, source, target_id, note)
         VALUES (${guildId}, ${userId}, 'admin_reset', 0, 'economy', ${session.id}, 'Admin reset user balance')
       `;
 

@@ -13,7 +13,7 @@ export async function GET(
 
   try {
     const [row] = await db`
-      SELECT default_name, default_limit, default_bitrate, is_locked
+      SELECT name_template, user_limit, is_locked, is_hidden, auto_pay_enabled
       FROM pvc_user_defaults
       WHERE guild_id = ${guildId} AND user_id = ${session.id}
     `;
@@ -21,9 +21,9 @@ export async function GET(
     return NextResponse.json({
       defaults: row
         ? {
-            defaultName: row.default_name,
-            defaultLimit: Number(row.default_limit),
-            defaultBitrate: Number(row.default_bitrate),
+            defaultName: row.name_template,
+            defaultLimit: Number(row.user_limit ?? 0),
+            defaultBitrate: 64000,
             isLocked: Boolean(row.is_locked),
           }
         : null,
@@ -45,21 +45,19 @@ export async function POST(
 
   try {
     const body = await req.json();
-    const { defaultName, defaultLimit, defaultBitrate, isLocked } = body;
+    const { defaultName, defaultLimit, isLocked } = body;
 
-    const nameVal = (defaultName || '').trim() || null;
+    const nameVal = (defaultName || '').trim() || "{username}'s Channel";
     const limitVal = defaultLimit !== undefined ? Math.max(0, Math.min(99, parseInt(defaultLimit, 10))) : 0;
-    const bitrateVal = defaultBitrate !== undefined ? Math.max(8000, Math.min(384000, parseInt(defaultBitrate, 10))) : 64000;
     const lockedVal = Boolean(isLocked);
 
     await db`
-      INSERT INTO pvc_user_defaults (guild_id, user_id, default_name, default_limit, default_bitrate, is_locked)
-      VALUES (${guildId}, ${session.id}, ${nameVal}, ${limitVal}, ${bitrateVal}, ${lockedVal})
+      INSERT INTO pvc_user_defaults (guild_id, user_id, name_template, user_limit, is_locked, is_hidden, auto_pay_enabled, updated_at)
+      VALUES (${guildId}, ${session.id}, ${nameVal}, ${limitVal}, ${lockedVal}, false, false, NOW())
       ON CONFLICT (guild_id, user_id)
       DO UPDATE SET
-        default_name = EXCLUDED.default_name,
-        default_limit = EXCLUDED.default_limit,
-        default_bitrate = EXCLUDED.default_bitrate,
+        name_template = EXCLUDED.name_template,
+        user_limit = EXCLUDED.user_limit,
         is_locked = EXCLUDED.is_locked,
         updated_at = NOW()
     `;

@@ -18,11 +18,11 @@ export async function GET(
       SELECT
         id,
         user_id,
-        action_type,
+        type,
         amount,
-        target_type,
+        source,
         target_id,
-        reason,
+        note,
         created_at
       FROM economy_transactions
       WHERE guild_id = ${guildId}
@@ -34,11 +34,11 @@ export async function GET(
       transactions: rows.map((r: any) => ({
         id: r.id,
         userId: r.user_id,
-        actionType: r.action_type,
+        actionType: r.type,
         amount: Number(r.amount),
-        targetType: r.target_type,
+        targetType: r.source,
         targetId: r.target_id,
-        reason: r.reason,
+        reason: r.note,
         createdAt: r.created_at,
       })),
     });

@@ -15,7 +15,7 @@ export async function GET(
 
   try {
     const cooldownRows = await db`
-      SELECT game, cooldown_seconds FROM game_cooldowns WHERE guild_id = ${guildId}
+      SELECT game_name, cooldown_seconds FROM game_cooldowns WHERE guild_id = ${guildId}
     `;
 
     const cooldownMap: Record<string, number> = {
@@ -24,7 +24,7 @@ export async function GET(
     };
 
     for (const row of cooldownRows) {
-      cooldownMap[row.game] = Number(row.cooldown_seconds);
+      cooldownMap[row.game_name] = Number(row.cooldown_seconds);
     }
 
     const [econConfig] = await db`
@@ -65,18 +65,18 @@ export async function POST(
 
     if (coinflip !== undefined) {
       await db`
-        INSERT INTO game_cooldowns (guild_id, game, cooldown_seconds)
+        INSERT INTO game_cooldowns (guild_id, game_name, cooldown_seconds)
         VALUES (${guildId}, 'coinflip', ${Math.max(0, parseInt(coinflip, 10))})
-        ON CONFLICT (guild_id, game)
+        ON CONFLICT (guild_id, game_name)
         DO UPDATE SET cooldown_seconds = EXCLUDED.cooldown_seconds, updated_at = NOW()
       `;
     }
 
     if (mines !== undefined) {
       await db`
-        INSERT INTO game_cooldowns (guild_id, game, cooldown_seconds)
+        INSERT INTO game_cooldowns (guild_id, game_name, cooldown_seconds)
         VALUES (${guildId}, 'mines', ${Math.max(0, parseInt(mines, 10))})
-        ON CONFLICT (guild_id, game)
+        ON CONFLICT (guild_id, game_name)
         DO UPDATE SET cooldown_seconds = EXCLUDED.cooldown_seconds, updated_at = NOW()
       `;
     }
