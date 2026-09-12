@@ -1,5 +1,4 @@
 import { getDb } from '../pool.js';
-import { TTLCache } from '../../utils/TTLCache.js';
 
 export interface AfkRecord {
   guildId: string;
@@ -18,10 +17,14 @@ export interface CachedAfk {
 }
 
 // In-memory cache for hot-path AFK checks in messageCreate: guildId -> userId -> CachedAfk
-const afkCache = new TTLCache<string, Map<string, CachedAfk>>(5_000);
+const afkCache = new Map<string, Map<string, CachedAfk>>();
 
 export function getAfkCacheSize(): number {
-  return 0; // Size calculation not possible without iterating TTLCache
+  let count = 0;
+  for (const guildMap of afkCache.values()) {
+    count += guildMap.size;
+  }
+  return count;
 }
 
 export function getAfkEntriesForGuild(guildId: string): (CachedAfk & { userId: string })[] {
@@ -36,9 +39,9 @@ export function getAfkEntriesForGuild(guildId: string): (CachedAfk & { userId: s
 
 export async function clearAllAfkRecords(guildId?: string): Promise<void> {
   if (guildId) {
-    afkCache.invalidate(guildId);
+    afkCache.delete(guildId);
   } else {
-    afkCache.invalidateAll();
+    afkCache.clear();
   }
 
   try {
@@ -54,7 +57,7 @@ export async function clearAllAfkRecords(guildId?: string): Promise<void> {
 }
 
 export async function loadAfkCache(): Promise<number> {
-  afkCache.invalidateAll();
+  afkCache.clear();
   try {
     const db = getDb();
     const rows = await db`SELECT guild_id, user_id, reason, started_at, channel_id, message_id FROM afk_users`;
@@ -141,7 +144,7 @@ export async function removeAfk(guildId: string, userId: string): Promise<Cached
 
   guildMap?.delete(userId);
   if (guildMap && guildMap.size === 0) {
-    afkCache.invalidate(guildId);
+    afkCache.delete(guildId);
   }
 
   try {

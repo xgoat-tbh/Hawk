@@ -29,6 +29,7 @@ export function getDb(): postgres.Sql {
       prepare: false,
       onnotice: () => {},
       keep_alive: 10,
+      backoff: (attempt) => Math.min(attempt * 0.5, 2),
     });
   }
   return sql;

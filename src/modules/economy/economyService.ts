@@ -101,6 +101,13 @@ export async function removeCash(guildId: string, userId: string, amount: number
   });
 }
 
+export async function deductCash(guildId: string, userId: string, amount: number): Promise<void> {
+  const success = await removeCash(guildId, userId, amount);
+  if (!success) {
+    throw new Error('Insufficient wallet balance to place this bet.');
+  }
+}
+
 export async function addBank(guildId: string, userId: string, amount: number): Promise<void> {
   if (amount <= 0) return;
   const db = getDb();

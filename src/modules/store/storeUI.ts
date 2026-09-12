@@ -67,14 +67,26 @@ export function buildStorePayload(
 export function buildItemInfoPayload(item: StoreItem, currencySymbol: string): ComponentV2Payload {
   let content =
     `• **Item ID:** \`${item.itemId}\`\n` +
-    `• **Item Name:** **${item.name}**\n` +
-    `• **Price:** \`${currencySymbol}${item.price.toLocaleString()}\`\n`;
+    `• **Name:** **${item.name}**\n` +
+    `• **Price:** \`${currencySymbol}${item.price.toLocaleString()}\`\n` +
+    `• **Stock:** \`${item.stock === -1 ? 'Unlimited' : item.stock}\`\n` +
+    `• **Usable:** \`${item.usable ? 'Yes' : 'No'}\` · **Sellable:** \`${item.sellable ? 'Yes' : 'No'}\`\n`;
 
-  if (item.inventoryRoleId) {
-    content += `• **Grants Role:** <@&${item.inventoryRoleId}>\n`;
+  if (item.roleRequired) {
+    content += `• **Requires Role:** <@&${item.roleRequired}>\n`;
+  }
+  const grantRole = item.roleGiven || item.inventoryRoleId;
+  if (grantRole) {
+    content += `• **Grants Role:** <@&${grantRole}>\n`;
+  }
+  if (item.roleRemoved) {
+    content += `• **Removes Role:** <@&${item.roleRemoved}>\n`;
+  }
+  if (item.replyMessage) {
+    content += `• **Custom Reply:** *"${item.replyMessage}"*\n`;
   }
 
-  content += `• **Description:** ${item.description || 'No description provided.'}`;
+  content += `\n**Description:**\n${item.description || '*No description provided.*'}`;
 
   return ui.standard({
     title: `Store Item: ${item.name}`,

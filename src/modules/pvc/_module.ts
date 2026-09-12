@@ -1,5 +1,5 @@
 import type { ModuleManifest } from '../../types/module.js';
-import type { Client } from 'discord.js';
+import { type Client, MessageFlags } from 'discord.js';
 import { handlePvcButton } from './_pvcButtonHandler.js';
 import { handlePvcSelect } from './_pvcSelectHandler.js';
 import { handlePvcVoiceStateUpdate } from './_pvcGatekeeper.js';
@@ -30,7 +30,7 @@ export default {
 
     const session = await getSessionByOwner(guildId, userId);
     if (!session) {
-      await interaction.reply({ content: "You don't have an active PVC.", ephemeral: true });
+      await interaction.reply({ content: "You don't have an active PVC.", flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -41,12 +41,12 @@ export default {
       if (channel && channel.isVoiceBased()) {
         await channel.setName(newName);
       }
-      await interaction.reply({ content: `PVC renamed to **${newName}**.`, ephemeral: true });
+      await interaction.reply({ content: `PVC renamed to **${newName}**.`, flags: MessageFlags.Ephemeral });
     } else if (interaction.customId === 'pvc_modal_limit') {
       const limitStr = interaction.fields.getTextInputValue('limit');
       const limit = parseInt(limitStr, 10);
       if (isNaN(limit) || limit < 0 || limit > 99) {
-        await interaction.reply({ content: 'Invalid limit. Must be between 0 and 99.', ephemeral: true });
+        await interaction.reply({ content: 'Invalid limit. Must be between 0 and 99.', flags: MessageFlags.Ephemeral });
         return;
       }
       
@@ -54,7 +54,7 @@ export default {
       if (channel && channel.isVoiceBased()) {
         await channel.setUserLimit(limit);
       }
-      await interaction.reply({ content: `PVC user limit set to ${limit === 0 ? 'unlimited' : limit}.`, ephemeral: true });
+      await interaction.reply({ content: `PVC user limit set to ${limit === 0 ? 'unlimited' : limit}.`, flags: MessageFlags.Ephemeral });
     }
   },
   

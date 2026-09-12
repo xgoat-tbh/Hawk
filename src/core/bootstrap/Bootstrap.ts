@@ -1,4 +1,4 @@
-import { Events, Client } from 'discord.js';
+import { Events, Client, MessageFlags } from 'discord.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import url from 'node:url';
@@ -231,7 +231,7 @@ export class Bootstrap {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: 'This interaction has expired or is unrecognized.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           }).catch(() => {});
         }
       }

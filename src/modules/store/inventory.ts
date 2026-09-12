@@ -4,6 +4,7 @@ import { getInventory } from './storeService.js';
 import { buildInventoryPayload } from './storeUI.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
 import { resolveUser } from '../../core/resolver/UserResolver.js';
+import { PermissionsBitField } from 'discord.js';
 import type { GuildTextBasedChannel } from 'discord.js';
 
 export default defineCommand({
@@ -20,6 +21,18 @@ export default defineCommand({
     let targetUser = ctx.message.author;
 
     if (ctx.parsed.args.length > 0) {
+      const isStaff =
+        ctx.member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+        ctx.member.permissions.has(PermissionsBitField.Flags.ManageGuild) ||
+        ctx.member.permissions.has(PermissionsBitField.Flags.ManageMessages) ||
+        ctx.member.permissions.has(PermissionsBitField.Flags.ModerateMembers) ||
+        ctx.member.id === ctx.guild.ownerId;
+
+      if (!isStaff) {
+        await ctx.message.react('❌').catch(() => {});
+        return;
+      }
+
       const resolved = await resolveUser(ctx.parsed.args[0], ctx.guild);
       if (resolved.success && resolved.value.member) {
         targetUser = resolved.value.member.user;

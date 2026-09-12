@@ -1,4 +1,4 @@
-import type { AnySelectMenuInteraction } from 'discord.js';
+import { type AnySelectMenuInteraction, MessageFlags } from 'discord.js';
 
 import { getSessionByOwner, addAccess, removeAccess } from './pvcService.js';
 import { transferOwnership } from './pvcService.js';
@@ -10,7 +10,7 @@ export async function handlePvcSelect(interaction: AnySelectMenuInteraction): Pr
 
   const session = await getSessionByOwner(guildId, userId);
   if (!session) {
-    await interaction.reply({ content: "You don't have an active PVC.", ephemeral: true });
+    await interaction.reply({ content: "You don't have an active PVC.", flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -28,7 +28,7 @@ export async function handlePvcSelect(interaction: AnySelectMenuInteraction): Pr
         });
       }
     }
-    await interaction.reply({ content: `Added ${users.size} users to your PVC.`, ephemeral: true });
+    await interaction.reply({ content: `Added ${users.size} users to your PVC.`, flags: MessageFlags.Ephemeral });
   } 
   else if (interaction.customId === 'pvc_select_remove_user' && interaction.isStringSelectMenu()) {
     const ids = interaction.values;
@@ -42,7 +42,7 @@ export async function handlePvcSelect(interaction: AnySelectMenuInteraction): Pr
         }
       }
     }
-    await interaction.reply({ content: `Removed ${ids.length} users from your PVC.`, ephemeral: true });
+    await interaction.reply({ content: `Removed ${ids.length} users from your PVC.`, flags: MessageFlags.Ephemeral });
   }
   else if (interaction.customId === 'pvc_select_transfer' && interaction.isUserSelectMenu()) {
     const newOwnerId = interaction.values[0];
@@ -56,9 +56,9 @@ export async function handlePvcSelect(interaction: AnySelectMenuInteraction): Pr
             ViewChannel: true
         });
     }
-    await interaction.reply({ content: `Transferred ownership to <@${newOwnerId}>.`, ephemeral: true });
+    await interaction.reply({ content: `Transferred ownership to <@${newOwnerId}>.`, flags: MessageFlags.Ephemeral });
   }
   else {
-    await interaction.reply({ content: 'Unknown action.', ephemeral: true });
+    await interaction.reply({ content: 'Unknown action.', flags: MessageFlags.Ephemeral });
   }
 }

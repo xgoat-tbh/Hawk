@@ -72,8 +72,8 @@ export async function checkPvcExpirations(client: Client): Promise<void> {
 export function startPvcScheduler(client: Client): NodeJS.Timeout {
   return setInterval(() => {
     checkPvcExpirations(client).catch((err: any) => {
-      const code = err?.code || err?.name || '';
-      const msg = String(err?.message || '');
+      const code = err?.code || err?.cause?.code || err?.name || '';
+      const msg = String(err?.message || '') + ' ' + String(err?.cause?.message || '');
       const isTransient =
         code === 'CONNECT_TIMEOUT' ||
         code === 'ETIMEDOUT' ||

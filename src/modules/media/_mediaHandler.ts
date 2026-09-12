@@ -19,6 +19,8 @@ export async function handleMediaFilter(message: Message): Promise<void> {
   if (!isValid) {
     // Delete invalid message
     await message.delete().catch((err) => {
+      const code = err?.code || (err as any)?.rawError?.code;
+      if (code === 10008 || String(err?.message || '').includes('Unknown Message')) return;
       consoleLog('warning', 'command_execution', `Failed to delete invalid media message in ${channelId}`, { error: err instanceof Error ? err.message : String(err) });
     });
 
@@ -39,7 +41,7 @@ export async function handleMediaFilter(message: Message): Promise<void> {
 
   // Valid media message -> Check auto-threading
   const autoThread = await getMediaAutoThread(guildId);
-  if (autoThread && 'startThread' in message.channel && !message.thread) {
+  if (autoThread && typeof message.startThread === 'function' && !message.hasThread && !message.channel.isThread()) {
     try {
       await message.startThread({
         name: 'Media Discussion',

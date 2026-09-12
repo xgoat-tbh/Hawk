@@ -7,6 +7,7 @@ import {
   type ButtonInteraction,
   type AnySelectMenuInteraction,
   type Guild,
+  MessageFlags,
 } from 'discord.js';
 import {
   getPermitsForGuild,
@@ -572,7 +573,7 @@ export async function handleAccessButton(interaction: ButtonInteraction): Promis
   if (authority !== AuthorityLevel.Owner) {
     await interaction.reply({
       content: 'Only **Bot Owners** can manage custom permits and dashboard access.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -896,7 +897,7 @@ export async function handleAccessSelect(interaction: AnySelectMenuInteraction):
   if (authority !== AuthorityLevel.Owner) {
     await interaction.reply({
       content: 'Only **Bot Owners** can manage custom permits and dashboard access.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
     return;
   }
@@ -917,7 +918,7 @@ export async function handleAccessSelect(interaction: AnySelectMenuInteraction):
     if (!inspectPayload) {
       await interaction.reply({
         content: 'Selected user no longer has active private Dashboard access.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -947,7 +948,7 @@ export async function handleAccessSelect(interaction: AnySelectMenuInteraction):
     if (!inspectPayload) {
       await interaction.reply({
         content: 'Selected target is no longer active in permits.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }

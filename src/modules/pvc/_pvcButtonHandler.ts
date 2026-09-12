@@ -2,7 +2,8 @@ import {
   type ButtonInteraction,
   ActionRowBuilder,
   UserSelectMenuBuilder,
-  StringSelectMenuBuilder
+  StringSelectMenuBuilder,
+  MessageFlags
 } from 'discord.js';
 import { getSessionByOwner, setLocked, setHidden, setAutoPayEnabled, deleteSession } from './pvcService.js';
 import { createRenameModal, createLimitModal } from './pvcModals.js';
@@ -22,7 +23,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
     // Maybe they are clicking from an Info panel inside their own PVC, or maybe from master panel
     // Wait, the master panel buttons are just aliases to the normal buttons, they act on the user's active session.
     // If no session:
-    await interaction.reply({ content: "You don't have an active PVC.", ephemeral: true });
+    await interaction.reply({ content: "You don't have an active PVC.", flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -38,7 +39,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
           Connect: newLocked ? false : null
         });
       }
-      await interaction.reply({ content: `PVC has been ${newLocked ? 'locked' : 'unlocked'}.`, ephemeral: true });
+      await interaction.reply({ content: `PVC has been ${newLocked ? 'locked' : 'unlocked'}.`, flags: MessageFlags.Ephemeral });
       break;
     }
     
@@ -51,7 +52,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
           ViewChannel: newHidden ? false : null
         });
       }
-      await interaction.reply({ content: `PVC has been ${newHidden ? 'hidden' : 'unhidden'}.`, ephemeral: true });
+      await interaction.reply({ content: `PVC has been ${newHidden ? 'hidden' : 'unhidden'}.`, flags: MessageFlags.Ephemeral });
       break;
     }
     
@@ -59,7 +60,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
     case 'btn_master_fastag': {
       const newFastag = !session.autoPayEnabled;
       await setAutoPayEnabled(session.channelId, newFastag);
-      await interaction.reply({ content: `FASTag (Auto-Pay) is now ${newFastag ? 'enabled' : 'disabled'}.`, ephemeral: true });
+      await interaction.reply({ content: `FASTag (Auto-Pay) is now ${newFastag ? 'enabled' : 'disabled'}.`, flags: MessageFlags.Ephemeral });
       break;
     }
     
@@ -69,7 +70,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
         await channel.delete('User deleted PVC').catch(() => {});
       }
       await deleteSession(session.channelId);
-      await interaction.reply({ content: 'PVC deleted successfully.', ephemeral: true });
+      await interaction.reply({ content: 'PVC deleted successfully.', flags: MessageFlags.Ephemeral });
       break;
     }
     
@@ -95,7 +96,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
         .setMinValues(1)
         .setMaxValues(1);
       const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(select);
-      await interaction.reply({ content: 'Select new owner:', components: [row], ephemeral: true });
+      await interaction.reply({ content: 'Select new owner:', components: [row], flags: MessageFlags.Ephemeral });
       break;
     }
     
@@ -108,7 +109,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
         .setMinValues(1)
         .setMaxValues(10);
       const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(select);
-      await interaction.reply({ content: 'Select friends to add:', components: [row], ephemeral: true });
+      await interaction.reply({ content: 'Select friends to add:', components: [row], flags: MessageFlags.Ephemeral });
       break;
     }
     
@@ -116,7 +117,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
     case 'btn_master_info': {
       const accessList = await getAccessList(session.channelId);
       const { embeds, components } = buildPvcInfoEmbed(session, interaction.user.username, accessList, interaction.client);
-      await interaction.reply({ embeds, components, ephemeral: true });
+      await interaction.reply({ embeds, components, flags: MessageFlags.Ephemeral });
       break;
     }
 
@@ -127,7 +128,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
         .setMinValues(1)
         .setMaxValues(10);
       const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(select);
-      await interaction.reply({ content: 'Select users to add:', components: [row], ephemeral: true });
+      await interaction.reply({ content: 'Select users to add:', components: [row], flags: MessageFlags.Ephemeral });
       break;
     }
 
@@ -135,7 +136,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
       const accessList = await getAccessList(session.channelId);
       const allowedUsers = accessList.filter(a => a.access === 'ALLOW' && a.targetType === 'USER');
       if (allowedUsers.length === 0) {
-        await interaction.reply({ content: 'No users to remove.', ephemeral: true });
+        await interaction.reply({ content: 'No users to remove.', flags: MessageFlags.Ephemeral });
         return;
       }
       const select = new StringSelectMenuBuilder()
@@ -147,7 +148,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
         select.addOptions({ label: `User: ${a.targetId}`, value: a.targetId });
       }
       const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
-      await interaction.reply({ content: 'Select users to remove:', components: [row], ephemeral: true });
+      await interaction.reply({ content: 'Select users to remove:', components: [row], flags: MessageFlags.Ephemeral });
       break;
     }
     
@@ -164,12 +165,12 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
           ViewChannel: newHidden ? false : null
         });
       }
-      await interaction.reply({ content: `PVC is now ${newLocked ? 'Private (Locked & Hidden)' : 'Open'}.`, ephemeral: true });
+      await interaction.reply({ content: `PVC is now ${newLocked ? 'Private (Locked & Hidden)' : 'Open'}.`, flags: MessageFlags.Ephemeral });
       break;
     }
 
     default:
-      await interaction.reply({ content: 'Unknown action.', ephemeral: true });
+      await interaction.reply({ content: 'Unknown action.', flags: MessageFlags.Ephemeral });
       break;
   }
 }

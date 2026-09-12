@@ -28,9 +28,14 @@ export default defineCommand({
       await ctx.respond.error('Please specify a price.');
       return;
     }
-    const price = parseInt(priceRaw);
+    let price: number;
+    if (priceRaw.toLowerCase().includes('e')) {
+      price = Math.floor(Number(priceRaw));
+    } else {
+      price = parseInt(priceRaw, 10);
+    }
     if (isNaN(price) || price < 0) {
-      await ctx.respond.error('Price must be a valid positive number.');
+      await ctx.respond.error('Price must be a valid positive number (supports scientific notation e.g. `1e6`).');
       return;
     }
 

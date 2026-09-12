@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -10,6 +10,7 @@ import {
   Gamepad2,
   MessageSquare,
   ChevronLeft,
+  ChevronDown,
   ShoppingBag,
   Briefcase,
   Pin,
@@ -18,10 +19,11 @@ import {
   FileText,
   Activity,
   HeartHandshake,
+  Terminal,
   X,
+  Dice5,
 } from 'lucide-react';
 import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
-
 import { useGuildData } from '@/context/GuildContext';
 
 interface SidebarProps {
@@ -42,6 +44,16 @@ export function Sidebar({
   const pathname = usePathname();
   const { userPermissions } = useGuildData();
 
+  // Accordion state per category group
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (groupName: string) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupName]: !prev[groupName],
+    }));
+  };
+
   const isModuleAllowed = (moduleId?: string) => {
     if (!moduleId) return true;
     if (!userPermissions) return true;
@@ -52,7 +64,8 @@ export function Sidebar({
 
   const navGroups = [
     {
-      group: 'SERVER',
+      group: 'SERVER CONFIG',
+      badge: 'Core',
       items: [
         { label: 'Overview', href: `/dashboard/${guildId}`, icon: Sliders },
         { label: 'General Settings', href: `/dashboard/${guildId}/general`, icon: Sliders, module: 'general' },
@@ -60,22 +73,25 @@ export function Sidebar({
       ].filter((item) => isModuleAllowed(item.module)),
     },
     {
-      group: 'ECONOMY',
+      group: 'ECONOMY & COMMERCE',
+      badge: 'Active',
       items: [
         { label: 'Economy & Rewards', href: `/dashboard/${guildId}/economy`, icon: Coins, module: 'economy' },
-        { label: 'Role Salaries', href: `/dashboard/${guildId}/income`, icon: Briefcase, module: 'economy' },
         { label: 'Store Catalog', href: `/dashboard/${guildId}/store`, icon: ShoppingBag, module: 'economy' },
+        { label: 'Role Salaries', href: `/dashboard/${guildId}/income`, icon: Briefcase, module: 'economy' },
+        { label: 'Minigames & Cooldowns', href: `/dashboard/${guildId}/games`, icon: Dice5, module: 'economy' },
       ].filter((item) => isModuleAllowed(item.module)),
     },
     {
-      group: 'VOICE',
+      group: 'VOICE & GAMING',
+      badge: 'Live',
       items: [
         { label: 'Private Voice (PVC)', href: `/dashboard/${guildId}/pvc`, icon: Radio, module: 'pvc' },
         { label: 'Gaming LFG', href: `/dashboard/${guildId}/gaming`, icon: Gamepad2, module: 'gaming' },
       ].filter((item) => isModuleAllowed(item.module)),
     },
     {
-      group: 'COMMUNITY',
+      group: 'COMMUNITY & CHAT',
       items: [
         { label: 'Welcome Greetings', href: `/dashboard/${guildId}/welcome`, icon: HeartHandshake },
         { label: 'Community Tools', href: `/dashboard/${guildId}/community`, icon: MessageSquare, module: 'community' },
@@ -84,8 +100,9 @@ export function Sidebar({
       ].filter((item) => isModuleAllowed(item.module)),
     },
     {
-      group: 'INSIGHTS & SYSTEM',
+      group: 'DEVELOPER & SYSTEM',
       items: [
+        { label: 'Developers & Permits', href: `/dashboard/${guildId}/developers`, icon: Terminal },
         { label: 'Audit Log', href: `/dashboard/${guildId}/permissions?tab=audit`, icon: FileText, module: 'permissions' },
         { label: 'Access Simulator', href: `/dashboard/${guildId}/permissions?tab=preview`, icon: Activity, module: 'permissions' },
       ].filter((item) => isModuleAllowed(item.module)),
@@ -94,18 +111,18 @@ export function Sidebar({
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-[#08090a] border-r border-[#17191c]">
-      {/* Guild Header */}
+      {/* Guild Header / Switcher */}
       <div className="p-3 border-b border-[#17191c] flex items-center justify-between gap-2 bg-[#08090a]">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <Link
             href="/dashboard"
-            className="p-1 rounded bg-[#121417] border border-[#1f2226] text-[#6e747c] hover:text-[#ededed] hover:bg-[#17191c] transition-colors shrink-0"
+            className="p-1.5 rounded-lg bg-[#121417] border border-[#1f2226] text-[#6e747c] hover:text-[#ededed] hover:bg-[#17191c] transition-colors shrink-0"
             title="Switch Server"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </Link>
 
-          <div className="w-6 h-6 rounded bg-[#121417] border border-[#1f2226] flex items-center justify-center overflow-hidden shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-[#121417] border border-[#1f2226] flex items-center justify-center overflow-hidden shrink-0">
             {guildIcon ? (
               <img src={guildIcon} alt={guildName} className="w-full h-full object-cover" />
             ) : (
@@ -115,9 +132,15 @@ export function Sidebar({
             )}
           </div>
 
-          <span className="text-xs font-medium text-[#ededed] truncate max-w-[130px]" title={guildName}>
-            {guildName}
-          </span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-[#f0f2f5] truncate max-w-[125px]" title={guildName}>
+              {guildName}
+            </span>
+            <span className="text-[10px] text-[#6e747c] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Connected
+            </span>
+          </div>
         </div>
 
         {onCloseMobile && (
@@ -131,63 +154,88 @@ export function Sidebar({
         )}
       </div>
 
-      {/* Navigation List - Independently Scrollable */}
-      <HawkScrollArea className="flex-1 px-2.5 py-3 space-y-4">
-        {navGroups.map((group) => (
-          <div key={group.group} className="space-y-0.5">
-            <div className="px-2 py-1 text-[9px] font-mono font-semibold uppercase tracking-wider text-[#6e747c]">
-              {group.group}
-            </div>
+      {/* Navigation List - Accordion Groups */}
+      <HawkScrollArea className="flex-1 px-2.5 py-3 space-y-3">
+        {navGroups.map((group) => {
+          const isCollapsed = collapsedGroups[group.group] === true;
 
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isExact = pathname === item.href;
-                const isNested = item.href.includes('?') 
-                  ? false 
-                  : item.href !== `/dashboard/${guildId}` && pathname.startsWith(item.href);
-                const isActive = isExact || isNested;
+          return (
+            <div key={group.group} className="space-y-1">
+              {/* Accordion Header */}
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.group)}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider text-[#6e747c] hover:text-[#c1c7cd] hover:bg-[#0f1114] transition-colors"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>{group.group}</span>
+                  {group.badge && (
+                    <span className="px-1.5 py-0.2 text-[8px] font-sans font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 lowercase">
+                      {group.badge}
+                    </span>
+                  )}
+                </div>
+                <ChevronDown
+                  className={`w-3 h-3 text-[#555b64] transition-transform duration-200 ${
+                    isCollapsed ? '-rotate-90' : 'rotate-0'
+                  }`}
+                />
+              </button>
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onCloseMobile}
-                    className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors select-none ${
-                      isActive
-                        ? 'bg-[#121417] text-[#ededed] border-l-2 border-l-success'
-                        : 'text-[#949aa2] hover:text-[#ededed] hover:bg-[#0d0e10]'
-                    }`}
-                  >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-success' : 'text-[#6e747c]'}`} />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
+              {/* Group Items */}
+              {!isCollapsed && (
+                <div className="space-y-0.5 animate-in fade-in duration-150">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isExact = pathname === item.href;
+                    const isNested = item.href.includes('?')
+                      ? false
+                      : item.href !== `/dashboard/${guildId}` && pathname.startsWith(item.href);
+                    const isActive = isExact || isNested;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onCloseMobile}
+                        className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-150 select-none ${
+                          isActive
+                            ? 'bg-[#14171c] text-[#f0f2f5] border-l-2 border-indigo-500 shadow-sm'
+                            : 'text-[#8c949e] hover:text-[#f0f2f5] hover:bg-[#0e1013]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 truncate">
+                          <Icon
+                            className={`w-3.5 h-3.5 shrink-0 ${
+                              isActive ? 'text-indigo-400' : 'text-[#6e747c]'
+                            }`}
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </HawkScrollArea>
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar (Fixed width, independent scroll) */}
-      <aside className="hidden md:block w-56 shrink-0 h-[calc(100vh-3.5rem)]">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:block w-60 shrink-0 h-[calc(100vh-3.5rem)]">
         {sidebarContent}
       </aside>
 
       {/* Mobile Drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
-          <div
-            onClick={onCloseMobile}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
-          />
-          <div className="relative w-64 max-w-[80vw] h-full z-10">
-            {sidebarContent}
-          </div>
+          <div onClick={onCloseMobile} className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+          <div className="relative w-64 max-w-[80vw] h-full z-10">{sidebarContent}</div>
         </div>
       )}
     </>
