@@ -1,15 +1,21 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { SaveBar } from '@/components/SaveBar';
 import { SettingRow } from '@/components/ui/SettingRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { usePageEntrance } from '@/hooks/useAnimation';
+import { StatCard } from '@/components/ui/StatCard';
 import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
-import { MessageSquare, Lightbulb, Lock } from 'lucide-react';
+import {
+  MessageSquare,
+  Lightbulb,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 
 interface CommunityFormData {
   sugSubmission: string | null;
@@ -19,8 +25,9 @@ interface CommunityFormData {
 
 export default function CommunitySettingsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const { channels, config, updateConfigLocally, loading } = useGuildData();
-  const containerRef = usePageEntrance(!loading);
+  const { channels, config, updateConfigLocally } = useGuildData();
+
+  const [activeTab, setActiveTab] = useState<'suggestions' | 'confessions' | 'audit'>('suggestions');
 
   const initialFormData = useMemo<CommunityFormData>(() => {
     const sug = config?.suggestion || {};
@@ -76,99 +83,191 @@ export default function CommunitySettingsPage() {
 
   const current = draft || initialFormData;
 
+  const sugChan = channels.find((c) => c.id === current.sugSubmission);
+  const confChan = channels.find((c) => c.id === current.confSubmission);
+  const logChan = channels.find((c) => c.id === current.confLog);
+
+  const activeHubsCount = (current.sugSubmission ? 1 : 0) + (current.confSubmission ? 1 : 0);
+
   return (
-    <div ref={containerRef} className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
+    <div className="space-y-6 max-w-6xl mx-auto pb-24">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-[#949aa2]" />
-            <span>Community Feedback & Tools</span>
+          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
+            <MessageSquare className="w-5 h-5 text-indigo-400" />
+            Community Feedback & Tools
           </h1>
-          <p className="text-xs text-[#6e747c] mt-0.5">
-            Configure server suggestion boards, voting workflows, and anonymous confession channels.
+          <p className="mt-1 text-xs text-[#8c949e]">
+            Configure server suggestion boards, voting workflows, and anonymous confession feeds.
           </p>
         </div>
 
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => save()}
+            disabled={saveState === 'saving' || !isDirty}
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition-colors disabled:opacity-40"
+          >
+            <span>
+              {saveState === 'saving'
+                ? 'Saving...'
+                : saveState === 'success'
+                ? '✓ Saved'
+                : 'Save Changes'}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Overview StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Suggestions Board"
+          value={sugChan ? `#${sugChan.name}` : 'Unconfigured'}
+          subtitle="Public voting channel"
+          icon={Lightbulb}
+        />
+        <StatCard
+          title="Confessions Feed"
+          value={confChan ? `#${confChan.name}` : 'Unconfigured'}
+          subtitle="Anonymous community feed"
+          icon={Lock}
+        />
+        <StatCard
+          title="Moderation Audit Log"
+          value={logChan ? `#${logChan.name}` : 'Disabled'}
+          subtitle="Private staff author logs"
+          icon={ShieldCheck}
+        />
+        <StatCard
+          title="Active Hubs"
+          value={`${activeHubsCount} / 2`}
+          subtitle="Live interaction modules"
+          icon={Sparkles}
+        />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
         <button
-          type="button"
-          onClick={() => save()}
-          disabled={saveState === 'saving' || !isDirty}
-          className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5 self-start sm:self-auto"
+          onClick={() => setActiveTab('suggestions')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'suggestions'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
         >
-          <span>{saveState === 'saving' ? 'Saving...' : saveState === 'success' ? '✓ Saved' : 'Save Changes'}</span>
+          <Lightbulb className="w-4 h-4" />
+          Suggestions Board
+        </button>
+
+        <button
+          onClick={() => setActiveTab('confessions')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'confessions'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <Lock className="w-4 h-4" />
+          Anonymous Confessions
+        </button>
+
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'audit'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          Audit & Staff Security
         </button>
       </div>
 
-      <div className="space-y-8">
-        {/* Suggestion System */}
-        <div className="space-y-1" data-animate-section>
+      {/* TAB 1: Suggestions */}
+      {activeTab === 'suggestions' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
           <SectionHeader
-            title="Suggestion Board"
-            description="Automated member feedback with upvote & downvote reaction buttons."
-            icon={<Lightbulb className="w-3.5 h-3.5 text-[#6e747c]" />}
+            title="Suggestion Board Architecture"
+            description="Automated member feedback with upvote & downvote reaction buttons for community voting."
           />
 
-          <div className="pt-2">
-            <SettingRow
-              label="Public Suggestions Channel"
-              description="Text channel where new member suggestions are formatted and posted for voting."
-            >
-              <div className="w-64">
-                <ChannelPicker
-                  channels={channels}
-                  value={current.sugSubmission}
-                  onChange={(val) => setField('sugSubmission', val)}
-                  placeholder="Select suggestions channel..."
-                  allowedTypes={[0, 5]}
-                />
-              </div>
-            </SettingRow>
-          </div>
+          <SettingRow
+            label="Public Suggestions Channel"
+            description="Text channel where new member suggestions are formatted and posted for voting."
+            badge={current.sugSubmission ? 'Active' : 'Unset'}
+            badgeVariant={current.sugSubmission ? 'success' : 'neutral'}
+          >
+            <div className="w-64">
+              <ChannelPicker
+                channels={channels}
+                value={current.sugSubmission}
+                onChange={(val) => setField('sugSubmission', val)}
+                placeholder="Select suggestions channel..."
+                allowedTypes={[0, 5]}
+              />
+            </div>
+          </SettingRow>
         </div>
+      )}
 
-        {/* Confession System */}
-        <div className="space-y-1" data-animate-section>
+      {/* TAB 2: Confessions */}
+      {activeTab === 'confessions' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
           <SectionHeader
-            title="Anonymous Confessions"
-            description="Modal-based anonymous confessions feed with administrative audit tracking."
-            icon={<Lock className="w-3.5 h-3.5 text-[#6e747c]" />}
+            title="Anonymous Confessions Feed"
+            description="Modal-based anonymous confessions feed enabling members to share secrets without revealing their username."
           />
 
-          <div className="pt-2">
-            <SettingRow
-              label="Public Confessions Feed"
-              description="Channel where approved anonymous confessions are posted publicly."
-            >
-              <div className="w-64">
-                <ChannelPicker
-                  channels={channels}
-                  value={current.confSubmission}
-                  onChange={(val) => setField('confSubmission', val)}
-                  placeholder="Select confession feed..."
-                  allowedTypes={[0, 5]}
-                />
-              </div>
-            </SettingRow>
-
-            <SettingRow
-              label="Admin Confession Audit Log"
-              description="Private staff channel recording author identity for moderation audits."
-              badge="Private Staff"
-              badgeVariant="warning"
-            >
-              <div className="w-64">
-                <ChannelPicker
-                  channels={channels}
-                  value={current.confLog}
-                  onChange={(val) => setField('confLog', val)}
-                  placeholder="Select admin log channel..."
-                  allowedTypes={[0, 5]}
-                />
-              </div>
-            </SettingRow>
-          </div>
+          <SettingRow
+            label="Public Confessions Feed Channel"
+            description="Channel where approved anonymous confessions are posted publicly for member viewing."
+            badge={current.confSubmission ? 'Active' : 'Unset'}
+            badgeVariant={current.confSubmission ? 'success' : 'neutral'}
+          >
+            <div className="w-64">
+              <ChannelPicker
+                channels={channels}
+                value={current.confSubmission}
+                onChange={(val) => setField('confSubmission', val)}
+                placeholder="Select confession feed..."
+                allowedTypes={[0, 5]}
+              />
+            </div>
+          </SettingRow>
         </div>
-      </div>
+      )}
+
+      {/* TAB 3: Audit */}
+      {activeTab === 'audit' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Confession Moderation & Safety"
+            description="Administrative logging to protect server safety while maintaining anonymity for standard members."
+          />
+
+          <SettingRow
+            label="Admin Confession Audit Log"
+            description="Private staff channel recording author identity for moderation audits if TOS or server rules are broken."
+            badge="Staff Only"
+            badgeVariant="warning"
+          >
+            <div className="w-64">
+              <ChannelPicker
+                channels={channels}
+                value={current.confLog}
+                onChange={(val) => setField('confLog', val)}
+                placeholder="Select staff log channel..."
+                allowedTypes={[0]}
+              />
+            </div>
+          </SettingRow>
+        </div>
+      )}
 
       <SaveBar
         isDirty={isDirty}

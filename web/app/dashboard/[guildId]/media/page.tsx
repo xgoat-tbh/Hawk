@@ -5,17 +5,27 @@ import { useParams } from 'next/navigation';
 import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SettingRow } from '@/components/ui/SettingRow';
-import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
-import { usePageEntrance } from '@/hooks/useAnimation';
+import { StatCard } from '@/components/ui/StatCard';
 import { useGuildData } from '@/context/GuildContext';
-import { Image as ImageIcon, Plus, Trash2, Hash, MessageSquare, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+  Hash,
+  MessageSquare,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react';
 
 export default function MediaChannelsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const { channels, config, refreshData, updateConfigLocally, loading } = useGuildData();
-  const containerRef = usePageEntrance(!loading);
+  const { channels, config, refreshData, updateConfigLocally } = useGuildData();
 
-  const mediaChannels = config?.mediaChannels || [];
+  const [activeTab, setActiveTab] = useState<'channels' | 'add' | 'settings'>('channels');
+  const mediaChannels: string[] = config?.mediaChannels || [];
   const autoThread = config?.mediaAutoThread ?? true;
 
   const [newChannelId, setNewChannelId] = useState<string | null>(null);
@@ -49,6 +59,7 @@ export default function MediaChannelsPage() {
       setNewChannelId(null);
       setActionSuccess('Channel designated as media-only.');
       await refreshData();
+      setActiveTab('channels');
       setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
       setActionError(err.message || 'Error configuring media channel');
@@ -94,44 +105,204 @@ export default function MediaChannelsPage() {
   };
 
   return (
-    <div ref={containerRef} className="space-y-6 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
+    <div className="space-y-6 max-w-6xl mx-auto pb-24">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
-            <ImageIcon className="w-4 h-4 text-[#949aa2]" />
-            <span>Media-Only Channels</span>
+          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
+            <ImageIcon className="w-5 h-5 text-indigo-400" />
+            Media-Only Channels & Auto-Threading
           </h1>
-          <p className="text-xs text-[#6e747c] mt-0.5">
-            Designate gallery channels that require attachments and automatically spawn comment discussion threads.
+          <p className="mt-1 text-xs text-[#8c949e]">
+            Designate gallery channels that enforce media attachments and automatically spawn discussion threads.
           </p>
         </div>
+
+        <button
+          onClick={() => setActiveTab('add')}
+          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Gallery Channel
+        </button>
       </div>
 
       {actionSuccess && (
-        <div className="p-3.5 rounded-lg bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
-          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-400">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="p-3.5 rounded-lg bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
-          <AlertCircle className="w-4 h-4 text-critical shrink-0" />
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2 text-xs text-rose-400">
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
           <span>{actionError}</span>
         </div>
       )}
 
-      {/* Auto Thread Setting Row */}
-      <div className="space-y-1" data-animate-section>
-        <SectionHeader
-          title="Thread Automation"
-          description="Spawns discussion threads under image and video uploads."
-          icon={<MessageSquare className="w-3.5 h-3.5 text-[#6e747c]" />}
+      {/* Overview StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Active Channels"
+          value={mediaChannels.length}
+          subtitle="Enforced media galleries"
+          icon={ImageIcon}
         />
+        <StatCard
+          title="Auto-Threading"
+          value={autoThread ? 'Active' : 'Disabled'}
+          subtitle="Automatic discussion spawn"
+          icon={MessageSquare}
+        />
+        <StatCard
+          title="Attachment Filter"
+          value="Enforced"
+          subtitle="Non-attachment posts purged"
+          icon={ShieldCheck}
+        />
+        <StatCard
+          title="Bot Pipeline"
+          value="Real-time"
+          subtitle="Zero latency discord gateway"
+          icon={Zap}
+        />
+      </div>
 
-        <div className="pt-2">
+      {/* Tabs */}
+      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+        <button
+          onClick={() => setActiveTab('channels')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'channels'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <ImageIcon className="w-4 h-4" />
+          Designated Channels ({mediaChannels.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('add')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'add'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <Plus className="w-4 h-4" />
+          Add Channel
+        </button>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'settings'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          Thread Settings
+        </button>
+      </div>
+
+      {/* TAB 1: Channels List */}
+      {activeTab === 'channels' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Designated Media Galleries"
+            description="Channels where users must include image, video, or audio attachments. Pure text messages are immediately purged."
+          />
+
+          {mediaChannels.length === 0 ? (
+            <div className="py-12 text-center text-xs text-[#717882]">
+              <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm font-semibold text-white">No media channels configured</p>
+              <p className="mt-1">Add a channel above to restrict it to media attachments only.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#1a1d24] border border-[#1a1d24] rounded-lg overflow-hidden bg-[#121418]">
+              {mediaChannels.map((cId) => {
+                const ch = channels.find((c) => c.id === cId);
+                return (
+                  <div key={cId} className="flex items-center justify-between p-4 hover:bg-[#16181d]/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <Hash className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-white">
+                          #{ch?.name || 'unknown-channel'}
+                        </div>
+                        <div className="text-[10px] font-mono text-[#717882]">{cId}</div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleDeleteMediaChannel(cId)}
+                      className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+                      title="Remove media filter"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: Add Channel */}
+      {activeTab === 'add' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Designate New Media Channel"
+            description="Select a text or announcement channel to convert into an attachment-only gallery."
+          />
+
+          <form onSubmit={handleAddMediaChannel} className="space-y-4">
+            <SettingRow
+              label="Target Channel"
+              description="Users who post plain text without an image or video in this channel will have their message deleted."
+            >
+              <div className="w-72">
+                <ChannelPicker
+                  channels={channels}
+                  value={newChannelId}
+                  onChange={setNewChannelId}
+                  placeholder="Select channel to restrict..."
+                  allowedTypes={[0, 5]}
+                />
+              </div>
+            </SettingRow>
+
+            <div className="pt-3 border-t border-[#1a1d24] flex justify-end">
+              <button
+                type="submit"
+                disabled={isAdding || !newChannelId}
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors disabled:opacity-40"
+              >
+                {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                <span>{isAdding ? 'Adding...' : 'Confirm Designation'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 3: Settings */}
+      {activeTab === 'settings' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Discussion Thread Automation"
+            description="Control whether Hawk creates a public thread under valid media uploads to keep the main channel clean."
+          />
+
           <SettingRow
             label="Auto-Create Discussion Threads"
-            description="Automatically creates a public discussion thread under every valid media post."
+            description="Automatically spawns a dedicated comment thread under every image or video upload."
             badge={autoThread ? 'Active' : 'Disabled'}
             badgeVariant={autoThread ? 'success' : 'neutral'}
           >
@@ -142,97 +313,11 @@ export default function MediaChannelsPage() {
                 onChange={(e) => handleToggleAutoThread(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#ededed] after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success border border-[#1f2226]"></div>
+              <div className="w-9 h-5 bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#ededed] after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 border border-[#1f2226]"></div>
             </label>
           </SettingRow>
         </div>
-      </div>
-
-      {/* Designate Channel Form Bar */}
-      <form
-        onSubmit={handleAddMediaChannel}
-        className="p-4 sm:p-5 rounded-lg bg-[#0d0e10] border border-[#1f2226] flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shadow-sm"
-        data-animate-section
-      >
-        <div className="flex-1">
-          <ChannelPicker
-            channels={channels}
-            value={newChannelId}
-            onChange={setNewChannelId}
-            placeholder="Select text channel to designate as media gallery..."
-            allowedTypes={[0, 5]}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={!newChannelId || isAdding}
-          className="btn-primary py-1.5 px-3.5 text-xs flex items-center justify-center gap-1.5 shrink-0"
-        >
-          {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-          <span>Designate Gallery</span>
-        </button>
-      </form>
-
-      {/* Media Channels Data Table with HawkScrollArea */}
-      <div className="space-y-3" data-animate-section>
-        <SectionHeader
-          title={`Designated Media Channels (${mediaChannels.length})`}
-          description="Messages lacking image or video attachments in these channels will be filtered."
-        />
-
-        <div className="border border-[#1f2226] rounded-lg overflow-hidden bg-[#0d0e10] shadow-sm">
-          <HawkScrollArea maxHeight="50vh">
-            <table className="w-full text-left text-xs">
-              <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#17191c] text-[10px] font-mono uppercase tracking-wider text-[#6e747c]">
-                <tr>
-                  <th className="py-2.5 px-4">Channel</th>
-                  <th className="py-2.5 px-4">Enforcement Rule</th>
-                  <th className="py-2.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#17191c]">
-                {mediaChannels.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="py-12 text-center text-[#6e747c] text-xs">
-                      No media-only channels designated. Select a channel above to enforce media attachments.
-                    </td>
-                  </tr>
-                ) : (
-                  mediaChannels.map((item: any) => {
-                    const targetChannel = channels.find((c) => c.id === item.channel_id);
-                    return (
-                      <tr key={item.channel_id} className="hover:bg-[#121417]/50 transition-colors">
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1.5 text-xs text-[#ededed] font-medium">
-                            <Hash className="w-3.5 h-3.5 text-[#6e747c]" />
-                            <span>#{targetChannel?.name || `Channel ${item.channel_id}`}</span>
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-4 text-xs text-[#949aa2]">
-                          Attachment Required (Images / Videos only)
-                        </td>
-
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMediaChannel(item.channel_id)}
-                            className="p-1 rounded text-[#6e747c] hover:text-critical-text hover:bg-critical-soft transition-colors"
-                            title="Remove media filter"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </HawkScrollArea>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

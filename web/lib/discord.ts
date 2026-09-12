@@ -7,6 +7,8 @@ export interface DiscordGuild {
   features?: string[];
   hasBot?: boolean;
   iconUrl?: string | null;
+  approximateMemberCount?: number;
+  memberCount?: number;
 }
 
 export interface DiscordChannel {

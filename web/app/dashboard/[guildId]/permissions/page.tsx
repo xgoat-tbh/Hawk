@@ -12,10 +12,10 @@ import { AuditLogTable } from '@/components/Permissions/AuditLogTable';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { HawkSelect } from '@/components/ui/HawkSelect';
 import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
-import { usePageEntrance } from '@/hooks/useAnimation';
+import { StatCard } from '@/components/ui/StatCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import {
   Shield,
-  Lock,
   Command,
   Users,
   User,
@@ -38,7 +38,6 @@ export default function PermissionsMasterPage() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || 'access';
 
-  const containerRef = usePageEntrance();
   const { roles } = useGuildData();
 
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -170,35 +169,63 @@ export default function PermissionsMasterPage() {
   });
 
   return (
-    <div ref={containerRef} className="space-y-6 pb-20">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#1c1f23] pb-4">
+    <div className="space-y-6 max-w-6xl mx-auto pb-24">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-base font-semibold text-[#f1f2f3] tracking-tight flex items-center gap-2">
-            <Lock className="w-4 h-4 text-[#a9adb2]" />
-            <span>Permissions & Access Rules</span>
+          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
+            <Shield className="w-5 h-5 text-indigo-400" />
+            Permissions & Access Rules
           </h1>
-          <p className="text-xs text-[#7e8389] mt-0.5">
-            Configure dashboard access profiles, Discord command ACL overrides, role policies, and audit logs.
+          <p className="mt-1 text-xs text-[#8c949e]">
+            Configure dashboard access profiles, Discord command ACL overrides, role policies, and audit trails.
           </p>
         </div>
       </div>
 
       {statusMessage && (
-        <div className="p-3 rounded-md bg-success-soft border border-success-border flex items-center gap-2 text-xs text-success-text">
-          <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-400">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{statusMessage}</span>
         </div>
       )}
       {errorMessage && (
-        <div className="p-3 rounded-md bg-critical-soft border border-critical-border flex items-center gap-2 text-xs text-critical-text">
-          <AlertCircle className="w-4 h-4 text-critical shrink-0" />
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2 text-xs text-rose-400">
+          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Tabs Navigation */}
-      <div className="flex items-center gap-1 border-b border-[#1c1f23] overflow-x-auto pb-px">
+      {/* Overview StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Access Profiles"
+          value={profiles.length}
+          subtitle="Granular permission sets"
+          icon={Shield}
+        />
+        <StatCard
+          title="Role Policies"
+          value={rolePolicies.length}
+          subtitle="Mapped Discord server roles"
+          icon={Users}
+        />
+        <StatCard
+          title="User Overrides"
+          value={userOverrides.length}
+          subtitle="Explicit member exceptions"
+          icon={User}
+        />
+        <StatCard
+          title="Command ACLs"
+          value={commandAcls.length}
+          subtitle="Protected bot commands"
+          icon={Command}
+        />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium overflow-x-auto">
         {[
           { id: 'access', label: 'Dashboard Access', icon: Shield },
           { id: 'commands', label: 'Command Permissions', icon: Command },
@@ -214,13 +241,13 @@ export default function PermissionsMasterPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+              className={`pb-3 border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
                 isActive
-                  ? 'border-[#f1f2f3] text-[#f1f2f3] font-semibold'
-                  : 'border-transparent text-[#7e8389] hover:text-[#f1f2f3] hover:border-[#24272b]'
+                  ? 'border-indigo-500 text-white'
+                  : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#f1f2f3]' : 'text-[#7e8389]'}`} />
+              <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
             </button>
           );
@@ -229,34 +256,35 @@ export default function PermissionsMasterPage() {
 
       {/* TAB 1: Dashboard Access & Permission Matrix */}
       {activeTab === 'access' && (
-        <div className="space-y-6" data-animate-section>
+        <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Profiles List (4 cols) */}
-            <div className="lg:col-span-4 space-y-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
-                Permission Profiles ({profiles.length})
-              </span>
+            <div className="lg:col-span-4 bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-3">
+              <SectionHeader
+                title="Profiles Matrix"
+                description="Select a role profile to inspect and configure permission grants."
+              />
 
-              <HawkScrollArea maxHeight="60vh" className="space-y-1.5 pr-1">
+              <HawkScrollArea maxHeight="60vh" className="space-y-2 pr-1">
                 {profiles.map((p) => (
                   <div
                     key={p.id}
                     onClick={() => setSelectedProfileId(p.id)}
-                    className={`p-3 rounded-md border cursor-pointer transition-all ${
+                    className={`p-3.5 rounded-lg border cursor-pointer transition-all ${
                       selectedProfileId === p.id
-                        ? 'bg-[#17191c] border-[#3e434a] text-[#f1f2f3] shadow-sm'
-                        : 'bg-[#0d0e10] border-[#24272b] text-[#d5d7da] hover:border-[#2b2f34] hover:bg-[#121417]'
+                        ? 'bg-[#14161b] border-indigo-500/50 text-white shadow-sm'
+                        : 'bg-[#121418] border-[#1a1d24] text-[#c1c7cd] hover:border-[#262a33] hover:bg-[#16181d]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#f1f2f3]">{p.name}</span>
+                      <span className="text-xs font-semibold text-white">{p.name}</span>
                       {p.isPreset && (
-                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-sm bg-[#121417] text-[#7e8389] border border-[#24272b]">
+                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                           Preset
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-[#7e8389] mt-1 line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-[#8c949e] mt-1 line-clamp-2 leading-relaxed">
                       {p.description}
                     </p>
                   </div>
@@ -265,16 +293,14 @@ export default function PermissionsMasterPage() {
             </div>
 
             {/* Right Matrix View (8 cols) */}
-            <div className="lg:col-span-8 space-y-4">
-              <div className="p-4 rounded-md bg-[#0d0e10] border border-[#24272b] flex items-center justify-between">
+            <div className="lg:col-span-8 bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-[#1a1d24]">
                 <div>
-                  <h3 className="text-sm font-semibold text-[#f1f2f3] tracking-tight">{activeProfile.name}</h3>
-                  <p className="text-xs text-[#7e8389] mt-0.5">{activeProfile.description}</p>
+                  <h3 className="text-sm font-semibold text-white tracking-tight">{activeProfile.name}</h3>
+                  <p className="text-xs text-[#8c949e] mt-0.5">{activeProfile.description}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={activeProfile.isPreset ? 'Preset Profile' : 'Custom'} variant="info" />
-                </div>
+                <StatusBadge status={activeProfile.isPreset ? 'Preset Profile' : 'Custom'} variant="info" />
               </div>
 
               <PermissionMatrix
@@ -292,20 +318,25 @@ export default function PermissionsMasterPage() {
 
       {/* TAB 2: Command Permissions & ACLs */}
       {activeTab === 'commands' && (
-        <div className="space-y-4" data-animate-section>
-          <div className="p-3.5 rounded-md bg-[#0d0e10] border border-[#24272b] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Bot Command Access Control Lists"
+            description="Manage role and user overrides per command to restrict destructive or economy commands."
+          />
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-sm">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#7e8389]" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#717882]" />
               <input
                 type="text"
                 placeholder="Search commands or descriptions..."
                 value={commandSearch}
                 onChange={(e) => setCommandSearch(e.target.value)}
-                className="glass-input pl-8 text-xs font-sans"
+                className="w-full bg-[#14161b] border border-[#20242c] rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-sans"
               />
             </div>
 
-            <div className="w-44">
+            <div className="w-48">
               <HawkSelect
                 options={commandFilterOptions}
                 value={commandFilter}
@@ -315,23 +346,23 @@ export default function PermissionsMasterPage() {
             </div>
           </div>
 
-          {/* Commands Table with HawkScrollArea */}
-          <div className="border border-[#24272b] rounded-md overflow-hidden bg-[#0d0e10]">
+          {/* Commands Table */}
+          <div className="border border-[#1a1d24] rounded-lg overflow-hidden bg-[#121418]">
             <HawkScrollArea maxHeight="55vh">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-[#08090a] border-b border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
+                <thead className="sticky top-0 z-10 bg-[#0d0e11] border-b border-[#1a1d24] text-[10px] font-mono uppercase tracking-wider text-[#717882]">
                   <tr>
-                    <th className="py-2.5 px-4">Command</th>
-                    <th className="py-2.5 px-4">Category</th>
-                    <th className="py-2.5 px-4">Default Profile</th>
-                    <th className="py-2.5 px-4">Overrides</th>
-                    <th className="py-2.5 px-4 text-right">Risk Level</th>
+                    <th className="py-3 px-4">Command</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Default Profile</th>
+                    <th className="py-3 px-4">Overrides</th>
+                    <th className="py-3 px-4 text-right">Risk Level</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1c1f23]">
+                <tbody className="divide-y divide-[#1a1d24]">
                   {filteredCommands.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-[#7e8389] text-xs">
+                      <td colSpan={5} className="py-12 text-center text-[#717882] text-xs">
                         No commands matching search criteria.
                       </td>
                     </tr>
@@ -342,27 +373,27 @@ export default function PermissionsMasterPage() {
                         <tr
                           key={cmd.command}
                           onClick={() => setSelectedCommandForAcl(cmd)}
-                          className="hover:bg-[#121417]/50 cursor-pointer transition-colors"
+                          className="hover:bg-[#16181d]/60 cursor-pointer transition-colors"
                         >
-                          <td className="py-2.5 px-4 font-mono font-medium text-[#f1f2f3]">
+                          <td className="py-3 px-4 font-mono font-medium text-white">
                             !{cmd.command}
                           </td>
-                          <td className="py-2.5 px-4 text-[#a9adb2] capitalize">
+                          <td className="py-3 px-4 text-[#8c949e] capitalize">
                             {cmd.category}
                           </td>
-                          <td className="py-2.5 px-4 text-[#d5d7da] capitalize">
+                          <td className="py-3 px-4 text-[#c1c7cd] capitalize">
                             {cmd.defaultRoleProfile}
                           </td>
-                          <td className="py-2.5 px-4">
+                          <td className="py-3 px-4">
                             {overrideCount > 0 ? (
-                              <span className="text-[10px] font-mono text-success-text bg-success-soft border border-success-border px-2 py-0.5 rounded">
+                              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
                                 {overrideCount} custom {overrideCount === 1 ? 'override' : 'overrides'}
                               </span>
                             ) : (
-                              <span className="text-[#7e8389] font-mono text-xs">0 overrides</span>
+                              <span className="text-[#717882] font-mono text-xs">0 overrides</span>
                             )}
                           </td>
-                          <td className="py-2.5 px-4 text-right">
+                          <td className="py-3 px-4 text-right">
                             <StatusBadge
                               status={cmd.dangerLevel}
                               variant={
@@ -395,7 +426,11 @@ export default function PermissionsMasterPage() {
 
       {/* TAB 3: Role Policies */}
       {activeTab === 'roles' && (
-        <div data-animate-section>
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Role Policies Configuration"
+            description="Assign permission profiles to Discord server roles."
+          />
           <RolePoliciesTable
             policies={rolePolicies}
             profiles={profiles}
@@ -407,7 +442,11 @@ export default function PermissionsMasterPage() {
 
       {/* TAB 4: User Overrides */}
       {activeTab === 'users' && (
-        <div data-animate-section>
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="User Overrides & Exceptions"
+            description="Grant explicit profile assignments to individual Discord users regardless of roles."
+          />
           <UserOverridesList
             overrides={userOverrides}
             onSaveOverrides={handleSaveUserOverrides}
@@ -419,7 +458,11 @@ export default function PermissionsMasterPage() {
 
       {/* TAB 5: Access Preview Simulator */}
       {activeTab === 'preview' && (
-        <div data-animate-section>
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Access Rights Simulator"
+            description="Test effective permissions for any member or role combination in your guild."
+          />
           <AccessPreviewer
             roles={roles}
             profiles={profiles}
@@ -431,7 +474,11 @@ export default function PermissionsMasterPage() {
 
       {/* TAB 6: Security Audit Log */}
       {activeTab === 'audit' && (
-        <div data-animate-section>
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <SectionHeader
+            title="Permissions Change Audit Log"
+            description="Immutable ledger tracking every modification to profiles, role policies, and command overrides."
+          />
           <AuditLogTable guildId={guildId} />
         </div>
       )}

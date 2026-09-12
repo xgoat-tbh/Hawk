@@ -3,9 +3,9 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useGuildData } from '@/context/GuildContext';
-import { usePageEntrance } from '@/hooks/useAnimation';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { SaveBar } from '@/components/SaveBar';
+import { StatCard } from '@/components/ui/StatCard';
 import { SystemRoutingSection } from '@/components/Welcome/SystemRoutingSection';
 import { MessageFormatSection } from '@/components/Welcome/MessageFormatSection';
 import { WelcomePreview } from '@/components/Welcome/WelcomePreview';
@@ -17,13 +17,19 @@ import {
   RotateCcw,
   Check,
   Loader2,
+  Sparkles,
+  Sliders,
+  Code,
+  Hash,
+  MessageSquare,
+  Users,
 } from 'lucide-react';
 
 export default function WelcomeGreetingsPage() {
   const { guildId } = useParams() as { guildId: string };
-  const { guild, bot, channels, config, updateConfigLocally, loading } = useGuildData();
-  const containerRef = usePageEntrance(!loading);
+  const { guild, bot, channels, config, updateConfigLocally } = useGuildData();
 
+  const [activeTab, setActiveTab] = useState<'routing' | 'designer' | 'json'>('designer');
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
   const [copiedJson, setCopiedJson] = useState(false);
@@ -97,6 +103,7 @@ export default function WelcomeGreetingsPage() {
   });
 
   const current = draft || initialData;
+  const targetChannel = channels.find((c) => c.id === current.channelId);
 
   const insertToken = (token: string) => {
     const textarea = textareaRef.current;
@@ -159,8 +166,8 @@ export default function WelcomeGreetingsPage() {
     }
   };
 
-  const handleCopyJson = () => {
-    const payload = {
+  const jsonPayload = useMemo(() => {
+    return {
       embeds: [
         {
           title: current.title,
@@ -172,21 +179,24 @@ export default function WelcomeGreetingsPage() {
         },
       ],
     };
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+  }, [current]);
+
+  const handleCopyJson = () => {
+    navigator.clipboard.writeText(JSON.stringify(jsonPayload, null, 2));
     setCopiedJson(true);
     setTimeout(() => setCopiedJson(false), 2500);
   };
 
   return (
-    <div ref={containerRef} className="space-y-6 pb-24">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#17191c] pb-4">
+    <div className="space-y-6 max-w-6xl mx-auto pb-24">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-base font-semibold text-[#ededed] tracking-tight flex items-center gap-2">
-            <HeartHandshake className="w-4 h-4 text-[#949aa2]" />
-            <span>Welcome Greetings & Embed Designer</span>
+          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
+            <HeartHandshake className="w-5 h-5 text-indigo-400" />
+            Welcome Greetings & Embed Designer
           </h1>
-          <p className="text-xs text-[#6e747c] mt-0.5">
+          <p className="mt-1 text-xs text-[#8c949e]">
             Craft automated welcome messages dispatched when members join your server.
           </p>
         </div>
@@ -196,99 +206,179 @@ export default function WelcomeGreetingsPage() {
             type="button"
             onClick={handleSendTestMessage}
             disabled={testSending || !current.channelId}
-            className="btn-outline-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors disabled:opacity-40"
             title="Dispatch a test greeting to your configured Discord channel"
           >
             {testSending ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Send className="w-3.5 h-3.5 text-[#949aa2]" />
+              <Send className="w-3.5 h-3.5 text-indigo-400" />
             )}
             <span>{testSending ? 'Sending...' : 'Test in Discord'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => save()}
-            disabled={saveState === 'saving' || !isDirty}
-            className="btn-primary text-xs py-1.5 px-3.5 flex items-center gap-1.5"
-          >
-            <span>
-              {saveState === 'saving'
-                ? 'Saving...'
-                : saveState === 'success'
-                ? '✓ Saved'
-                : 'Save Changes'}
-            </span>
           </button>
         </div>
       </div>
 
-      {/* Test Result Toast */}
+      {/* Test Result Banner */}
       {testResult && (
         <div
-          className={`p-3 rounded-md text-xs border flex items-center justify-between transition-all ${
+          className={`p-3 rounded-xl text-xs border flex items-center justify-between transition-all ${
             testResult.success
-              ? 'bg-success-soft border-success-border text-success-text'
-              : 'bg-critical-soft border-critical-border text-critical-text'
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
           }`}
         >
           <span>{testResult.message}</span>
         </div>
       )}
 
-      {/* 2-Column Responsive Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Side: Configuration Controls */}
-        <div className="lg:col-span-7 space-y-6">
+      {/* Overview StatCards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Delivery State"
+          value={current.enabled ? 'Enabled' : 'Disabled'}
+          subtitle="Automated welcome trigger"
+          icon={Sparkles}
+        />
+        <StatCard
+          title="Target Channel"
+          value={targetChannel ? `#${targetChannel.name}` : 'Not Assigned'}
+          subtitle="Public greeting channel"
+          icon={Hash}
+        />
+        <StatCard
+          title="Message Format"
+          value={current.isEmbed ? 'Rich Embed' : 'Plain Text'}
+          subtitle="Card rendering engine"
+          icon={MessageSquare}
+        />
+        <StatCard
+          title="Server Scope"
+          value={guild?.approximateMemberCount ? `${guild.approximateMemberCount.toLocaleString()}` : `${channels.length} Channels`}
+          subtitle="Target audience reach"
+          icon={Users}
+        />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+        <button
+          onClick={() => setActiveTab('designer')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'designer'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          Message & Embed Designer
+        </button>
+
+        <button
+          onClick={() => setActiveTab('routing')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'routing'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <Sliders className="w-4 h-4" />
+          Routing & Setup
+        </button>
+
+        <button
+          onClick={() => setActiveTab('json')}
+          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+            activeTab === 'json'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+          }`}
+        >
+          <Code className="w-4 h-4" />
+          Raw JSON Payload
+        </button>
+      </div>
+
+      {/* TAB 1: Designer */}
+      {activeTab === 'designer' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-7 bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+            <MessageFormatSection
+              current={current}
+              setField={setField}
+              textareaRef={textareaRef}
+              insertToken={insertToken}
+            />
+
+            <div className="pt-3 flex items-center justify-between border-t border-[#1a1d24]">
+              <button
+                type="button"
+                onClick={handleCopyJson}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors"
+              >
+                {copiedJson ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-[#717882]" />
+                )}
+                <span>{copiedJson ? 'Copied JSON!' : 'Copy Discord JSON'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => reset()}
+                disabled={!isDirty}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#717882] hover:text-[#c1c7cd] flex items-center gap-1.5 transition-colors disabled:opacity-40"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Draft</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 sticky top-6">
+            <WelcomePreview
+              current={current}
+              guildName={guild?.name}
+              botUsername={bot?.username}
+              botAvatarUrl={bot?.avatarUrl}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: Routing */}
+      {activeTab === 'routing' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
           <SystemRoutingSection
             current={current}
             channels={channels}
             setField={setField}
           />
+        </div>
+      )}
 
-          <MessageFormatSection
-            current={current}
-            setField={setField}
-            textareaRef={textareaRef}
-            insertToken={insertToken}
-          />
-
-          {/* Utility Actions */}
-          <div className="pt-2 flex items-center justify-between border-t border-[#17191c]">
+      {/* TAB 3: Raw JSON */}
+      {activeTab === 'json' && (
+        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Discord REST JSON Representation</h3>
+              <p className="text-xs text-[#8c949e]">Full embed payload sent to Discord Webhook and REST API channels.</p>
+            </div>
             <button
-              type="button"
               onClick={handleCopyJson}
-              className="btn-outline-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors"
             >
-              {copiedJson ? (
-                <Check className="w-3.5 h-3.5 text-success" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-[#6e747c]" />
-              )}
-              <span>{copiedJson ? 'Copied JSON!' : 'Copy Discord JSON'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => reset()}
-              disabled={!isDirty}
-              className="btn-outline-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 disabled:opacity-35"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-[#6e747c]" />
-              <span>Reset Draft</span>
+              {copiedJson ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedJson ? 'Copied' : 'Copy'}
             </button>
           </div>
+          <pre className="p-4 rounded-lg bg-[#121418] border border-[#20242c] text-xs font-mono text-[#c1c7cd] overflow-x-auto">
+            {JSON.stringify(jsonPayload, null, 2)}
+          </pre>
         </div>
-
-        {/* Right Side: Sticky Live Discord Preview */}
-        <WelcomePreview
-          current={current}
-          guildName={guild?.name}
-          botUsername={bot?.username}
-          botAvatarUrl={bot?.avatarUrl}
-        />
-      </div>
+      )}
 
       <SaveBar
         isDirty={isDirty}
