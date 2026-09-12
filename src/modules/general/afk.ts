@@ -6,9 +6,10 @@ import {
   setAfk,
   getAfkEntriesForGuild,
   clearAllAfkRecords,
+  removeAfk,
 } from '../../core/database/repositories/afkRepo.js';
 import { buildAfkSetPayload, AFK_ALLOWED_MENTIONS } from './afkUI.js';
-import { applyAfkNickname } from './afkSanitizer.js';
+import { applyAfkNickname, removeAfkNickname } from './afkSanitizer.js';
 import { getAuthorityLevel } from '../../core/permissions/PermissionChecker.js';
 import { AuthorityLevel } from '../../types/permission.js';
 import { ui } from '../../core/ui/index.js';
@@ -27,7 +28,7 @@ export default defineCommand({
   cooldown: 3,
 
   async execute(ctx: CommandContext): Promise<void> {
-    const { guild, member, channel, parsed, message } = ctx;
+    const { guild, member, channel, parsed, message, respond } = ctx;
     const aliasUsed = parsed.aliasUsed.toLowerCase();
 
     // ── Direct Reset Shortcut ──
@@ -50,8 +51,20 @@ export default defineCommand({
       return;
     }
 
-    // ── Subcommand: reset / clear ──
-    if (firstWord === 'reset' || firstWord === 'clear') {
+    // ── Subcommand: clear / off / remove (Own AFK) ──
+    if (firstWord === 'clear' || firstWord === 'off' || firstWord === 'remove') {
+      const removed = await removeAfk(guild.id, member.id);
+      await removeAfkNickname(member);
+      if (removed) {
+        await respond.success('Your AFK status and nickname tag have been removed.');
+      } else {
+        await respond.info('You are not marked as AFK. Any lingering AFK tag has been removed.');
+      }
+      return;
+    }
+
+    // ── Subcommand: reset (Admin/Owner) ──
+    if (firstWord === 'reset') {
       await handleAfkReset(ctx);
       return;
     }
@@ -115,8 +128,16 @@ async function handleAfkReset(ctx: CommandContext): Promise<void> {
     return;
   }
 
+  const entries = getAfkEntriesForGuild(guild.id);
+  for (const e of entries) {
+    const m = await guild.members.fetch(e.userId).catch(() => null);
+    if (m) {
+      await removeAfkNickname(m);
+    }
+  }
+
   await clearAllAfkRecords(guild.id);
-  await respond.success('Successfully cleared all AFK records and reset AFK cache for this server.');
+  await respond.success('Successfully cleared all AFK records and restored nicknames for this server.');
 
   logEvent('info', 'command_execution', `Server AFK cache reset by ${member.user.tag}`, {
     executor: member.user.tag,

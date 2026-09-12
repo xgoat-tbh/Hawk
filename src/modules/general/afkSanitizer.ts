@@ -106,13 +106,32 @@ export async function removeAfkNickname(member: GuildMember): Promise<{ success:
       return { success: false, reason: 'hierarchy_restricted' };
     }
 
-    const currentName = member.displayName;
-    if (!currentName.startsWith('[AFK] ')) {
+    // Check member's current nickname or displayName
+    let targetMember = member;
+    let currentName = targetMember.nickname || targetMember.displayName;
+
+    if (!/^\[AFK\]\s*/i.test(currentName)) {
+      // Refresh member from API in case cache was stale
+      const fetched = await guild.members.fetch(member.id).catch(() => null);
+      if (fetched) {
+        targetMember = fetched;
+        currentName = targetMember.nickname || targetMember.displayName;
+      }
+    }
+
+    if (!/^\[AFK\]\s*/i.test(currentName)) {
       return { success: true };
     }
 
-    const restoredName = currentName.replace(/^\[AFK\]\s*/i, '');
-    await member.setNickname(restoredName, 'User returned from AFK');
+    // Strip [AFK] tags (case-insensitive, handles multiple or missing space)
+    const restoredName = currentName.replace(/^(\[AFK\]\s*)+/i, '').trim();
+
+    // If restoredName matches user's username/globalName or is empty, set null to clear nickname override
+    const targetNick = (!restoredName || restoredName === targetMember.user.username || restoredName === targetMember.user.globalName)
+      ? null
+      : restoredName;
+
+    await targetMember.setNickname(targetNick, 'User returned from AFK / AFK status cleared');
     return { success: true };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
