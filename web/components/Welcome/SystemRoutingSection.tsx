@@ -29,7 +29,7 @@ export function SystemRoutingSection({
       <div className="pt-2">
         <SettingRow
           label="Enable Welcome Greetings"
-          description="When enabled, Hawk will automatically post the greeting when a new user arrives."
+          description="When enabled, Amo Bot will automatically post the greeting when a new user arrives."
           badge={current.enabled ? 'Active' : 'Disabled'}
           badgeVariant={current.enabled ? 'success' : 'neutral'}
         >
@@ -40,7 +40,7 @@ export function SystemRoutingSection({
               onChange={(e) => setField('enabled', e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-9 h-5 bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#ededed] after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success border border-[#1f2226]"></div>
+            <div className="w-9 h-5 bg-slate-200 dark:bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-[#ededed] after:border-black/[0.08] dark:after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success border border-black/[0.08] dark:border-[#1f2226]"></div>
           </label>
         </SettingRow>
 
@@ -71,7 +71,7 @@ export function SystemRoutingSection({
               onChange={(e) => setField('sendAsDm', e.target.checked)}
               className="sr-only peer"
             />
-            <div className="w-9 h-5 bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#ededed] after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success border border-[#1f2226]"></div>
+            <div className="w-9 h-5 bg-slate-200 dark:bg-[#121417] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white dark:after:bg-[#ededed] after:border-black/[0.08] dark:after:border-[#1f2226] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success border border-black/[0.08] dark:border-[#1f2226]"></div>
           </label>
         </SettingRow>
       </div>

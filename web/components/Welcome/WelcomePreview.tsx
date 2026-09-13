@@ -14,19 +14,19 @@ interface WelcomePreviewProps {
 export function WelcomePreview({
   current,
   guildName = 'Discord Server',
-  botUsername = 'Hawk',
+  botUsername = 'Amo Bot',
   botAvatarUrl = null,
 }: WelcomePreviewProps) {
   return (
     <div className="lg:col-span-5 sticky top-20 space-y-3">
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-[#ededed]">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#101217] dark:text-[#ededed]">
             Live Discord Preview
           </span>
           <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
         </div>
-        <span className="text-[10px] font-mono text-[#6e747c]">Simulated Output</span>
+        <span className="text-[10px] font-mono text-slate-500 dark:text-[#6e747c]">Simulated Output</span>
       </div>
 
       <div className="rounded-lg overflow-hidden border border-[#1f2226] shadow-2xl bg-[#313338]">

@@ -26,7 +26,7 @@ export function DiscordEmbedSimulator({
   footerText = 'Member #{server.count}',
   serverName = 'Discord Server',
   memberCount = 1250,
-  botName = 'Hawk',
+  botName = 'Amo Bot',
   botAvatarUrl,
 }: DiscordEmbedSimulatorProps) {
   const currentServer = serverName || 'Discord Server';

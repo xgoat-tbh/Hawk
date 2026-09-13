@@ -44,31 +44,31 @@ export function Navbar({
   const displayName = user?.username || 'Aaryan';
 
   return (
-    <header className="px-6 sm:px-8 pt-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 select-none shrink-0">
+    <header className="px-6 pt-3 pb-2 flex flex-col md:flex-row md:items-center justify-between gap-2.5 select-none shrink-0">
       {/* Left: Date + Greeting + Subtitle */}
       <div className="space-y-0.5">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {onMobileMenuToggle && (
             <button
               type="button"
               onClick={onMobileMenuToggle}
-              className="lg:hidden p-1.5 rounded-xl bg-white dark:bg-[#14161b] border border-black/[0.06] dark:border-white/[0.06] text-[#64748b] hover:text-[#101217] transition-colors"
+              className="lg:hidden p-1 rounded-lg bg-white dark:bg-[#14161b] border border-black/[0.06] dark:border-white/[0.06] text-[#64748b] hover:text-[#101217] transition-colors"
             >
-              <Menu className="w-4 h-4" />
+              <Menu className="w-3.5 h-3.5" />
             </button>
           )}
-          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-[#94a3b8]">
+          <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-[#94a3b8]">
             {dateStr}
           </span>
         </div>
 
-        <h1 className="text-2xl font-bold tracking-tight text-[#101217] dark:text-white flex items-center gap-2">
+        <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#101217] dark:text-white flex items-center gap-2">
           <span>{greeting},</span>
           <span className="font-extrabold text-[#101217] dark:text-white">{displayName}</span>
-          <span className="text-xl">👋</span>
+          <span className="text-lg">👋</span>
         </h1>
 
-        <p className="text-xs font-medium text-[#64748b] dark:text-[#94a3b8]">
+        <p className="text-[11px] font-medium text-[#64748b] dark:text-[#94a3b8]">
           {guildName} is running smoothly.
         </p>
       </div>

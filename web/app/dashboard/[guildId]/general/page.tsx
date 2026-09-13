@@ -87,11 +87,11 @@ export default function GeneralSettingsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
             <Sliders className="w-5 h-5 text-indigo-400" />
             General Server Settings
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-[#6b7280] dark:text-[#8c949e]">
             Configure bot command prefix, administrator authority role, and server audit logging channels.
           </p>
         </div>
@@ -99,7 +99,7 @@ export default function GeneralSettingsPage() {
         <button
           type="button"
           onClick={() => refreshData()}
-          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-gray-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#4b5563] dark:text-[#c1c7cd] hover:text-[#101217] dark:hover:text-white shadow-xs flex items-center gap-1.5 transition-colors self-start sm:self-auto"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Refresh State
@@ -135,13 +135,13 @@ export default function GeneralSettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
         <button
           onClick={() => setActiveTab('core')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'core'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white'
+              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Terminal className="w-4 h-4" />
@@ -152,8 +152,8 @@ export default function GeneralSettingsPage() {
           onClick={() => setActiveTab('logging')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'logging'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white'
+              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
           }`}
         >
           <FileText className="w-4 h-4" />
@@ -164,8 +164,8 @@ export default function GeneralSettingsPage() {
           onClick={() => setActiveTab('standards')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'standards'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white'
+              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Globe className="w-4 h-4" />
@@ -175,7 +175,7 @@ export default function GeneralSettingsPage() {
 
       {/* TAB 1: Core Configuration */}
       {activeTab === 'core' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Core Bot Configuration"
             description="Fundamental prefix and elevated role settings."
@@ -190,7 +190,7 @@ export default function GeneralSettingsPage() {
               value={current.prefix}
               maxLength={5}
               onChange={(e) => setField('prefix', e.target.value)}
-              className="bg-[#14161b] border border-[#20242c] rounded-lg px-3 py-1.5 font-mono text-xs w-28 text-center text-white focus:outline-none focus:border-indigo-500"
+              className="bg-white dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg px-3 py-1.5 font-mono text-xs w-28 text-center text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
               placeholder="!"
             />
           </SettingRow>
@@ -213,10 +213,10 @@ export default function GeneralSettingsPage() {
 
       {/* TAB 2: Logging & Audits */}
       {activeTab === 'logging' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Logging & Audit Channels"
-            description="Dedicated channels where Hawk dispatches moderation, system, and economy logs."
+            description="Dedicated channels where Amo Bot dispatches moderation, system, and economy logs."
           />
 
           <SettingRow
@@ -251,7 +251,7 @@ export default function GeneralSettingsPage() {
 
       {/* TAB 3: System Standards */}
       {activeTab === 'standards' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="System Standards"
             description="Timestamps, audit standards, and regional format."
@@ -261,7 +261,7 @@ export default function GeneralSettingsPage() {
             label="Audit Timezone Standard"
             description="All server events, voice logs, and database records use standard UTC ISO 8601 formatting."
           >
-            <span className="text-xs font-mono text-[#949aa2] bg-[#14161b] px-3 py-1.5 rounded-lg border border-[#20242c] flex items-center gap-2">
+            <span className="text-xs font-mono text-gray-700 dark:text-[#949aa2] bg-gray-50 dark:bg-[#14161b] px-3 py-1.5 rounded-lg border border-black/[0.08] dark:border-[#20242c] flex items-center gap-2">
               <Clock className="w-3.5 h-3.5 text-indigo-400" />
               UTC (Universal Coordinated Time)
             </span>

@@ -38,7 +38,7 @@ export function ConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
       <div
-        className="w-full max-w-md bg-[#0e1013] border border-[#20232b] rounded-xl shadow-2xl p-6 relative overflow-hidden"
+        className="w-full max-w-md bg-white dark:bg-[#0e1013] border border-black/[0.08] dark:border-[#20232b] rounded-xl shadow-2xl p-6 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
@@ -54,17 +54,17 @@ export function ConfirmModal({
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-[#f0f2f5]">{title}</h3>
-            <p className="mt-1.5 text-xs text-[#8c949e] leading-relaxed">{description}</p>
+            <h3 className="text-base font-semibold text-[#101217] dark:text-[#f0f2f5]">{title}</h3>
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-[#8c949e] leading-relaxed">{description}</p>
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-[#1a1d24]">
+        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-black/[0.08] dark:border-[#1a1d24]">
           <button
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-xs font-medium text-[#c1c7cd] hover:text-white bg-[#16181d] hover:bg-[#1f2229] border border-[#262a33] rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-xs font-medium text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white bg-slate-100 dark:bg-[#16181d] hover:bg-slate-200 dark:hover:bg-[#1f2229] border border-black/[0.08] dark:border-[#262a33] rounded-lg transition-colors disabled:opacity-50"
           >
             {cancelLabel}
           </button>

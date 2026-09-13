@@ -94,11 +94,11 @@ export default function CommunitySettingsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
             <MessageSquare className="w-5 h-5 text-indigo-400" />
             Community Feedback & Tools
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-[#6b7280] dark:text-[#8c949e]">
             Configure server suggestion boards, voting workflows, and anonymous confession feeds.
           </p>
         </div>
@@ -150,13 +150,13 @@ export default function CommunitySettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
         <button
           onClick={() => setActiveTab('suggestions')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'suggestions'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white'
+              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Lightbulb className="w-4 h-4" />
@@ -167,8 +167,8 @@ export default function CommunitySettingsPage() {
           onClick={() => setActiveTab('confessions')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'confessions'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white'
+              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Lock className="w-4 h-4" />
@@ -179,8 +179,8 @@ export default function CommunitySettingsPage() {
           onClick={() => setActiveTab('audit')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'audit'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white'
+              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
@@ -190,7 +190,7 @@ export default function CommunitySettingsPage() {
 
       {/* TAB 1: Suggestions */}
       {activeTab === 'suggestions' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Suggestion Board Architecture"
             description="Automated member feedback with upvote & downvote reaction buttons for community voting."
@@ -217,7 +217,7 @@ export default function CommunitySettingsPage() {
 
       {/* TAB 2: Confessions */}
       {activeTab === 'confessions' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Anonymous Confessions Feed"
             description="Modal-based anonymous confessions feed enabling members to share secrets without revealing their username."
@@ -244,7 +244,7 @@ export default function CommunitySettingsPage() {
 
       {/* TAB 3: Audit */}
       {activeTab === 'audit' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Confession Moderation & Safety"
             description="Administrative logging to protect server safety while maintaining anonymity for standard members."

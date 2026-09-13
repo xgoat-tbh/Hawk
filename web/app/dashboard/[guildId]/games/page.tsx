@@ -81,11 +81,11 @@ export default function GamesDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
             <Dice5 className="w-5 h-5 text-indigo-400" />
             Minigames & Cooldown Settings
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-[#6b7280] dark:text-[#8c949e]">
             Fine-tune turn cooldowns for casino minigames (Coinflip, Mines) and economy jobs.
           </p>
         </div>
@@ -129,7 +129,7 @@ export default function GamesDashboardPage() {
       </div>
 
       {/* Minigames Cooldowns Card */}
-      <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+      <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
         <SectionHeader
           title="Casino Minigame Cooldowns"
           description="Control the mandatory delay between user bets to prevent bot spamming and rapid bankruptcies."
@@ -146,7 +146,7 @@ export default function GamesDashboardPage() {
               max={3600}
               value={cooldowns.coinflip}
               onChange={(e) => setCooldowns((prev) => ({ ...prev, coinflip: Number(e.target.value) }))}
-              className="w-28 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+              className="w-28 px-3 py-1.5 text-xs bg-white dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
             />
             <span className="text-xs text-[#717882]">seconds</span>
           </div>
@@ -163,7 +163,7 @@ export default function GamesDashboardPage() {
               max={3600}
               value={cooldowns.mines}
               onChange={(e) => setCooldowns((prev) => ({ ...prev, mines: Number(e.target.value) }))}
-              className="w-28 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+              className="w-28 px-3 py-1.5 text-xs bg-white dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
             />
             <span className="text-xs text-[#717882]">seconds</span>
           </div>
@@ -171,7 +171,7 @@ export default function GamesDashboardPage() {
       </div>
 
       {/* Economy Jobs Cooldowns Card */}
-      <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+      <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
         <SectionHeader
           title="Job & Activity Cooldowns"
           description="Set cooldown durations for community earning commands."
@@ -188,7 +188,7 @@ export default function GamesDashboardPage() {
               max={86400}
               value={cooldowns.work}
               onChange={(e) => setCooldowns((prev) => ({ ...prev, work: Number(e.target.value) }))}
-              className="w-28 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+              className="w-28 px-3 py-1.5 text-xs bg-white dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
             />
             <span className="text-xs text-[#717882]">seconds ({Math.round(cooldowns.work / 60)}m)</span>
           </div>
@@ -205,7 +205,7 @@ export default function GamesDashboardPage() {
               max={86400}
               value={cooldowns.slut}
               onChange={(e) => setCooldowns((prev) => ({ ...prev, slut: Number(e.target.value) }))}
-              className="w-28 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+              className="w-28 px-3 py-1.5 text-xs bg-white dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
             />
             <span className="text-xs text-[#717882]">seconds ({Math.round(cooldowns.slut / 60)}m)</span>
           </div>
@@ -222,7 +222,7 @@ export default function GamesDashboardPage() {
               max={86400}
               value={cooldowns.crime}
               onChange={(e) => setCooldowns((prev) => ({ ...prev, crime: Number(e.target.value) }))}
-              className="w-28 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+              className="w-28 px-3 py-1.5 text-xs bg-white dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
             />
             <span className="text-xs text-[#717882]">seconds ({Math.round(cooldowns.crime / 60)}m)</span>
           </div>
@@ -239,7 +239,7 @@ export default function GamesDashboardPage() {
               max={86400}
               value={cooldowns.rob}
               onChange={(e) => setCooldowns((prev) => ({ ...prev, rob: Number(e.target.value) }))}
-              className="w-28 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+              className="w-28 px-3 py-1.5 text-xs bg-white dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
             />
             <span className="text-xs text-[#717882]">seconds ({Math.round(cooldowns.rob / 3600)}h)</span>
           </div>
@@ -247,26 +247,26 @@ export default function GamesDashboardPage() {
       </div>
 
       {/* Mines Mechanics Reference Card */}
-      <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-4">
+      <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-4 shadow-xs">
         <SectionHeader
           title="Mines Grid Mechanics Reference"
           description="Real-time mathematical multiplier table applied across 3x3 interactive button grid."
         />
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 bg-[#121418] border border-[#20242c] rounded-lg">
+          <div className="p-3 bg-gray-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
             <span className="text-[10px] text-[#717882] uppercase tracking-wider block">1 Bomb</span>
             <span className="text-sm font-bold text-emerald-400">1.06x ~ 2.11x</span>
           </div>
-          <div className="p-3 bg-[#121418] border border-[#20242c] rounded-lg">
+          <div className="p-3 bg-gray-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
             <span className="text-[10px] text-[#717882] uppercase tracking-wider block">3 Bombs</span>
             <span className="text-sm font-bold text-emerald-400">1.41x ~ 4.23x</span>
           </div>
-          <div className="p-3 bg-[#121418] border border-[#20242c] rounded-lg">
+          <div className="p-3 bg-gray-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
             <span className="text-[10px] text-[#717882] uppercase tracking-wider block">5 Bombs</span>
             <span className="text-sm font-bold text-emerald-400">2.11x ~ 8.46x</span>
           </div>
-          <div className="p-3 bg-[#121418] border border-[#20242c] rounded-lg">
+          <div className="p-3 bg-gray-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
             <span className="text-[10px] text-[#717882] uppercase tracking-wider block">Inactivity Timeout</span>
             <span className="text-sm font-bold text-indigo-400">5 minutes auto</span>
           </div>

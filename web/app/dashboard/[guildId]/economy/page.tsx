@@ -314,7 +314,7 @@ export default function EconomyDashboardPage() {
       header: 'User ID',
       sortable: true,
       render: (row) => (
-        <div className="font-mono text-xs text-[#ededed] flex items-center gap-2">
+        <div className="font-mono text-xs text-[#101217] dark:text-[#ededed] flex items-center gap-2">
           <span>{row.userId}</span>
         </div>
       ),
@@ -324,7 +324,7 @@ export default function EconomyDashboardPage() {
       header: 'Wallet Cash',
       sortable: true,
       render: (row) => (
-        <span className="font-semibold text-emerald-400">
+        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
           {stats.currencySymbol}{row.cash.toLocaleString()}
         </span>
       ),
@@ -334,7 +334,7 @@ export default function EconomyDashboardPage() {
       header: 'Bank Balance',
       sortable: true,
       render: (row) => (
-        <span className="font-semibold text-indigo-400">
+        <span className="font-semibold text-indigo-600 dark:text-indigo-400">
           {stats.currencySymbol}{row.bank.toLocaleString()}
         </span>
       ),
@@ -344,7 +344,7 @@ export default function EconomyDashboardPage() {
       header: 'Net Worth',
       sortable: true,
       render: (row) => (
-        <span className="font-bold text-[#f0f2f5]">
+        <span className="font-bold text-[#101217] dark:text-[#f0f2f5]">
           {stats.currencySymbol}{row.netWorth.toLocaleString()}
         </span>
       ),
@@ -361,14 +361,14 @@ export default function EconomyDashboardPage() {
               setEditCash(row.cash);
               setEditBank(row.bank);
             }}
-            className="p-1.5 rounded-lg bg-[#16181d] hover:bg-[#20232b] text-[#c1c7cd] hover:text-white border border-[#262a33] transition-colors"
+            className="p-1.5 rounded-lg bg-white dark:bg-[#16181d] hover:bg-slate-100 dark:hover:bg-[#20232b] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33] shadow-xs transition-colors"
             title="Edit balance"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setResetTargetUser(row.userId)}
-            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
             title="Reset balance"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -390,14 +390,14 @@ export default function EconomyDashboardPage() {
         if (row.rank === 1) badge = '🥇 1st';
         if (row.rank === 2) badge = '🥈 2nd';
         if (row.rank === 3) badge = '🥉 3rd';
-        return <span className="font-bold text-xs text-[#ededed]">{badge}</span>;
+        return <span className="font-bold text-xs text-[#101217] dark:text-[#ededed]">{badge}</span>;
       },
     },
     {
       key: 'userId',
       header: 'User Snowflake',
       sortable: true,
-      render: (row) => <span className="font-mono text-xs text-[#c1c7cd]">{row.userId}</span>,
+      render: (row) => <span className="font-mono text-xs text-slate-600 dark:text-[#c1c7cd]">{row.userId}</span>,
     },
     {
       key: 'cash',
@@ -416,7 +416,7 @@ export default function EconomyDashboardPage() {
       header: 'Total Net Worth',
       sortable: true,
       render: (row) => (
-        <span className="font-bold text-emerald-400">
+        <span className="font-bold text-emerald-600 dark:text-emerald-400">
           {stats.currencySymbol}{row.netWorth.toLocaleString()}
         </span>
       ),
@@ -430,7 +430,7 @@ export default function EconomyDashboardPage() {
       header: 'Timestamp',
       sortable: true,
       render: (row) => (
-        <span className="text-[11px] text-[#717882]">
+        <span className="text-[11px] text-slate-500 dark:text-[#717882]">
           {new Date(row.createdAt).toLocaleString()}
         </span>
       ),
@@ -438,13 +438,13 @@ export default function EconomyDashboardPage() {
     {
       key: 'userId',
       header: 'User',
-      render: (row) => <span className="font-mono text-xs text-[#c1c7cd]">{row.userId}</span>,
+      render: (row) => <span className="font-mono text-xs text-slate-600 dark:text-[#c1c7cd]">{row.userId}</span>,
     },
     {
       key: 'actionType',
       header: 'Type',
       render: (row) => (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-[#16181d] border border-[#262a33] text-indigo-400">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-indigo-50 dark:bg-[#16181d] border border-indigo-200 dark:border-[#262a33] text-indigo-600 dark:text-indigo-400">
           {row.actionType}
         </span>
       ),
@@ -454,7 +454,7 @@ export default function EconomyDashboardPage() {
       header: 'Amount',
       sortable: true,
       render: (row) => (
-        <span className={row.amount >= 0 ? 'text-emerald-400 font-medium' : 'text-rose-400 font-medium'}>
+        <span className={row.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-rose-600 dark:text-rose-400 font-medium'}>
           {row.amount >= 0 ? '+' : ''}{stats.currencySymbol}{row.amount.toLocaleString()}
         </span>
       ),
@@ -462,7 +462,7 @@ export default function EconomyDashboardPage() {
     {
       key: 'reason',
       header: 'Details / Reason',
-      render: (row) => <span className="text-xs text-[#8c949e]">{row.reason || '—'}</span>,
+      render: (row) => <span className="text-xs text-slate-600 dark:text-[#8c949e]">{row.reason || '—'}</span>,
     },
   ];
 
@@ -471,11 +471,11 @@ export default function EconomyDashboardPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
-            <Coins className="w-5 h-5 text-indigo-400" />
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
+            <Coins className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
             Economy & Financial System
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
             Manage server money supply, inspect real-time user balances, rewards, and transaction audit trails.
           </p>
         </div>
@@ -489,7 +489,7 @@ export default function EconomyDashboardPage() {
               if (activeTab === 'transactions') fetchTransactions();
               toast.info('Telemetry refreshed.');
             }}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Refresh
@@ -497,7 +497,7 @@ export default function EconomyDashboardPage() {
 
           <button
             onClick={() => setIsResetAllOpen(true)}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-colors"
           >
             <AlertOctagon className="w-3.5 h-3.5" />
             Reset All Balances
@@ -534,13 +534,13 @@ export default function EconomyDashboardPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
         <button
           onClick={() => setActiveTab('balances')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'balances'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Wallet className="w-4 h-4" />
@@ -551,8 +551,8 @@ export default function EconomyDashboardPage() {
           onClick={() => setActiveTab('config')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'config'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Settings className="w-4 h-4" />
@@ -563,8 +563,8 @@ export default function EconomyDashboardPage() {
           onClick={() => setActiveTab('leaderboard')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'leaderboard'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Trophy className="w-4 h-4" />
@@ -575,8 +575,8 @@ export default function EconomyDashboardPage() {
           onClick={() => setActiveTab('transactions')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'transactions'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <History className="w-4 h-4" />
@@ -602,7 +602,7 @@ export default function EconomyDashboardPage() {
       {/* TAB 2: Configuration & Rewards */}
       {activeTab === 'config' && draft && (
         <div className="space-y-6">
-          <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
             <SectionHeader
               title="Currency & Starting Capital"
               description="Define the currency symbol and default balance for new server members."
@@ -616,7 +616,7 @@ export default function EconomyDashboardPage() {
                 maxLength={5}
                 value={draft.currencySymbol}
                 onChange={(e) => setField('currencySymbol', e.target.value)}
-                className="w-24 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+                className="w-24 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
               />
             </SettingRow>
 
@@ -629,12 +629,12 @@ export default function EconomyDashboardPage() {
                 min={0}
                 value={draft.startBalance}
                 onChange={(e) => setField('startBalance', Number(e.target.value))}
-                className="w-36 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+                className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
               />
             </SettingRow>
           </div>
 
-          <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
             <SectionHeader
               title="Daily Rewards & Streak Incentives"
               description="Configure rewards earned via the !daily command."
@@ -648,7 +648,7 @@ export default function EconomyDashboardPage() {
                 min={0}
                 value={draft.dailyRewardAmount}
                 onChange={(e) => setField('dailyRewardAmount', Number(e.target.value))}
-                className="w-36 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+                className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
               />
             </SettingRow>
 
@@ -661,12 +661,12 @@ export default function EconomyDashboardPage() {
                 min={0}
                 value={draft.dailyStreakBonus}
                 onChange={(e) => setField('dailyStreakBonus', Number(e.target.value))}
-                className="w-36 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+                className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
               />
             </SettingRow>
           </div>
 
-          <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
             <SectionHeader
               title="Passive Chat Income"
               description="Reward members automatically as they chat in active channels."
@@ -679,7 +679,7 @@ export default function EconomyDashboardPage() {
                 type="checkbox"
                 checked={draft.passiveIncome}
                 onChange={(e) => setField('passiveIncome', e.target.checked)}
-                className="w-4 h-4 rounded bg-[#121418] border-[#20242c] text-indigo-500 focus:ring-0 cursor-pointer"
+                className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#121418] border-black/[0.08] dark:border-[#20242c] text-indigo-600 focus:ring-0 cursor-pointer"
               />
             </SettingRow>
 
@@ -693,7 +693,7 @@ export default function EconomyDashboardPage() {
                   min={1}
                   value={draft.passiveAmount}
                   onChange={(e) => setField('passiveAmount', Number(e.target.value))}
-                  className="w-36 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+                  className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
                 />
               </SettingRow>
             )}
@@ -732,39 +732,39 @@ export default function EconomyDashboardPage() {
       {/* Edit User Balance Modal */}
       {editUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-[#0e1013] border border-[#20232b] rounded-xl p-6 shadow-2xl space-y-4">
-            <h3 className="text-sm font-semibold text-[#f0f2f5]">Edit User Balance</h3>
-            <p className="text-xs text-[#717882] font-mono">User: {editUser.userId}</p>
+          <div className="w-full max-w-sm bg-white dark:bg-[#0e1013] border border-black/[0.08] dark:border-[#20232b] rounded-xl p-6 shadow-2xl space-y-4">
+            <h3 className="text-sm font-semibold text-[#101217] dark:text-[#f0f2f5]">Edit User Balance</h3>
+            <p className="text-xs text-slate-500 dark:text-[#717882] font-mono">User: {editUser.userId}</p>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-[#c1c7cd]">Wallet Cash</label>
+                <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Wallet Cash</label>
                 <input
                   type="number"
                   min={0}
                   value={editCash}
                   onChange={(e) => setEditCash(Number(e.target.value))}
-                  className="w-full mt-1 px-3 py-1.5 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full mt-1 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[#c1c7cd]">Bank Balance</label>
+                <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Bank Balance</label>
                 <input
                   type="number"
                   min={0}
                   value={editBank}
                   onChange={(e) => setEditBank(Number(e.target.value))}
-                  className="w-full mt-1 px-3 py-1.5 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full mt-1 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#1a1d24]">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-black/[0.08] dark:border-[#1a1d24]">
               <button
                 type="button"
                 onClick={() => setEditUser(null)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-[#16181d] text-[#c1c7cd] hover:text-white border border-[#262a33]"
+                className="px-3 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-[#16181d] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33]"
               >
                 Cancel
               </button>

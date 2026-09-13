@@ -216,14 +216,14 @@ export default function PvcDashboardPage() {
       key: 'channelId',
       header: 'Channel ID',
       render: (row) => (
-        <span className="font-mono text-xs text-[#ededed]">{row.channelId}</span>
+        <span className="font-mono text-xs text-[#101217] dark:text-[#ededed]">{row.channelId}</span>
       ),
     },
     {
       key: 'ownerId',
       header: 'Owner',
       render: (row) => (
-        <span className="font-mono text-xs text-[#8c949e]">{row.ownerId}</span>
+        <span className="font-mono text-xs text-slate-600 dark:text-[#8c949e]">{row.ownerId}</span>
       ),
     },
     {
@@ -232,16 +232,16 @@ export default function PvcDashboardPage() {
       render: (row) => (
         <div className="flex items-center gap-1.5 text-xs">
           {row.isLocked ? (
-            <span className="flex items-center gap-1 text-rose-400 font-medium px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
+            <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-medium px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
               <Lock className="w-3 h-3" /> Locked
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-emerald-400 font-medium px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
               <Unlock className="w-3 h-3" /> Open
             </span>
           )}
           {row.isHidden && (
-            <span className="flex items-center gap-1 text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
+            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">
               <EyeOff className="w-3 h-3" /> Hidden
             </span>
           )}
@@ -252,7 +252,7 @@ export default function PvcDashboardPage() {
       key: 'userLimit',
       header: 'Limit',
       render: (row) => (
-        <span className="text-xs text-[#c1c7cd]">
+        <span className="text-xs text-slate-700 dark:text-[#c1c7cd]">
           {row.userLimit === 0 ? 'No limit' : `${row.userLimit} users`}
         </span>
       ),
@@ -261,7 +261,7 @@ export default function PvcDashboardPage() {
       key: 'autoPayEnabled',
       header: 'Auto-Pay',
       render: (row) => (
-        <span className={`text-xs font-semibold ${row.autoPayEnabled ? 'text-emerald-400' : 'text-[#717882]'}`}>
+        <span className={`text-xs font-semibold ${row.autoPayEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-[#717882]'}`}>
           {row.autoPayEnabled ? 'Active' : 'Off'}
         </span>
       ),
@@ -270,7 +270,7 @@ export default function PvcDashboardPage() {
       key: 'expiresAt',
       header: 'Expires At',
       render: (row) => (
-        <span className="text-[11px] text-[#717882]">
+        <span className="text-[11px] text-slate-500 dark:text-[#717882]">
           {new Date(row.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       ),
@@ -282,7 +282,7 @@ export default function PvcDashboardPage() {
       render: (row) => (
         <button
           onClick={() => setTerminateTarget(row.channelId)}
-          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
           title="Terminate Session"
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -296,11 +296,11 @@ export default function PvcDashboardPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
-            <Radio className="w-5 h-5 text-indigo-400" />
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
+            <Radio className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
             Private Voice Channels (PVC)
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
             Configure join-to-create voice hubs, monitor live channel telemetry, and adjust personal voice presets.
           </p>
         </div>
@@ -310,7 +310,7 @@ export default function PvcDashboardPage() {
             fetchLiveSessions();
             toast.info('Live PVC state refreshed.');
           }}
-          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors"
+          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Refresh Live
@@ -346,13 +346,13 @@ export default function PvcDashboardPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
         <button
           onClick={() => setActiveTab('live')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'live'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Radio className="w-4 h-4" />
@@ -363,8 +363,8 @@ export default function PvcDashboardPage() {
           onClick={() => setActiveTab('config')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'config'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Sliders className="w-4 h-4" />
@@ -375,8 +375,8 @@ export default function PvcDashboardPage() {
           onClick={() => setActiveTab('presets')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'presets'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -400,7 +400,7 @@ export default function PvcDashboardPage() {
       {/* TAB 2: Hub Configuration */}
       {activeTab === 'config' && draft && (
         <div className="space-y-6">
-          <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
             <SectionHeader
               title="Hub & Channel Architecture"
               description="Designate the Join-to-Create trigger channel and category where dynamic voice channels spawn."
@@ -449,7 +449,7 @@ export default function PvcDashboardPage() {
             </SettingRow>
           </div>
 
-          <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
             <SectionHeader
               title="Economy & Rental Rates"
               description="Set financial costs for keeping temporary voice channels active."
@@ -460,15 +460,15 @@ export default function PvcDashboardPage() {
               description="Amount deducted per hour from room owner's wallet or bank."
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#717882]">$</span>
+                <span className="text-xs text-slate-500 dark:text-[#717882]">$</span>
                 <input
                   type="number"
                   min={0}
                   value={draft.pvcHourlyRate}
                   onChange={(e) => setField('pvcHourlyRate', Number(e.target.value))}
-                  className="w-32 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+                  className="w-32 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
                 />
-                <span className="text-xs text-[#717882]">/ hour</span>
+                <span className="text-xs text-slate-500 dark:text-[#717882]">/ hour</span>
               </div>
             </SettingRow>
           </div>
@@ -477,7 +477,7 @@ export default function PvcDashboardPage() {
 
       {/* TAB 3: Personal Presets */}
       {activeTab === 'presets' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5 max-w-2xl">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 max-w-2xl shadow-xs">
           <SectionHeader
             title="Personal Room Defaults"
             description="Whenever you create a new private voice channel, your room will automatically inherit these settings."
@@ -493,7 +493,7 @@ export default function PvcDashboardPage() {
               value={personalDefaults.defaultName}
               onChange={(e) => setPersonalDefaults((p) => ({ ...p, defaultName: e.target.value }))}
               placeholder="e.g. Secret Hideout"
-              className="w-64 px-3 py-1.5 text-xs bg-[#121418] border border-[#20242c] rounded-lg text-[#ededed] focus:outline-none focus:border-indigo-500"
+              className="w-64 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
             />
           </SettingRow>
 
@@ -530,11 +530,11 @@ export default function PvcDashboardPage() {
               type="checkbox"
               checked={personalDefaults.isLocked}
               onChange={(e) => setPersonalDefaults((p) => ({ ...p, isLocked: e.target.checked }))}
-              className="w-4 h-4 rounded bg-[#121418] border-[#20242c] text-indigo-500 focus:ring-0 cursor-pointer"
+              className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#121418] border-black/[0.08] dark:border-[#20242c] text-indigo-600 focus:ring-0 cursor-pointer"
             />
           </SettingRow>
 
-          <div className="pt-4 border-t border-[#1a1d24] flex justify-end">
+          <div className="pt-4 border-t border-black/[0.08] dark:border-[#1a1d24] flex justify-end">
             <button
               onClick={handleSavePersonalDefaults}
               disabled={savingPersonal}

@@ -9,7 +9,7 @@ import {
   resolveEffectiveCommandAccess,
   SimulationResponse,
 } from '@/lib/permissions';
-import { fetchGuildPermissions } from '../route';
+import { fetchGuildPermissions } from '@/lib/permissionsService';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();

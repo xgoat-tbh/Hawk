@@ -192,11 +192,11 @@ export default function WelcomeGreetingsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
-            <HeartHandshake className="w-5 h-5 text-indigo-400" />
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
+            <HeartHandshake className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
             Welcome Greetings & Embed Designer
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
             Craft automated welcome messages dispatched when members join your server.
           </p>
         </div>
@@ -206,13 +206,13 @@ export default function WelcomeGreetingsPage() {
             type="button"
             onClick={handleSendTestMessage}
             disabled={testSending || !current.channelId}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors disabled:opacity-40"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors disabled:opacity-40 shadow-xs"
             title="Dispatch a test greeting to your configured Discord channel"
           >
             {testSending ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
-              <Send className="w-3.5 h-3.5 text-indigo-400" />
+              <Send className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
             )}
             <span>{testSending ? 'Sending...' : 'Test in Discord'}</span>
           </button>
@@ -261,13 +261,13 @@ export default function WelcomeGreetingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
         <button
           onClick={() => setActiveTab('designer')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'designer'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -278,8 +278,8 @@ export default function WelcomeGreetingsPage() {
           onClick={() => setActiveTab('routing')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'routing'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Sliders className="w-4 h-4" />
@@ -290,8 +290,8 @@ export default function WelcomeGreetingsPage() {
           onClick={() => setActiveTab('json')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'json'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Code className="w-4 h-4" />
@@ -302,7 +302,7 @@ export default function WelcomeGreetingsPage() {
       {/* TAB 1: Designer */}
       {activeTab === 'designer' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-7 bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+          <div className="lg:col-span-7 bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
             <MessageFormatSection
               current={current}
               setField={setField}
@@ -310,16 +310,16 @@ export default function WelcomeGreetingsPage() {
               insertToken={insertToken}
             />
 
-            <div className="pt-3 flex items-center justify-between border-t border-[#1a1d24]">
+            <div className="pt-3 flex items-center justify-between border-t border-black/[0.08] dark:border-[#1a1d24]">
               <button
                 type="button"
                 onClick={handleCopyJson}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
               >
                 {copiedJson ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
-                  <Copy className="w-3.5 h-3.5 text-[#717882]" />
+                  <Copy className="w-3.5 h-3.5 text-slate-400 dark:text-[#717882]" />
                 )}
                 <span>{copiedJson ? 'Copied JSON!' : 'Copy Discord JSON'}</span>
               </button>
@@ -328,7 +328,7 @@ export default function WelcomeGreetingsPage() {
                 type="button"
                 onClick={() => reset()}
                 disabled={!isDirty}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#717882] hover:text-[#c1c7cd] flex items-center gap-1.5 transition-colors disabled:opacity-40"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-slate-500 dark:text-[#717882] hover:text-slate-900 dark:hover:text-[#c1c7cd] flex items-center gap-1.5 transition-colors disabled:opacity-40 shadow-xs"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset Draft</span>
@@ -340,7 +340,7 @@ export default function WelcomeGreetingsPage() {
             <WelcomePreview
               current={current}
               guildName={guild?.name}
-              botUsername={bot?.username}
+              botUsername="Amo Bot"
               botAvatarUrl={bot?.avatarUrl}
             />
           </div>
@@ -349,7 +349,7 @@ export default function WelcomeGreetingsPage() {
 
       {/* TAB 2: Routing */}
       {activeTab === 'routing' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SystemRoutingSection
             current={current}
             channels={channels}
@@ -360,21 +360,21 @@ export default function WelcomeGreetingsPage() {
 
       {/* TAB 3: Raw JSON */}
       {activeTab === 'json' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-white">Discord REST JSON Representation</h3>
-              <p className="text-xs text-[#8c949e]">Full embed payload sent to Discord Webhook and REST API channels.</p>
+              <h3 className="text-sm font-semibold text-[#101217] dark:text-white">Discord REST JSON Representation</h3>
+              <p className="text-xs text-slate-500 dark:text-[#8c949e]">Full embed payload sent to Discord Webhook and REST API channels.</p>
             </div>
             <button
               onClick={handleCopyJson}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
             >
-              {copiedJson ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedJson ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400 dark:text-[#717882]" />}
               {copiedJson ? 'Copied' : 'Copy'}
             </button>
           </div>
-          <pre className="p-4 rounded-lg bg-[#121418] border border-[#20242c] text-xs font-mono text-[#c1c7cd] overflow-x-auto">
+          <pre className="p-4 rounded-lg bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] text-xs font-mono text-slate-800 dark:text-[#c1c7cd] overflow-x-auto">
             {JSON.stringify(jsonPayload, null, 2)}
           </pre>
         </div>

@@ -32,14 +32,14 @@ export function MessageFormatSection({
           label="Message Presentation"
           description="Display as an authentic Discord Rich Embed or standard text message."
         >
-          <div className="flex items-center gap-1 bg-[#0a0b0d] p-0.5 rounded-md border border-[#1f2226]">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#0a0b0d] p-0.5 rounded-md border border-black/[0.08] dark:border-[#1f2226]">
             <button
               type="button"
               onClick={() => setField('isEmbed', true)}
               className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                 current.isEmbed
-                  ? 'bg-[#17191c] text-[#ededed] shadow-tactile-btn'
-                  : 'text-[#6e747c] hover:text-[#ededed]'
+                  ? 'bg-white dark:bg-[#17191c] text-[#101217] dark:text-[#ededed] shadow-xs'
+                  : 'text-slate-500 dark:text-[#6e747c] hover:text-black dark:hover:text-[#ededed]'
               }`}
             >
               Rich Embed
@@ -49,8 +49,8 @@ export function MessageFormatSection({
               onClick={() => setField('isEmbed', false)}
               className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
                 !current.isEmbed
-                  ? 'bg-[#17191c] text-[#ededed] shadow-tactile-btn'
-                  : 'text-[#6e747c] hover:text-[#ededed]'
+                  ? 'bg-white dark:bg-[#17191c] text-[#101217] dark:text-[#ededed] shadow-xs'
+                  : 'text-slate-500 dark:text-[#6e747c] hover:text-black dark:hover:text-[#ededed]'
               }`}
             >
               Plain Text
@@ -75,17 +75,17 @@ export function MessageFormatSection({
         )}
 
         {/* Message Textarea with Token Injection */}
-        <div className="py-3 border-b border-[#17191c] space-y-2">
+        <div className="py-3 border-b border-black/[0.06] dark:border-[#17191c] space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-medium text-[#ededed]">
+              <span className="text-xs font-medium text-[#101217] dark:text-[#ededed]">
                 {current.isEmbed ? 'Embed Description' : 'Message Body'}
               </span>
-              <p className="text-[11px] text-[#6e747c]">
+              <p className="text-[11px] text-slate-500 dark:text-[#6e747c]">
                 Supports Markdown: **bold**, *italic*, `code`, and variable tokens.
               </p>
             </div>
-            <span className="text-[10px] font-mono text-[#6e747c]">
+            <span className="text-[10px] font-mono text-slate-400 dark:text-[#6e747c]">
               {current.description.length} / {current.isEmbed ? '4096' : '2000'}
             </span>
           </div>
@@ -102,7 +102,7 @@ export function MessageFormatSection({
 
           {/* Variable Tokens Chips */}
           <div className="space-y-1.5 pt-1">
-            <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#6e747c]">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-slate-500 dark:text-[#6e747c]">
               <Sparkles className="w-3 h-3 text-warning" />
               <span>Click a variable to insert into editor:</span>
             </div>
@@ -113,10 +113,10 @@ export function MessageFormatSection({
                   type="button"
                   onClick={() => insertToken(v.token)}
                   title={v.desc}
-                  className="px-2 py-1 rounded bg-[#121417] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#17191c] active:translate-y-[0.5px] text-[11px] font-mono text-[#ededed] flex items-center gap-1 transition-all"
+                  className="px-2 py-1 rounded bg-slate-50 dark:bg-[#121417] border border-black/[0.08] dark:border-[#1f2226] hover:border-black/[0.15] dark:hover:border-[#2a2d33] hover:bg-slate-100 dark:hover:bg-[#17191c] active:translate-y-[0.5px] text-[11px] font-mono text-[#101217] dark:text-[#ededed] flex items-center gap-1 transition-all shadow-xs"
                 >
-                  <span className="text-success">{v.token}</span>
-                  <span className="text-[9px] text-[#6e747c]">({v.label})</span>
+                  <span className="text-emerald-600 dark:text-success">{v.token}</span>
+                  <span className="text-[9px] text-slate-400 dark:text-[#6e747c]">({v.label})</span>
                 </button>
               ))}
             </div>

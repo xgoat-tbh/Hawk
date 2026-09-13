@@ -129,18 +129,18 @@ export default function GamingSettingsPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
-            <Gamepad2 className="w-5 h-5 text-indigo-400" />
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
+            <Gamepad2 className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
             Gaming LFG Alerts & Activity Pings
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
             Automated voice activity alerts and role pings triggered when players enter specific game voice channels.
           </p>
         </div>
 
         <button
           onClick={() => setActiveTab('create')}
-          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition-colors"
+          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition-colors shadow-xs"
         >
           <Plus className="w-3.5 h-3.5" />
           Add LFG Trigger
@@ -148,14 +148,14 @@ export default function GamingSettingsPage() {
       </div>
 
       {actionSuccess && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-400">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2 text-xs text-rose-400">
-          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2 text-xs text-rose-600 dark:text-rose-400">
+          <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
           <span>{actionError}</span>
         </div>
       )}
@@ -189,13 +189,13 @@ export default function GamingSettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
+      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
         <button
           onClick={() => setActiveTab('triggers')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'triggers'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Gamepad2 className="w-4 h-4" />
@@ -206,8 +206,8 @@ export default function GamingSettingsPage() {
           onClick={() => setActiveTab('create')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'create'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Plus className="w-4 h-4" />
@@ -218,8 +218,8 @@ export default function GamingSettingsPage() {
           onClick={() => setActiveTab('feed')}
           className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
             activeTab === 'feed'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
           }`}
         >
           <Radio className="w-4 h-4" />
@@ -229,46 +229,46 @@ export default function GamingSettingsPage() {
 
       {/* TAB 1: Triggers List */}
       {activeTab === 'triggers' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Monitored Voice Triggers"
-            description="When members connect to these voice rooms, Hawk automatically pings the associated game role in the designated channel."
+            description="When members connect to these voice rooms, Amo Bot automatically pings the associated game role in the designated channel."
           />
 
           {gamePings.length === 0 ? (
-            <div className="py-12 text-center text-xs text-[#717882]">
+            <div className="py-12 text-center text-xs text-slate-500 dark:text-[#717882]">
               <Gamepad2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm font-semibold text-white">No gaming triggers configured</p>
+              <p className="text-sm font-semibold text-[#101217] dark:text-white">No gaming triggers configured</p>
               <p className="mt-1">Create a trigger above to ping player roles when voice activity starts.</p>
             </div>
           ) : (
-            <div className="divide-y divide-[#1a1d24] border border-[#1a1d24] rounded-lg overflow-hidden bg-[#121418]">
+            <div className="divide-y divide-black/[0.06] dark:divide-[#1a1d24] border border-black/[0.08] dark:border-[#1a1d24] rounded-lg overflow-hidden bg-slate-50/50 dark:bg-[#121418]">
               {gamePings.map((ping: any) => {
                 const role = roles.find((r) => r.id === ping.role_id);
                 const vc = channels.find((c) => c.id === ping.vc_id);
 
                 return (
-                  <div key={ping.identifier} className="flex items-center justify-between p-4 hover:bg-[#16181d]/50 transition-colors">
+                  <div key={ping.identifier} className="flex items-center justify-between p-4 hover:bg-slate-100/50 dark:hover:bg-[#16181d]/50 transition-colors">
                     <div className="flex items-center gap-4">
-                      <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                      <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                         <Volume2 className="w-4 h-4" />
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-white">{ping.game_name}</span>
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#16181d] border border-[#262a33] text-indigo-400">
+                          <span className="text-xs font-semibold text-[#101217] dark:text-white">{ping.game_name}</span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-[#16181d] border border-black/[0.08] dark:border-[#262a33] text-indigo-600 dark:text-indigo-400">
                             {ping.identifier}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-[#8c949e]">
+                        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-[#8c949e]">
                           <span className="flex items-center gap-1">
-                            <Volume2 className="w-3 h-3 text-[#717882]" />
+                            <Volume2 className="w-3 h-3 text-slate-400 dark:text-[#717882]" />
                             {vc ? vc.name : ping.vc_id}
                           </span>
                           <span>•</span>
                           <span className="flex items-center gap-1">
-                            <Shield className="w-3 h-3 text-[#717882]" />
-                            <code className="text-indigo-400">@{role ? role.name : ping.role_id}</code>
+                            <Shield className="w-3 h-3 text-slate-400 dark:text-[#717882]" />
+                            <code className="text-indigo-600 dark:text-indigo-400">@{role ? role.name : ping.role_id}</code>
                           </span>
                           <span>•</span>
                           <span>{ping.cooldown_seconds || 1200}s cooldown</span>
@@ -278,7 +278,7 @@ export default function GamingSettingsPage() {
 
                     <button
                       onClick={() => handleDeleteTrigger(ping.identifier)}
-                      className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+                      className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
                       title="Delete Trigger"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -293,7 +293,7 @@ export default function GamingSettingsPage() {
 
       {/* TAB 2: Create Trigger */}
       {activeTab === 'create' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Configure Gaming LFG Trigger"
             description="Link a Discord voice room to a game title and notification role."
@@ -311,7 +311,7 @@ export default function GamingSettingsPage() {
                 placeholder="e.g. valorant"
                 value={newIdentifier}
                 onChange={(e) => setNewIdentifier(e.target.value)}
-                className="w-72 bg-[#14161b] border border-[#20242c] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                className="w-72 bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg px-3 py-1.5 text-xs text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500 font-mono"
               />
             </SettingRow>
 
@@ -326,7 +326,7 @@ export default function GamingSettingsPage() {
                 placeholder="e.g. Valorant Competitive"
                 value={newGameName}
                 onChange={(e) => setNewGameName(e.target.value)}
-                className="w-72 bg-[#14161b] border border-[#20242c] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                className="w-72 bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg px-3 py-1.5 text-xs text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
               />
             </SettingRow>
 
@@ -369,15 +369,15 @@ export default function GamingSettingsPage() {
                 max={86400}
                 value={newCooldown}
                 onChange={(e) => setNewCooldown(e.target.value)}
-                className="w-32 bg-[#14161b] border border-[#20242c] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                className="w-32 bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg px-3 py-1.5 text-xs text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500 font-mono"
               />
             </SettingRow>
 
-            <div className="pt-3 border-t border-[#1a1d24] flex justify-end">
+            <div className="pt-3 border-t border-black/[0.08] dark:border-[#1a1d24] flex justify-end">
               <button
                 type="submit"
                 disabled={isAdding}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors disabled:opacity-40"
+                className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors disabled:opacity-40 shadow-xs"
               >
                 {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                 <span>{isAdding ? 'Creating...' : 'Create Trigger'}</span>
@@ -389,7 +389,7 @@ export default function GamingSettingsPage() {
 
       {/* TAB 3: Feed Channel */}
       {activeTab === 'feed' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
+        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
           <SectionHeader
             title="Global Notification Routing"
             description="Default text channel where gaming LFG pings and player activity alerts are posted."

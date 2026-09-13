@@ -72,7 +72,7 @@ export function SaveBar({
             ? 'bg-[#0d1611]/95 border-success-border text-success-text'
             : effectiveSaveState === 'error'
             ? 'bg-[#180f11]/95 border-critical-border text-critical-text'
-            : 'bg-[#121417]/95 border-[#2a2d33]'
+            : 'bg-white/95 dark:bg-[#121417]/95 border-black/[0.1] dark:border-[#2a2d33] shadow-lg'
         }`}
       >
         {/* Left Side: Status Info */}
@@ -93,14 +93,14 @@ export function SaveBar({
             </>
           ) : effectiveSaveState === 'saving' ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-[#949aa2] shrink-0" />
-              <span className="text-[#ededed] font-medium text-xs">Persisting changes...</span>
+              <Loader2 className="w-4 h-4 animate-spin text-slate-500 dark:text-[#949aa2] shrink-0" />
+              <span className="text-[#101217] dark:text-[#ededed] font-medium text-xs">Persisting changes...</span>
             </>
           ) : (
             <>
               <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
-              <span className="text-[#ededed] font-medium text-xs">Careful — unsaved changes</span>
-              <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono text-[#949aa2] bg-[#17191c] border border-[#1f2226] rounded">
+              <span className="text-[#101217] dark:text-[#ededed] font-medium text-xs">Careful — unsaved changes</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono text-slate-500 dark:text-[#949aa2] bg-slate-100 dark:bg-[#17191c] border border-black/[0.08] dark:border-[#1f2226] rounded">
                 Ctrl+S
               </kbd>
             </>

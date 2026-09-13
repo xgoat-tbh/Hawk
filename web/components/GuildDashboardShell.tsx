@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { Sidebar } from '@/components/Sidebar';
 import { CommandPalette } from '@/components/Layout/CommandPalette';
@@ -23,6 +24,8 @@ export function GuildDashboardShell({
   guildIcon,
   children,
 }: GuildDashboardShellProps) {
+  const pathname = usePathname();
+  const isOverview = pathname === `/dashboard/${guildId}` || pathname === `/dashboard/${guildId}/`;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [serverSwitcherOpen, setServerSwitcherOpen] = useState(false);
@@ -52,6 +55,7 @@ export function GuildDashboardShell({
             guildId={guildId}
             guildName={guildName}
             guildIcon={guildIcon}
+            user={user}
             mobileOpen={mobileOpen}
             onCloseMobile={() => setMobileOpen(false)}
             onOpenServerSwitcher={() => setServerSwitcherOpen(true)}
@@ -66,7 +70,13 @@ export function GuildDashboardShell({
               onOpenCommandPalette={() => setCommandPaletteOpen(true)}
             />
 
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-12">
+            <div
+              className={`flex-1 ${
+                isOverview
+                  ? 'overflow-y-auto xl:overflow-hidden px-4 sm:px-6 lg:px-8 pt-1 pb-1'
+                  : 'overflow-y-auto px-4 sm:px-6 lg:px-8 pb-12'
+              }`}
+            >
               <div className="max-w-[1400px] mx-auto w-full">
                 {children}
               </div>

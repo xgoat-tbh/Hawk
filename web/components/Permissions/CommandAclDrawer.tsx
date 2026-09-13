@@ -95,9 +95,9 @@ export function CommandAclDrawer({
     >
       <div className="space-y-6">
         {/* Command Metadata */}
-        <div className="space-y-3 pb-4 border-b border-[#1c1f23]">
+        <div className="space-y-3 pb-4 border-b border-black/[0.08] dark:border-[#1c1f23]">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-[#7e8389]">
               Risk Level
             </span>
             <StatusBadge
@@ -107,29 +107,29 @@ export function CommandAclDrawer({
           </div>
 
           <div className="flex items-center justify-between text-xs">
-            <span className="text-[#7e8389]">Category:</span>
-            <span className="font-mono text-[#f1f2f3] capitalize">{command.category}</span>
+            <span className="text-gray-500 dark:text-[#7e8389]">Category:</span>
+            <span className="font-mono text-[#101217] dark:text-[#f1f2f3] capitalize">{command.category}</span>
           </div>
 
           {command.requiredDiscordPerm && (
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#7e8389]">Discord Permission:</span>
-              <span className="font-mono text-[#d5d7da] bg-[#17191c] px-2 py-0.5 rounded border border-[#24272b]">
+              <span className="text-gray-500 dark:text-[#7e8389]">Discord Permission:</span>
+              <span className="font-mono text-gray-700 dark:text-[#d5d7da] bg-gray-100 dark:bg-[#17191c] px-2 py-0.5 rounded border border-black/[0.08] dark:border-[#24272b]">
                 {command.requiredDiscordPerm}
               </span>
             </div>
           )}
 
           <div className="flex items-center justify-between text-xs">
-            <span className="text-[#7e8389]">Default Profile:</span>
-            <span className="font-mono text-[#f1f2f3] capitalize">{command.defaultRoleProfile}</span>
+            <span className="text-gray-500 dark:text-[#7e8389]">Default Profile:</span>
+            <span className="font-mono text-[#101217] dark:text-[#f1f2f3] capitalize">{command.defaultRoleProfile}</span>
           </div>
         </div>
 
         {/* Add Role Override */}
         <div className="space-y-3">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-[#f1f2f3] flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-[#a9adb2]" />
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-[#101217] dark:text-[#f1f2f3] flex items-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-gray-400 dark:text-[#a9adb2]" />
             <span>Add Role Override</span>
           </h4>
 
@@ -149,12 +149,12 @@ export function CommandAclDrawer({
             />
 
             <div className="flex items-center gap-2">
-              <div className="flex-1 flex bg-[#0a0b0d] p-0.5 rounded-md border border-[#24272b]">
+              <div className="flex-1 flex bg-gray-100 dark:bg-[#0a0b0d] p-0.5 rounded-md border border-black/[0.08] dark:border-[#24272b]">
                 <button
                   type="button"
                   onClick={() => setOverrideEffect('ALLOW')}
                   className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${
-                    overrideEffect === 'ALLOW' ? 'bg-success text-black font-semibold' : 'text-[#7e8389]'
+                    overrideEffect === 'ALLOW' ? 'bg-success text-black font-semibold' : 'text-gray-500 dark:text-[#7e8389]'
                   }`}
                 >
                   ALLOW
@@ -163,7 +163,7 @@ export function CommandAclDrawer({
                   type="button"
                   onClick={() => setOverrideEffect('DENY')}
                   className={`flex-1 py-1 rounded text-xs font-medium transition-colors ${
-                    overrideEffect === 'DENY' ? 'bg-critical text-white font-semibold' : 'text-[#7e8389]'
+                    overrideEffect === 'DENY' ? 'bg-critical text-white font-semibold' : 'text-gray-500 dark:text-[#7e8389]'
                   }`}
                 >
                   DENY
@@ -186,13 +186,13 @@ export function CommandAclDrawer({
         {/* Active Role Overrides List (with HawkScrollArea) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#7e8389]">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-[#7e8389]">
               Configured Role Overrides ({roleOverrides.length})
             </span>
           </div>
 
           {roleOverrides.length === 0 ? (
-            <div className="p-4 text-center text-xs text-[#7e8389] border border-dashed border-[#24272b] rounded-md">
+            <div className="p-4 text-center text-xs text-gray-500 dark:text-[#7e8389] border border-dashed border-black/[0.08] dark:border-[#24272b] rounded-md">
               No specific role overrides. Follows default server permissions.
             </div>
           ) : (
@@ -202,7 +202,7 @@ export function CommandAclDrawer({
                 return (
                   <div
                     key={ro.roleId}
-                    className="p-2.5 rounded-md bg-[#121417] border border-[#24272b] flex items-center justify-between"
+                    className="p-2.5 rounded-md bg-gray-50 dark:bg-[#121417] border border-black/[0.08] dark:border-[#24272b] flex items-center justify-between"
                   >
                     <div className="flex items-center gap-2">
                       <span
@@ -214,13 +214,13 @@ export function CommandAclDrawer({
                       >
                         {ro.effect}
                       </span>
-                      <span className="text-xs text-[#f1f2f3]">@{r?.name || `Role ${ro.roleId}`}</span>
+                      <span className="text-xs text-[#101217] dark:text-[#f1f2f3]">@{r?.name || `Role ${ro.roleId}`}</span>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleRemoveRoleOverride(ro.roleId)}
-                      className="p-1 rounded text-[#7e8389] hover:text-critical-text transition-colors"
+                      className="p-1 rounded text-gray-400 dark:text-[#7e8389] hover:text-critical-text transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -232,7 +232,7 @@ export function CommandAclDrawer({
         </div>
 
         {/* Action Footer */}
-        <div className="pt-4 border-t border-[#1c1f23] flex items-center justify-end gap-2">
+        <div className="pt-4 border-t border-black/[0.08] dark:border-[#1c1f23] flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}

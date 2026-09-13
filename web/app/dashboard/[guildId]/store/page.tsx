@@ -201,20 +201,20 @@ export default function StoreCatalogPage() {
       header: 'Item',
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#14161b] border border-[#20242c] flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
             {row.iconUrl ? (
               <img src={row.iconUrl} alt={row.name} className="w-full h-full object-cover" />
             ) : (
-              <Package className="w-4 h-4 text-[#717882]" />
+              <Package className="w-4 h-4 text-slate-400 dark:text-[#717882]" />
             )}
           </div>
           <div>
-            <div className="font-semibold text-xs text-[#ededed] flex items-center gap-1.5">
+            <div className="font-semibold text-xs text-[#101217] dark:text-[#ededed] flex items-center gap-1.5">
               <span>{row.name}</span>
-              <span className="font-mono text-[10px] text-[#717882]">#{row.itemId}</span>
+              <span className="font-mono text-[10px] text-slate-400 dark:text-[#717882]">#{row.itemId}</span>
             </div>
             {row.description && (
-              <p className="text-[11px] text-[#717882] truncate max-w-xs">{row.description}</p>
+              <p className="text-[11px] text-slate-500 dark:text-[#717882] truncate max-w-xs">{row.description}</p>
             )}
           </div>
         </div>
@@ -225,7 +225,7 @@ export default function StoreCatalogPage() {
       header: 'Price',
       sortable: true,
       render: (row) => (
-        <span className="font-semibold text-xs text-emerald-400">
+        <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400">
           {currencySymbol}{row.price.toLocaleString()}
         </span>
       ),
@@ -235,7 +235,7 @@ export default function StoreCatalogPage() {
       header: 'Stock',
       sortable: true,
       render: (row) => (
-        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-[#16181d] border border-[#262a33] text-[#c1c7cd]">
+        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-[#16181d] border border-black/[0.08] dark:border-[#262a33] text-slate-700 dark:text-[#c1c7cd]">
           {row.stock === -1 ? 'Unlimited' : `${row.stock} left`}
         </span>
       ),
@@ -246,17 +246,17 @@ export default function StoreCatalogPage() {
       render: (row) => (
         <div className="flex items-center gap-1.5 text-[10px]">
           {row.usable && (
-            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
               Usable
             </span>
           )}
           {row.sellable && (
-            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               Sellable
             </span>
           )}
           {row.roleRequired && (
-            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
               Requires Role
             </span>
           )}
@@ -271,14 +271,14 @@ export default function StoreCatalogPage() {
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={() => openEditModal(row)}
-            className="p-1.5 rounded-lg bg-[#16181d] hover:bg-[#20232b] text-[#c1c7cd] hover:text-white border border-[#262a33] transition-colors"
+            className="p-1.5 rounded-lg bg-white dark:bg-[#16181d] hover:bg-slate-100 dark:hover:bg-[#20232b] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33] shadow-xs transition-colors"
             title="Edit item"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setDeleteTarget(row)}
-            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
             title="Delete item"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -293,18 +293,18 @@ export default function StoreCatalogPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5] flex items-center gap-2.5">
-            <ShoppingBag className="w-5 h-5 text-indigo-400" />
+          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
+            <ShoppingBag className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
             Store Catalog & Items
           </h1>
-          <p className="mt-1 text-xs text-[#8c949e]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
             Design store goods, stock levels, role granting triggers, and requirements rules.
           </p>
         </div>
 
         <button
           onClick={openCreateModal}
-          className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors shadow-sm"
+          className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors shadow-xs"
         >
           <Plus className="w-4 h-4" />
           Create New Item
@@ -326,33 +326,33 @@ export default function StoreCatalogPage() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
           <div
-            className="w-full max-w-xl bg-[#0c0d10] border border-[#20232b] rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            className="w-full max-w-xl bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#20232b] rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-4 border-b border-[#1a1d24] flex items-center justify-between bg-[#101216]">
+            <div className="p-4 border-b border-black/[0.08] dark:border-[#1a1d24] flex items-center justify-between bg-slate-50 dark:bg-[#101216]">
               <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-sm font-semibold text-[#f0f2f5]">
+                <Package className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                <h3 className="text-sm font-semibold text-[#101217] dark:text-[#f0f2f5]">
                   {modalMode === 'create' ? 'Create Store Item' : `Edit Item #${itemId}`}
                 </h3>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-[#717882] hover:text-white p-1 rounded transition-colors"
+                className="text-slate-400 hover:text-black dark:text-[#717882] dark:hover:text-white p-1 rounded transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Modal Tabs */}
-            <div className="flex border-b border-[#1a1d24] px-4 gap-4 text-xs font-medium bg-[#0e1013]">
+            <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] px-4 gap-4 text-xs font-medium bg-slate-100/50 dark:bg-[#0e1013]">
               <button
                 onClick={() => setModalTab('info')}
                 className={`py-2.5 border-b-2 transition-colors ${
                   modalTab === 'info'
-                    ? 'border-indigo-500 text-white font-semibold'
-                    : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+                    ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
                 }`}
               >
                 Item Information
@@ -361,8 +361,8 @@ export default function StoreCatalogPage() {
                 onClick={() => setModalTab('inventory')}
                 className={`py-2.5 border-b-2 transition-colors ${
                   modalTab === 'inventory'
-                    ? 'border-indigo-500 text-white font-semibold'
-                    : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+                    ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
                 }`}
               >
                 Stock & Behavior
@@ -371,8 +371,8 @@ export default function StoreCatalogPage() {
                 onClick={() => setModalTab('roles')}
                 className={`py-2.5 border-b-2 transition-colors ${
                   modalTab === 'roles'
-                    ? 'border-indigo-500 text-white font-semibold'
-                    : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
+                    ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
+                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
                 }`}
               >
                 Role Triggers & Reply
@@ -384,18 +384,18 @@ export default function StoreCatalogPage() {
               {modalTab === 'info' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">Item Name *</label>
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Item Name *</label>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. VIP Pass, Legendary Sword"
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">
                       Price ({currencySymbol}) * (Supports scientific notation e.g. 1e6)
                     </label>
                     <input
@@ -403,29 +403,29 @@ export default function StoreCatalogPage() {
                       value={rawPrice}
                       onChange={(e) => setRawPrice(e.target.value)}
                       placeholder="1000 or 1e6"
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">Description</label>
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Description</label>
                     <textarea
                       rows={3}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       placeholder="Explain what this item grants or represents..."
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500 resize-none"
+                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500 resize-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">Icon Image URL</label>
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Icon Image URL</label>
                     <input
                       type="url"
                       value={iconUrl}
                       onChange={(e) => setIconUrl(e.target.value)}
                       placeholder="https://example.com/icon.png"
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 </div>
@@ -433,47 +433,47 @@ export default function StoreCatalogPage() {
 
               {modalTab === 'inventory' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-[#121418] border border-[#20242c] rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
                     <div>
-                      <div className="text-xs font-semibold text-[#f0f2f5]">Can Be Placed in Inventory</div>
-                      <p className="text-[11px] text-[#717882]">Users hold this item in their inventory upon purchase.</p>
+                      <div className="text-xs font-semibold text-[#101217] dark:text-[#f0f2f5]">Can Be Placed in Inventory</div>
+                      <p className="text-[11px] text-slate-500 dark:text-[#717882]">Users hold this item in their inventory upon purchase.</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={inventoryEnabled}
                       onChange={(e) => setInventoryEnabled(e.target.checked)}
-                      className="w-4 h-4 rounded bg-[#16181d] border-[#262a33] text-indigo-500 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#16181d] border-black/[0.08] dark:border-[#262a33] text-indigo-600 focus:ring-0 cursor-pointer"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-[#121418] border border-[#20242c] rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
                     <div>
-                      <div className="text-xs font-semibold text-[#f0f2f5]">Usable</div>
-                      <p className="text-[11px] text-[#717882]">Users can trigger !use-item to consume effects.</p>
+                      <div className="text-xs font-semibold text-[#101217] dark:text-[#f0f2f5]">Usable</div>
+                      <p className="text-[11px] text-slate-500 dark:text-[#717882]">Users can trigger !use-item to consume effects.</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={usable}
                       onChange={(e) => setUsable(e.target.checked)}
-                      className="w-4 h-4 rounded bg-[#16181d] border-[#262a33] text-indigo-500 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#16181d] border-black/[0.08] dark:border-[#262a33] text-indigo-600 focus:ring-0 cursor-pointer"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-[#121418] border border-[#20242c] rounded-lg">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
                     <div>
-                      <div className="text-xs font-semibold text-[#f0f2f5]">Sellable</div>
-                      <p className="text-[11px] text-[#717882]">Users can sell this back for 50% refund or trade to others.</p>
+                      <div className="text-xs font-semibold text-[#101217] dark:text-[#f0f2f5]">Sellable</div>
+                      <p className="text-[11px] text-slate-500 dark:text-[#717882]">Users can sell this back for 50% refund or trade to others.</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={sellable}
                       onChange={(e) => setSellable(e.target.checked)}
-                      className="w-4 h-4 rounded bg-[#16181d] border-[#262a33] text-indigo-500 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#16181d] border-black/[0.08] dark:border-[#262a33] text-indigo-600 focus:ring-0 cursor-pointer"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">
                       Stock Available (-1 = Unlimited)
                     </label>
                     <input
@@ -481,7 +481,7 @@ export default function StoreCatalogPage() {
                       min={-1}
                       value={stock}
                       onChange={(e) => setStock(parseInt(e.target.value, 10))}
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 </div>
@@ -490,7 +490,7 @@ export default function StoreCatalogPage() {
               {modalTab === 'roles' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">Role Required to Buy</label>
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Role Required to Buy</label>
                     <div className="mt-1">
                       <RolePicker
                         value={roleRequired}
@@ -502,7 +502,7 @@ export default function StoreCatalogPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">Role Given on Purchase / Use</label>
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Role Given on Purchase / Use</label>
                     <div className="mt-1">
                       <RolePicker
                         value={roleGiven}
@@ -514,7 +514,7 @@ export default function StoreCatalogPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">Role Removed on Purchase / Use</label>
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Role Removed on Purchase / Use</label>
                     <div className="mt-1">
                       <RolePicker
                         value={roleRemoved}
@@ -526,13 +526,13 @@ export default function StoreCatalogPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#c1c7cd]">Custom Reply Message</label>
+                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Custom Reply Message</label>
                     <input
                       type="text"
                       value={replyMessage}
                       onChange={(e) => setReplyMessage(e.target.value)}
                       placeholder="Message sent in chat when item is consumed..."
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#14161b] border border-[#20242c] rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 </div>
@@ -540,11 +540,11 @@ export default function StoreCatalogPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-[#1a1d24] flex items-center justify-end gap-2.5 bg-[#101216]">
+            <div className="p-4 border-t border-black/[0.08] dark:border-[#1a1d24] flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-[#101216]">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-xs font-medium text-[#c1c7cd] hover:text-white bg-[#16181d] hover:bg-[#20242c] border border-[#262a33] rounded-lg transition-colors"
+                className="px-4 py-2 text-xs font-medium text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white bg-slate-100 dark:bg-[#16181d] hover:bg-slate-200 dark:hover:bg-[#20232b] border border-black/[0.08] dark:border-[#262a33] rounded-lg transition-colors"
               >
                 Cancel
               </button>

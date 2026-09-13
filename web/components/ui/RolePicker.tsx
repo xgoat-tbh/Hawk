@@ -121,7 +121,7 @@ export function RolePicker({
         type="button"
         disabled={disabled}
         onClick={() => (isOpen ? handleClose() : setIsOpen(true))}
-        className="w-full bg-[#0a0b0d] border border-[#24272b] rounded-md px-3 py-2 text-xs text-[#f1f2f3] flex items-center justify-between cursor-pointer hover:border-[#2b2f34] shadow-clay-input focus:outline-none focus:border-border-focus transition-all select-none text-left disabled:opacity-40 disabled:pointer-events-none"
+        className="w-full bg-white dark:bg-[#0a0b0d] border border-black/[0.08] dark:border-[#24272b] rounded-md px-3 py-2 text-xs text-[#101217] dark:text-[#f1f2f3] flex items-center justify-between cursor-pointer hover:border-black/[0.15] dark:hover:border-[#2b2f34] shadow-xs focus:outline-none focus:border-border-focus transition-all select-none text-left disabled:opacity-40 disabled:pointer-events-none"
       >
         <div className="flex items-center gap-2 truncate">
           {selectedRole ? (
@@ -130,13 +130,13 @@ export function RolePicker({
                 className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
                 style={{ backgroundColor: intToHex(selectedRole.color) }}
               />
-              <span className="font-medium text-[#f1f2f3] truncate">
+              <span className="font-medium text-[#101217] dark:text-[#f1f2f3] truncate">
                 @{selectedRole.name}
               </span>
             </>
           ) : (
-            <div className="flex items-center gap-1.5 text-[#7e8389]">
-              <Shield className="w-3.5 h-3.5 text-[#7e8389]" />
+            <div className="flex items-center gap-1.5 text-slate-500 dark:text-[#7e8389]">
+              <Shield className="w-3.5 h-3.5 text-slate-400 dark:text-[#7e8389]" />
               <span>{placeholder}</span>
             </div>
           )}
@@ -149,14 +149,14 @@ export function RolePicker({
                 e.stopPropagation();
                 onChange(null);
               }}
-              className="p-0.5 rounded text-[#7e8389] hover:text-[#f1f2f3] hover:bg-white/10 transition-colors"
+              className="p-0.5 rounded text-slate-400 dark:text-[#7e8389] hover:text-[#101217] dark:hover:text-[#f1f2f3] hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
             >
               <X className="w-3 h-3" />
             </span>
           )}
           <ChevronDown
-            className={`w-3.5 h-3.5 text-[#7e8389] transition-transform duration-150 ${
-              isOpen ? 'rotate-180 text-[#f1f2f3]' : ''
+            className={`w-3.5 h-3.5 text-slate-400 dark:text-[#7e8389] transition-transform duration-150 ${
+              isOpen ? 'rotate-180 text-[#101217] dark:text-[#f1f2f3]' : ''
             }`}
           />
         </div>
@@ -166,12 +166,12 @@ export function RolePicker({
       {isOpen && (
         <div
           ref={menuRef}
-          className="absolute top-full left-0 mt-1.5 w-full bg-[#0d0e10] border border-[#2b2f34] rounded-md shadow-2xl z-[100] overflow-hidden"
+          className="absolute top-full left-0 mt-1.5 w-full bg-white dark:bg-[#0d0e10] border border-black/[0.1] dark:border-[#2b2f34] rounded-md shadow-2xl z-[100] overflow-hidden"
         >
           {/* Search Header */}
-          <div className="p-2 border-b border-[#24272b] bg-[#0a0b0d] flex items-center justify-between gap-2">
+          <div className="p-2 border-b border-black/[0.08] dark:border-[#24272b] bg-slate-50 dark:bg-[#0a0b0d] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 flex-1">
-              <Search className="w-3.5 h-3.5 text-[#7e8389] shrink-0 ml-1" />
+              <Search className="w-3.5 h-3.5 text-slate-400 dark:text-[#7e8389] shrink-0 ml-1" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -181,10 +181,10 @@ export function RolePicker({
                   setHighlightedIndex(0);
                 }}
                 placeholder="Search roles..."
-                className="w-full bg-transparent text-xs text-[#f1f2f3] placeholder:text-[#7e8389] focus:outline-none"
+                className="w-full bg-transparent text-xs text-[#101217] dark:text-[#f1f2f3] placeholder:text-slate-400 dark:placeholder:text-[#7e8389] focus:outline-none"
               />
             </div>
-            <span className="text-[10px] font-mono text-[#7e8389] px-1">
+            <span className="text-[10px] font-mono text-slate-400 dark:text-[#7e8389] px-1">
               {filteredRoles.length} {filteredRoles.length === 1 ? 'role' : 'roles'}
             </span>
           </div>
@@ -192,7 +192,7 @@ export function RolePicker({
           {/* Roles Scroll List */}
           <HawkScrollArea maxHeight="220px" className="p-1 space-y-0.5">
             {filteredRoles.length === 0 ? (
-              <div className="py-6 text-center text-xs text-[#7e8389]">
+              <div className="py-6 text-center text-xs text-slate-400 dark:text-[#7e8389]">
                 {roles.length === 0 ? 'No roles loaded from server' : 'No matching roles found'}
               </div>
             ) : (
@@ -208,10 +208,10 @@ export function RolePicker({
                     onMouseEnter={() => setHighlightedIndex(idx)}
                     className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-sm cursor-pointer text-xs transition-colors select-none ${
                       isSelected
-                        ? 'bg-[#17191c] text-[#f1f2f3] font-medium border border-[#2b2f34]'
+                        ? 'bg-slate-100 dark:bg-[#17191c] text-[#101217] dark:text-[#f1f2f3] font-medium border border-black/[0.08] dark:border-[#2b2f34]'
                         : isHighlighted
-                        ? 'bg-[#121417] text-[#f1f2f3]'
-                        : 'text-[#d5d7da] hover:bg-[#121417]'
+                        ? 'bg-slate-50 dark:bg-[#121417] text-[#101217] dark:text-[#f1f2f3]'
+                        : 'text-slate-700 dark:text-[#d5d7da] hover:bg-slate-50 dark:hover:bg-[#121417]'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 truncate">
@@ -224,7 +224,7 @@ export function RolePicker({
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
                       {role.managed && (
-                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#17191c] border border-[#24272b] text-[#7e8389] font-mono">
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#17191c] border border-black/[0.08] dark:border-[#24272b] text-slate-500 dark:text-[#7e8389] font-mono">
                           Bot
                         </span>
                       )}

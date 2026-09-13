@@ -80,19 +80,19 @@ body {
 @layer components {
   /* Tactile Button Hierarchy */
   .btn-primary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-[#e2e5e8] text-[#0d0e10] hover:bg-[#ffffff] active:translate-y-[0.5px] shadow-tactile-btn active:shadow-tactile-btn-pressed transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-[#181a1f] text-white hover:bg-[#2c3038] dark:bg-[#e2e5e8] dark:text-[#0d0e10] dark:hover:bg-[#ffffff] active:translate-y-[0.5px] shadow-tactile-btn active:shadow-tactile-btn-pressed transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
   .btn-outline-primary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-[#121417] border border-[#1f2226] text-[#ededed] hover:bg-[#17191c] hover:border-[#2a2d33] active:translate-y-[0.5px] shadow-tactile-btn transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-white border border-black/[0.08] text-[#101217] hover:bg-slate-50 hover:border-black/[0.15] dark:bg-[#121417] dark:border-[#1f2226] dark:text-[#ededed] dark:hover:bg-[#17191c] dark:hover:border-[#2a2d33] active:translate-y-[0.5px] shadow-tactile-btn transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
   .btn-outline-secondary {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-transparent border border-[#1f2226] text-[#949aa2] hover:bg-[#121417] hover:border-[#2a2d33] hover:text-[#ededed] active:translate-y-[0.5px] transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-3 py-1.5 rounded-md bg-transparent border border-black/[0.08] dark:border-[#1f2226] text-slate-600 dark:text-[#949aa2] hover:bg-slate-100 dark:hover:bg-[#121417] hover:text-slate-900 dark:hover:text-[#ededed] active:translate-y-[0.5px] transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
   .btn-ghost {
-    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-2.5 py-1.5 rounded-md bg-transparent text-[#949aa2] hover:text-[#ededed] hover:bg-[#17191c] active:translate-y-[0.5px] transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
+    @apply relative inline-flex items-center justify-center font-medium text-xs tracking-tight px-2.5 py-1.5 rounded-md bg-transparent text-slate-600 dark:text-[#949aa2] hover:text-slate-900 dark:hover:text-[#ededed] hover:bg-black/[0.04] dark:hover:bg-[#17191c] active:translate-y-[0.5px] transition-colors duration-100 cursor-pointer select-none disabled:opacity-35 disabled:pointer-events-none;
   }
 
   .btn-outline-danger {
@@ -101,21 +101,21 @@ body {
 
   /* Cohesive Control Surfaces (Replacing excessive cards) */
   .surface-container {
-    @apply bg-[#0d0e10] border border-[#1f2226] rounded-lg overflow-hidden shadow-sm;
+    @apply bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#1f2226] rounded-lg overflow-hidden shadow-xs;
   }
 
   .surface-elevated {
-    @apply bg-[#121417] border border-[#1f2226] rounded-lg shadow-sm;
+    @apply bg-white dark:bg-[#121417] border border-black/[0.08] dark:border-[#1f2226] rounded-lg shadow-xs;
   }
 
   /* Tactile Input */
   .glass-input {
-    @apply w-full bg-[#0a0b0d] border border-[#1f2226] rounded-md px-3 py-1.5 text-xs text-[#ededed] placeholder:text-[#6e747c] shadow-tactile-input focus:outline-none focus:border-[#3d424a] focus:ring-1 focus:ring-[#3d424a]/25 hover:border-[#2a2d33] transition-colors duration-100;
+    @apply w-full bg-white dark:bg-[#0a0b0d] border border-black/[0.08] dark:border-[#1f2226] rounded-md px-3 py-1.5 text-xs text-[#101217] dark:text-[#ededed] placeholder:text-slate-400 dark:placeholder:text-[#6e747c] shadow-tactile-input focus:outline-none focus:border-indigo-500 dark:focus:border-[#3d424a] focus:ring-1 focus:ring-indigo-500/20 dark:focus:ring-[#3d424a]/25 hover:border-black/[0.15] dark:hover:border-[#2a2d33] transition-colors duration-100;
   }
 
   /* Subtle Hairline Dividers */
   .hairline-divider {
-    @apply border-b border-[#17191c];
+    @apply border-b border-black/[0.06] dark:border-[#17191c];
   }
 }
 
