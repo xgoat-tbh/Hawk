@@ -42,7 +42,7 @@ export default async function DashboardHubPage() {
               </span>
             </h1>
             <p className="text-xs text-[#6e747c] mt-0.5">
-              Select an authorized Discord server to configure Hawk bot features and settings.
+              Select an authorized Discord server to configure Amo Bot features and settings.
             </p>
           </div>
         </div>

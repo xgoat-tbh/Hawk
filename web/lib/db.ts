@@ -275,6 +275,22 @@ export async function ensureDatabaseSchema(): Promise<void> {
       )
     `;
 
+    // 14. Activity Log
+    await db`
+      CREATE TABLE IF NOT EXISTS activity_log (
+        id SERIAL PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        actor_id TEXT,
+        actor_name TEXT,
+        target_name TEXT,
+        details JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await db`CREATE INDEX IF NOT EXISTS idx_activity_log_guild_created ON activity_log(guild_id, created_at DESC)`.catch(() => {});
+    await db`CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(guild_id, type)`.catch(() => {});
+
     globalForDb.schemaEnsured = true;
   } catch (error) {
     console.warn('Database schema verification notice:', error);

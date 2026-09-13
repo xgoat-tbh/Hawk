@@ -1,448 +1,793 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useGuildData } from '@/context/GuildContext';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { StatCard } from '@/components/ui/StatCard';
 import {
-  ShieldCheck,
-  Zap,
   Users,
-  Sliders,
-  Pin,
-  Coins,
-  Radio,
-  Lock,
-  ArrowUpRight,
-  Activity,
-  AlertTriangle,
-  CheckCircle2,
-  Wrench,
-  HeartHandshake,
-  Gamepad2,
-  ShoppingBag,
-  Dice5,
   MessageSquare,
+  BarChart2,
+  Clock,
+  Radio,
+  Coins,
+  ShoppingBag,
+  Pin,
+  Gamepad2,
+  Briefcase,
+  Dice5,
+  ChevronRight,
+  ArrowRight,
+  Send,
+  Gift,
+  MoreHorizontal,
+  UserCheck,
+  Award,
+  Zap,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  Tooltip,
+} from 'recharts';
+import { SendMessageModal } from '@/components/Overview/SendMessageModal';
+import { AddRewardModal } from '@/components/Overview/AddRewardModal';
+import { SystemHealthDrawer } from '@/components/Overview/SystemHealthDrawer';
+import { ActivityLogDrawer } from '@/components/Overview/ActivityLogDrawer';
+import { ServerSwitcherModal } from '@/components/Overview/ServerSwitcherModal';
+import { useToast } from '@/components/ui/Toast';
+
+// Sparkline SVG with soft gradient
+function SparklineWave({ color = '#22c55e', width = 64, height = 24 }: { color?: string; width?: number; height?: number }) {
+  const gradId = `wave-grad-${color.replace('#', '')}`;
+  return (
+    <svg width={width} height={height} viewBox="0 0 64 24" fill="none" className="overflow-visible">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M0 18 C14 18, 18 8, 30 12 C42 16, 48 4, 64 6 L64 24 L0 24 Z"
+        fill={`url(#${gradId})`}
+      />
+      <path
+        d="M0 18 C14 18, 18 8, 30 12 C42 16, 48 4, 64 6"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 export default function GuildOverviewPage() {
   const { guildId } = useParams() as { guildId: string };
-  const { guild, bot, channels, roles, config } = useGuildData();
+  const { guild, config, refreshData } = useGuildData();
+  const { success, error } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'modules' | 'console' | 'health'>('modules');
+  const [activeTab, setActiveTab] = useState<'messages' | 'members' | 'commands'>('messages');
+  const [timeRange, setTimeRange] = useState<'24h' | '7d'>('24h');
 
-  const channelMap = new Set(channels.map((c) => c.id));
+  // Modals state
+  const [sendMessageOpen, setSendMessageOpen] = useState(false);
+  const [addRewardOpen, setAddRewardOpen] = useState(false);
+  const [systemHealthOpen, setSystemHealthOpen] = useState(false);
+  const [activityLogOpen, setActivityLogOpen] = useState(false);
+  const [serverSwitcherOpen, setServerSwitcherOpen] = useState(false);
 
-  // Diagnostic health checks
-  const healthChecks = [
-    {
-      id: 'pvc',
-      name: 'Join-To-Create Voice Channel',
-      status: !config?.economy?.pvc_jtc_channel_id
-        ? 'optional'
-        : channelMap.has(config.economy.pvc_jtc_channel_id)
-        ? 'healthy'
-        : 'stale',
-      message: !config?.economy?.pvc_jtc_channel_id
-        ? 'Not configured (Optional)'
-        : channelMap.has(config.economy.pvc_jtc_channel_id)
-        ? 'Active voice generator channel'
-        : 'Configured JTC channel was deleted from Discord',
-      fixPath: `/dashboard/${guildId}/pvc`,
+  // Live Stats State
+  const [stats, setStats] = useState<{
+    summary: {
+      members: number;
+      memberChangePct: number;
+      messagesPerHr: number;
+      messagesChangePct: number;
+      modulesActive: number;
+      modulesTotal: number;
+      gatewayPing: number;
+    };
+    systemHealth: {
+      cpu: number;
+      memory: number;
+      gateway: number;
+      uptime: string;
+      status: string;
+    };
+    recentActivity: Array<{
+      id: number;
+      type: string;
+      actorName: string;
+      targetName: string;
+      relativeTime: string;
+    }>;
+    activityChart: Array<{
+      hour: string;
+      messages: number;
+      members: number;
+      commands: number;
+    }>;
+  }>({
+    summary: {
+      members: 34821,
+      memberChangePct: 12,
+      messagesPerHr: 1284,
+      messagesChangePct: 8,
+      modulesActive: 6,
+      modulesTotal: 9,
+      gatewayPing: 63,
     },
-    {
-      id: 'logging',
-      name: 'Audit & Mod Logging',
-      status: !config?.general?.log_channel_id
-        ? 'optional'
-        : channelMap.has(config.general.log_channel_id)
-        ? 'healthy'
-        : 'stale',
-      message: !config?.general?.log_channel_id
-        ? 'No audit logging channel set'
-        : channelMap.has(config.general.log_channel_id)
-        ? 'Audit logs streaming to channel'
-        : 'Target logging channel is missing',
-      fixPath: `/dashboard/${guildId}/general`,
+    systemHealth: {
+      cpu: 14,
+      memory: 38,
+      gateway: 63,
+      uptime: '99.9%',
+      status: 'operational',
     },
+    recentActivity: [
+      { id: 1, type: 'welcome', actorName: '@aryan', targetName: 'joined the server', relativeTime: '2m ago' },
+      { id: 2, type: 'role_reward', actorName: '@kiara', targetName: 'claimed Premium', relativeTime: '6m ago' },
+      { id: 3, type: 'voice_create', actorName: 'Gaming Lobby #3', targetName: 'Temporary voice room created', relativeTime: '12m ago' },
+      { id: 4, type: 'store_purchase', actorName: '@dev', targetName: 'purchased Custom Role', relativeTime: '18m ago' },
+      { id: 5, type: 'streak_reward', actorName: '@nex', targetName: '+120 XP', relativeTime: '24m ago' },
+    ],
+    activityChart: [],
+  });
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/stats`);
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch guild stats:', err);
+    }
+  }, [guildId]);
+
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 15000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
+  // Quick Action: Create Voice Channel
+  const handleCreateVoice = async () => {
+    try {
+      const res = await fetch(`/api/guilds/${guildId}/quick-actions/create-voice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create voice channel');
+      success(`Created temporary voice room: ${data.channelName}`);
+      fetchStats();
+      refreshData();
+    } catch (err: any) {
+      error(err.message || 'Failed to create voice channel');
+    }
+  };
+
+  // 9 Module Cards Config
+  const moduleCards = [
     {
       id: 'welcome',
-      name: 'Welcome Greetings',
-      status: !config?.welcome?.config?.channel_id
-        ? 'optional'
-        : channelMap.has(config.welcome.config.channel_id)
-        ? 'healthy'
-        : 'stale',
-      message: !config?.welcome?.config?.channel_id
-        ? 'Welcome channel not set'
-        : channelMap.has(config.welcome.config.channel_id)
-        ? 'Greetings active and routing'
-        : 'Configured welcome channel missing from Discord',
-      fixPath: `/dashboard/${guildId}/welcome`,
-    },
-  ];
-
-  const staleIssues = healthChecks.filter((h) => h.status === 'stale');
-
-  const activeModules = [
-    {
-      name: 'Welcome Greetings',
+      title: 'Welcome',
       active: Boolean(config?.welcome?.config?.enabled && config?.welcome?.config?.channel_id),
-      description: 'Automated greeting embeds and DM delivery',
       path: `/dashboard/${guildId}/welcome`,
-      icon: HeartHandshake,
+      icon: UserCheck,
+      color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400',
     },
     {
-      name: 'Private Voice (PVC)',
+      id: 'pvc',
+      title: 'Private Voice',
       active: Boolean(config?.economy?.pvc_jtc_channel_id),
-      description: 'Join-to-Create dynamic temporary voice rooms',
       path: `/dashboard/${guildId}/pvc`,
       icon: Radio,
+      color: 'bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400',
     },
     {
-      name: 'Economy & Rewards',
+      id: 'economy',
+      title: 'Economy',
       active: Boolean(config?.economy?.daily_reward_amount || config?.economy?.passive_income),
-      description: 'Streaks, chat rewards, and currency system',
       path: `/dashboard/${guildId}/economy`,
       icon: Coins,
+      color: 'bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400',
     },
     {
-      name: 'Store Catalog',
+      id: 'store',
+      title: 'Store',
       active: true,
-      description: 'Custom purchasable items and role rewards',
       path: `/dashboard/${guildId}/store`,
       icon: ShoppingBag,
+      color: 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400',
     },
     {
-      name: 'Sticky Notices',
+      id: 'sticky',
+      title: 'Sticky Notices',
       active: (config?.stickyMessages || []).length > 0,
-      description: 'Pinned bottom messages per channel',
       path: `/dashboard/${guildId}/sticky`,
       icon: Pin,
+      color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400',
     },
     {
-      name: 'Gaming LFG Alerts',
+      id: 'gaming',
+      title: 'Gaming LFG',
       active: (config?.gamePings || []).length > 0,
-      description: 'Voice room activity pings for players',
       path: `/dashboard/${guildId}/gaming`,
       icon: Gamepad2,
+      color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     },
     {
-      name: 'Community Feedback',
+      id: 'community',
+      title: 'Community Feedback',
       active: Boolean(config?.suggestion?.submission_channel_id || config?.confession?.submission_channel_id),
-      description: 'Suggestions voting and anonymous confessions',
       path: `/dashboard/${guildId}/community`,
       icon: MessageSquare,
+      color: 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400',
+    },
+    {
+      id: 'income',
+      title: 'Role Salaries',
+      active: (config?.incomeRoles || []).length > 0,
+      path: `/dashboard/${guildId}/income`,
+      icon: Briefcase,
+      color: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
+    },
+    {
+      id: 'games',
+      title: 'Minigames',
+      active: true,
+      path: `/dashboard/${guildId}/games`,
+      icon: Dice5,
+      color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400',
     },
   ];
 
-  const activeCount = activeModules.filter((m) => m.active).length;
+  const CustomChartTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-[#181b21] border border-black/[0.08] dark:border-white/[0.08] px-3.5 py-2 rounded-xl shadow-xl text-center select-none animate-in fade-in zoom-in-95 duration-100">
+          <div className="text-sm font-bold text-[#101217] dark:text-white font-mono">
+            {Number(payload[0].value).toLocaleString()}
+          </div>
+          <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8] capitalize">
+            {activeTab}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const getActivityItemIcon = (type: string) => {
+    switch (type) {
+      case 'welcome':
+        return <UserCheck className="w-4 h-4 text-sky-500" />;
+      case 'role_reward':
+        return <Award className="w-4 h-4 text-purple-500" />;
+      case 'voice_create':
+        return <Radio className="w-4 h-4 text-blue-500" />;
+      case 'store_purchase':
+        return <ShoppingBag className="w-4 h-4 text-rose-500" />;
+      case 'streak_reward':
+        return <Zap className="w-4 h-4 text-amber-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-indigo-500" />;
+    }
+  };
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Server Banner */}
-      <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[#14161b] border border-[#20242c] flex items-center justify-center overflow-hidden shrink-0">
-            {guild?.iconUrl ? (
-              <img src={guild.iconUrl} alt={guild.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm font-bold font-mono text-white">
-                {guild?.name ? guild.name.slice(0, 2).toUpperCase() : 'HK'}
-              </span>
-            )}
-          </div>
-
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-[#f0f2f5]">
-                {guild?.name || 'Discord Server'}
-              </h1>
-              <StatusBadge status="OPERATIONAL" variant="operational" />
+    <div className="space-y-6 max-w-[1400px] mx-auto pb-16 select-none">
+      {/* 2-Column Bento Grid Container */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* ======================================================== */}
+        {/* LEFT COLUMN (Wider): 4 StatCards, Activity Chart, Modules */}
+        {/* ======================================================== */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* 1. Four Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Card 1: Members */}
+            <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#f0f4ff] dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg font-extrabold text-[#101217] dark:text-white tracking-tight">
+                    {stats.summary.members.toLocaleString()}
+                  </div>
+                  <div className="text-xs font-medium text-[#64748b] dark:text-[#94a3b8]">
+                    Members
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span className="px-1.5 py-0.5 text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-md">
+                  ↗ +{stats.summary.memberChangePct}%
+                </span>
+                <SparklineWave color="#22c55e" width={56} height={20} />
+              </div>
             </div>
-            <p className="text-xs text-[#8c949e]">
-              Snowflake: <span className="font-mono">{guildId}</span> • Bot: <span className="text-indigo-400 font-semibold">{bot?.username || 'Hawk'}</span>
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Link
-            href={`/dashboard/${guildId}/permissions`}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white flex items-center gap-1.5 transition-colors"
-          >
-            <Lock className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Permissions Matrix</span>
-          </Link>
-          <Link
-            href={`/dashboard/${guildId}/general`}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition-colors"
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>General Settings</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Stale Configuration Warning Banner if any */}
-      {staleIssues.length > 0 && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-2">
-          <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>Configuration Alert ({staleIssues.length} issue{staleIssues.length > 1 ? 's' : ''} detected)</span>
-          </div>
-          <div className="space-y-1.5 pl-6">
-            {staleIssues.map((issue) => (
-              <div key={issue.id} className="flex items-center justify-between text-xs text-[#c1c7cd]">
-                <span>{issue.name}: {issue.message}</span>
-                <Link
-                  href={issue.fixPath}
-                  className="px-2.5 py-1 rounded bg-[#14161b] border border-[#20242c] text-[10px] font-mono text-amber-400 hover:text-white flex items-center gap-1"
-                >
-                  <Wrench className="w-3 h-3" />
-                  <span>Resolve</span>
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Overview StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Gateway Status"
-          value="Connected"
-          subtitle="0 dropped websocket frames"
-          icon={Activity}
-        />
-        <StatCard
-          title="Active Modules"
-          value={`${activeCount} / ${activeModules.length}`}
-          subtitle="Real-time enforcement"
-          icon={Zap}
-        />
-        <StatCard
-          title="Discord Channels"
-          value={channels.length}
-          subtitle="Synchronized for routing"
-          icon={Users}
-        />
-        <StatCard
-          title="Server Roles"
-          value={roles.length}
-          subtitle="Mapped for permissions"
-          icon={ShieldCheck}
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-[#1a1d24] gap-6 text-xs font-medium">
-        <button
-          onClick={() => setActiveTab('modules')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'modules'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Zap className="w-4 h-4" />
-          Module Status ({activeCount} Active)
-        </button>
-
-        <button
-          onClick={() => setActiveTab('console')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'console'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Sliders className="w-4 h-4" />
-          Quick Console
-        </button>
-
-        <button
-          onClick={() => setActiveTab('health')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'health'
-              ? 'border-indigo-500 text-white'
-              : 'border-transparent text-[#717882] hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          Health Diagnostics
-        </button>
-      </div>
-
-      {/* TAB 1: Modules Grid */}
-      {activeTab === 'modules' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
-          <SectionHeader
-            title="Server Modules & Operational State"
-            description="Status overview of automated Discord features and background workers configured for this server."
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeModules.map((m) => {
-              const Icon = m.icon;
-              return (
-                <Link
-                  key={m.name}
-                  href={m.path}
-                  className="p-4 rounded-xl bg-[#121418] border border-[#1a1d24] hover:border-indigo-500/40 hover:bg-[#16181d] flex items-center justify-between gap-3 transition-colors group"
-                >
-                  <div className="space-y-1 overflow-hidden">
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4 text-indigo-400 shrink-0" />
-                      <span className="text-xs font-semibold text-white group-hover:text-indigo-300 transition-colors">
-                        {m.name}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-[#8c949e] truncate">
-                      {m.description}
-                    </div>
-                    <div className="text-[10px] font-mono pt-1">
-                      {m.active ? (
-                        <span className="text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          Active & Enforcing
-                        </span>
-                      ) : (
-                        <span className="text-[#717882]">Not configured</span>
-                      )}
-                    </div>
+            {/* Card 2: Messages / hr */}
+            <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#f5f3ff] dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg font-extrabold text-[#101217] dark:text-white tracking-tight">
+                    {stats.summary.messagesPerHr.toLocaleString()}
                   </div>
-
-                  <ArrowUpRight className="w-4 h-4 text-[#717882] group-hover:text-white transition-colors shrink-0" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: Quick Console */}
-      {activeTab === 'console' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
-          <SectionHeader
-            title="Fast Navigation Hub"
-            description="Direct shortcuts to common server administration and configuration workflows."
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link
-              href={`/dashboard/${guildId}/pvc`}
-              className="p-4 rounded-xl bg-[#121418] border border-[#1a1d24] hover:border-indigo-500/40 hover:bg-[#16181d] space-y-1 group transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Radio className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-semibold text-white group-hover:text-indigo-300">Private Voice (PVC)</span>
-              </div>
-              <p className="text-[11px] text-[#8c949e]">Join-to-Create hubs, live telemetry, and personal presets</p>
-            </Link>
-
-            <Link
-              href={`/dashboard/${guildId}/economy`}
-              className="p-4 rounded-xl bg-[#121418] border border-[#1a1d24] hover:border-indigo-500/40 hover:bg-[#16181d] space-y-1 group transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Coins className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-semibold text-white group-hover:text-indigo-300">Economy & Balances</span>
-              </div>
-              <p className="text-[11px] text-[#8c949e]">Inspect member net worth, daily rewards, and transactions</p>
-            </Link>
-
-            <Link
-              href={`/dashboard/${guildId}/store`}
-              className="p-4 rounded-xl bg-[#121418] border border-[#1a1d24] hover:border-indigo-500/40 hover:bg-[#16181d] space-y-1 group transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <ShoppingBag className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-semibold text-white group-hover:text-indigo-300">Store Catalog</span>
-              </div>
-              <p className="text-[11px] text-[#8c949e]">Create custom shop items and role rewards</p>
-            </Link>
-
-            <Link
-              href={`/dashboard/${guildId}/welcome`}
-              className="p-4 rounded-xl bg-[#121418] border border-[#1a1d24] hover:border-indigo-500/40 hover:bg-[#16181d] space-y-1 group transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <HeartHandshake className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-semibold text-white group-hover:text-indigo-300">Welcome Designer</span>
-              </div>
-              <p className="text-[11px] text-[#8c949e]">Interactive embed designer, placeholders, and live test</p>
-            </Link>
-
-            <Link
-              href={`/dashboard/${guildId}/permissions`}
-              className="p-4 rounded-xl bg-[#121418] border border-[#1a1d24] hover:border-indigo-500/40 hover:bg-[#16181d] space-y-1 group transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-semibold text-white group-hover:text-indigo-300">Permissions Matrix</span>
-              </div>
-              <p className="text-[11px] text-[#8c949e]">Profiles, role policies, and command ACL security</p>
-            </Link>
-
-            <Link
-              href={`/dashboard/${guildId}/games`}
-              className="p-4 rounded-xl bg-[#121418] border border-[#1a1d24] hover:border-indigo-500/40 hover:bg-[#16181d] space-y-1 group transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Dice5 className="w-4 h-4 text-indigo-400" />
-                <span className="text-xs font-semibold text-white group-hover:text-indigo-300">Minigames & Cooldowns</span>
-              </div>
-              <p className="text-[11px] text-[#8c949e]">Coinflip and Mines multiplier settings and delays</p>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: Health */}
-      {activeTab === 'health' && (
-        <div className="bg-[#0c0d10] border border-[#1a1d24] rounded-xl p-5 space-y-5">
-          <SectionHeader
-            title="Channel & Config Health Checks"
-            description="Verification of linked Discord channels to guarantee bot commands and automated listeners function properly."
-          />
-
-          <div className="divide-y divide-[#1a1d24] border border-[#1a1d24] rounded-lg overflow-hidden bg-[#121418]">
-            {healthChecks.map((hc) => (
-              <div key={hc.id} className="p-4 flex items-center justify-between gap-4">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-semibold text-white flex items-center gap-2">
-                    <span>{hc.name}</span>
-                    <span
-                      className={`px-1.5 py-0.2 text-[10px] font-mono rounded ${
-                        hc.status === 'healthy'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : hc.status === 'stale'
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          : 'bg-[#16181d] text-[#717882] border border-[#262a33]'
-                      }`}
-                    >
-                      {hc.status.toUpperCase()}
-                    </span>
+                  <div className="text-xs font-medium text-[#64748b] dark:text-[#94a3b8]">
+                    Messages / hr
                   </div>
-                  <div className="text-xs text-[#8c949e]">{hc.message}</div>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span className="px-1.5 py-0.5 text-[10px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-md">
+                  ↗ +{stats.summary.messagesChangePct}%
+                </span>
+                <SparklineWave color="#3b82f6" width={56} height={20} />
+              </div>
+            </div>
+
+            {/* Card 3: Modules Active */}
+            <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#eff6ff] dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <BarChart2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg font-extrabold text-[#101217] dark:text-white tracking-tight">
+                    {stats.summary.modulesActive}
+                  </div>
+                  <div className="text-xs font-medium text-[#64748b] dark:text-[#94a3b8]">
+                    Modules Active
+                  </div>
+                </div>
+              </div>
+              {/* Colored Indicator Dots */}
+              <div className="flex items-center gap-1">
+                {[...Array(6)].map((_, i) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                ))}
+              </div>
+            </div>
+
+            {/* Card 4: Gateway */}
+            <div className="p-4 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#f0fdf4] dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-lg font-extrabold text-[#101217] dark:text-white tracking-tight">
+                    {stats.summary.gatewayPing}ms
+                  </div>
+                  <div className="text-xs font-medium text-[#64748b] dark:text-[#94a3b8]">
+                    Gateway
+                  </div>
+                </div>
+              </div>
+              <SparklineWave color="#10b981" width={56} height={20} />
+            </div>
+          </div>
+
+          {/* 2. Activity Bar Chart */}
+          <div className="p-6 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] space-y-6">
+            {/* Activity Chart Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold text-[#101217] dark:text-white">
+                  Activity
+                </h2>
+                <p className="text-xs text-[#64748b] dark:text-[#94a3b8]">
+                  Real-time server activity
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Segmented Control */}
+                <div className="p-1 rounded-2xl bg-[#f1f5f9] dark:bg-[#181b21] flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('messages')}
+                    className={`px-3 py-1 text-xs rounded-xl transition-all ${
+                      activeTab === 'messages'
+                        ? 'bg-white dark:bg-[#252830] text-[#101217] dark:text-white font-semibold shadow-sm'
+                        : 'text-[#64748b] dark:text-[#94a3b8] hover:text-[#101217]'
+                    }`}
+                  >
+                    Messages
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('members')}
+                    className={`px-3 py-1 text-xs rounded-xl transition-all ${
+                      activeTab === 'members'
+                        ? 'bg-white dark:bg-[#252830] text-[#101217] dark:text-white font-semibold shadow-sm'
+                        : 'text-[#64748b] dark:text-[#94a3b8] hover:text-[#101217]'
+                    }`}
+                  >
+                    Members
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('commands')}
+                    className={`px-3 py-1 text-xs rounded-xl transition-all ${
+                      activeTab === 'commands'
+                        ? 'bg-white dark:bg-[#252830] text-[#101217] dark:text-white font-semibold shadow-sm'
+                        : 'text-[#64748b] dark:text-[#94a3b8] hover:text-[#101217]'
+                    }`}
+                  >
+                    Commands
+                  </button>
                 </div>
 
-                <Link
-                  href={hc.fixPath}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#14161b] hover:bg-[#1c1f26] border border-[#20242c] text-[#c1c7cd] hover:text-white transition-colors shrink-0"
+                {/* Range Selector */}
+                <select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value as any)}
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-[#f1f5f9] dark:bg-[#181b21] border-none text-[#101217] dark:text-white focus:outline-none"
                 >
-                  Configure
-                </Link>
+                  <option value="24h">24h</option>
+                  <option value="7d">7d</option>
+                </select>
               </div>
-            ))}
+            </div>
+
+            {/* Recharts Bar Chart */}
+            <div className="h-48 sm:h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.activityChart} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <XAxis
+                    dataKey="hour"
+                    stroke="#94a3b8"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    interval={3}
+                  />
+                  <Tooltip content={<CustomChartTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.02)' }} />
+                  <Bar
+                    dataKey={activeTab}
+                    fill={activeTab === 'messages' ? '#c7d2fe' : activeTab === 'members' ? '#bbf7d0' : '#fbcfe8'}
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={14}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* 3. Modules Grid Section */}
+          <div id="modules-section" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-[#101217] dark:text-white">
+                  Modules
+                </h2>
+                <p className="text-xs text-[#64748b] dark:text-[#94a3b8]">
+                  Manage and configure your server&apos;s features
+                </p>
+              </div>
+
+              <Link
+                href={`/dashboard/${guildId}/general`}
+                className="text-xs font-semibold text-[#64748b] dark:text-[#94a3b8] hover:text-[#101217] dark:hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <span>Manage all</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* 3x3 Bento Module Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
+              {moduleCards.map((m) => {
+                const Icon = m.icon;
+                return (
+                  <Link
+                    key={m.id}
+                    href={m.path}
+                    className="p-4 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] hover:border-black/[0.12] dark:hover:border-white/[0.15] shadow-[0_4px_16px_-2px_rgba(0,0,0,0.02)] flex items-center justify-between gap-3 transition-all hover:scale-[1.01] group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-2xl ${m.color} flex items-center justify-center shrink-0`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#101217] dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {m.title}
+                        </div>
+                        <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8] flex items-center gap-1.5 pt-0.5">
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              m.active ? 'bg-emerald-500' : 'bg-slate-400'
+                            }`}
+                          />
+                          <span>{m.active ? 'Active' : 'Disabled'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ChevronRight className="w-4 h-4 text-[#94a3b8] group-hover:text-[#101217] dark:group-hover:text-white transition-colors shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
-      )}
+
+        {/* ======================================================== */}
+        {/* RIGHT COLUMN: Server Card, Health, Recent, Quick Actions */}
+        {/* ======================================================== */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* 1. Amo India Server Card (Dark Smoky Glass Aesthetic) */}
+          <div className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-[#1a1c22] via-[#15171c] to-[#0d0e12] text-white shadow-xl border border-white/[0.08]">
+            {/* Background Smoky Wave Glow */}
+            <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/[0.04] rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/[0.03] rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-white tracking-tight">
+                      {guild?.name || 'Amo India'}
+                    </h3>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                  <p className="text-[11px] text-white/60 pt-0.5">
+                    Connected since 3 days
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setServerSwitcherOpen(true)}
+                  className="w-8 h-8 rounded-full bg-white/[0.1] hover:bg-white/[0.2] border border-white/[0.15] flex items-center justify-center text-white transition-all hover:scale-105"
+                  title="Switch Server"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between text-[11px] text-white/70 font-medium">
+                <span>{stats.summary.members.toLocaleString()} members</span>
+                <span>•</span>
+                <span>{stats.summary.modulesActive} modules</span>
+                <span>•</span>
+                <span>Owner: Aaryan</span>
+              </div>
+
+              <div className="pt-1">
+                <p className="text-xs italic text-white/50 font-serif">
+                  &ldquo;A place to belong.&rdquo;
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. System Health Card */}
+          <div className="p-5 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#101217] dark:text-white">
+                System Health
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSystemHealthOpen(true)}
+                className="px-2.5 py-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-full flex items-center gap-1 transition-colors"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>All systems operational</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* 4 Health Progress Columns */}
+            <div className="grid grid-cols-4 gap-2 text-center pt-1">
+              <div>
+                <div className="text-sm font-extrabold text-[#101217] dark:text-white font-mono">
+                  {stats.systemHealth.cpu}%
+                </div>
+                <div className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">
+                  CPU
+                </div>
+                <div className="w-full h-1 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden mt-1.5">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${stats.systemHealth.cpu}%` }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-extrabold text-[#101217] dark:text-white font-mono">
+                  {stats.systemHealth.memory}%
+                </div>
+                <div className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">
+                  Memory
+                </div>
+                <div className="w-full h-1 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden mt-1.5">
+                  <div className="h-full bg-sky-500 rounded-full" style={{ width: `${stats.systemHealth.memory}%` }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-extrabold text-[#101217] dark:text-white font-mono">
+                  {stats.systemHealth.gateway}ms
+                </div>
+                <div className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">
+                  Gateway
+                </div>
+                <div className="w-full h-1 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden mt-1.5">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '40%' }} />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-extrabold text-[#101217] dark:text-white font-mono">
+                  {stats.systemHealth.uptime}
+                </div>
+                <div className="text-[10px] font-medium text-[#64748b] dark:text-[#94a3b8]">
+                  Uptime
+                </div>
+                <div className="w-full h-1 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden mt-1.5">
+                  <div className="h-full bg-purple-500 rounded-full" style={{ width: '99%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Recent Activity Card */}
+          <div className="p-5 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#101217] dark:text-white">
+                Recent Activity
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActivityLogOpen(true)}
+                className="text-xs font-semibold text-[#64748b] dark:text-[#94a3b8] hover:text-[#101217] dark:hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <span>View all</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              {stats.recentActivity.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-[#f8fafc] dark:bg-[#181b21] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-center shrink-0">
+                      {getActivityItemIcon(item.type)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-[#101217] dark:text-white truncate">
+                        {item.type === 'welcome'
+                          ? 'Welcome message sent'
+                          : item.type === 'role_reward'
+                          ? 'Role reward claimed'
+                          : item.type === 'voice_create'
+                          ? 'Temporary voice room created'
+                          : item.type === 'store_purchase'
+                          ? 'Store purchase completed'
+                          : item.type === 'streak_reward'
+                          ? 'Streak reward given'
+                          : 'Bot interaction completed'}
+                      </div>
+                      <div className="text-[11px] text-[#64748b] dark:text-[#94a3b8] truncate">
+                        {item.actorName} {item.targetName}
+                      </div>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-mono text-[#94a3b8] shrink-0">
+                    {item.relativeTime}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. Quick Actions Card */}
+          <div className="p-5 rounded-3xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-[0_4px_20px_-2px_rgba(0,0,0,0.03)] space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#101217] dark:text-white">
+                Quick Actions
+              </h3>
+              <Link
+                href={`/dashboard/${guildId}/general`}
+                className="px-2.5 py-1 text-[10px] font-semibold text-[#64748b] dark:text-[#94a3b8] bg-[#f1f5f9] dark:bg-[#181b21] hover:text-[#101217] dark:hover:text-white rounded-full transition-colors"
+              >
+                Customize
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              {/* Send Message */}
+              <button
+                type="button"
+                onClick={() => setSendMessageOpen(true)}
+                className="p-2.5 rounded-2xl bg-[#f8fafc] dark:bg-[#181b21] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] flex flex-col items-center justify-center gap-1.5 transition-all text-center group"
+              >
+                <Send className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-semibold text-[#101217] dark:text-white">
+                  Send Message
+                </span>
+              </button>
+
+              {/* Create Voice */}
+              <button
+                type="button"
+                onClick={handleCreateVoice}
+                className="p-2.5 rounded-2xl bg-[#f8fafc] dark:bg-[#181b21] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] flex flex-col items-center justify-center gap-1.5 transition-all text-center group"
+              >
+                <Radio className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-semibold text-[#101217] dark:text-white">
+                  Create Voice
+                </span>
+              </button>
+
+              {/* Add Reward */}
+              <button
+                type="button"
+                onClick={() => setAddRewardOpen(true)}
+                className="p-2.5 rounded-2xl bg-[#f8fafc] dark:bg-[#181b21] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] flex flex-col items-center justify-center gap-1.5 transition-all text-center group"
+              >
+                <Gift className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-semibold text-[#101217] dark:text-white">
+                  Add Reward
+                </span>
+              </button>
+
+              {/* Overflow / More */}
+              <Link
+                href={`/dashboard/${guildId}/permissions?tab=audit`}
+                className="p-2.5 rounded-2xl bg-[#f8fafc] dark:bg-[#181b21] border border-black/[0.04] dark:border-white/[0.06] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] flex flex-col items-center justify-center gap-1.5 transition-all text-center group"
+              >
+                <MoreHorizontal className="w-4 h-4 text-[#94a3b8] group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-semibold text-[#101217] dark:text-white">
+                  Audit Logs
+                </span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Drawers & Modals */}
+      <SendMessageModal
+        isOpen={sendMessageOpen}
+        onClose={() => setSendMessageOpen(false)}
+        onSuccess={fetchStats}
+      />
+
+      <AddRewardModal
+        isOpen={addRewardOpen}
+        onClose={() => setAddRewardOpen(false)}
+        onSuccess={fetchStats}
+      />
+
+      <SystemHealthDrawer
+        isOpen={systemHealthOpen}
+        onClose={() => setSystemHealthOpen(false)}
+        health={stats.systemHealth}
+      />
+
+      <ActivityLogDrawer
+        isOpen={activityLogOpen}
+        onClose={() => setActivityLogOpen(false)}
+      />
+
+      <ServerSwitcherModal
+        isOpen={serverSwitcherOpen}
+        onClose={() => setServerSwitcherOpen(false)}
+      />
     </div>
   );
 }

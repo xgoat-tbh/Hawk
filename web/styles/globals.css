@@ -3,18 +3,44 @@
 @tailwind utilities;
 
 :root {
+  --background: #f2f4f8;
+  --foreground: #101217;
+  --scroll-track: rgba(0, 0, 0, 0.03);
+  --scroll-thumb: #d0d5dd;
+  --scroll-thumb-hover: #98a2b3;
+  --scroll-thumb-active: #667085;
+  --scroll-width: 5px;
+
+  /* Reference Bento Tokens */
+  --bento-card-bg: rgba(255, 255, 255, 0.82);
+  --bento-card-border: rgba(0, 0, 0, 0.05);
+  --bento-card-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.03), 0 4px 10px -2px rgba(0, 0, 0, 0.02);
+  --bento-text-main: #101217;
+  --bento-text-muted: #64748b;
+  --bento-text-subtle: #94a3b8;
+  --bento-icon-bg: #f1f5f9;
+}
+
+.dark {
   --background: #08090a;
   --foreground: #ededed;
   --scroll-track: rgba(8, 9, 10, 0.4);
   --scroll-thumb: #1e2226;
   --scroll-thumb-hover: #2d3238;
   --scroll-thumb-active: #3e444d;
-  --scroll-width: 5px;
+
+  --bento-card-bg: rgba(18, 20, 24, 0.75);
+  --bento-card-border: rgba(255, 255, 255, 0.07);
+  --bento-card-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.45);
+  --bento-text-main: #f8fafc;
+  --bento-text-muted: #94a3b8;
+  --bento-text-subtle: #64748b;
+  --bento-icon-bg: #1a1d24;
 }
 
 body {
-  background-color: #08090a;
-  color: #ededed;
+  background-color: var(--background);
+  color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, "Geist", "Inter", "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
   text-rendering: optimizeLegibility;

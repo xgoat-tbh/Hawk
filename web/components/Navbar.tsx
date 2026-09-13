@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
-import { Shield, LogOut, LayoutDashboard, Menu, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Sun, Bell, Menu } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 interface NavbarProps {
   user?: {
@@ -20,94 +20,108 @@ export function Navbar({
   user,
   onMobileMenuToggle,
   onOpenCommandPalette,
-  guildName,
-  botStatus: _botStatus = 'operational',
+  guildName = 'Amo India',
 }: NavbarProps) {
-  const avatarUrl = user?.avatar
-    ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
-    : 'https://cdn.discordapp.com/embed/avatars/0.png';
+  const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const [dateStr, setDateStr] = useState('MON, SEP 13');
+  const [greeting, setGreeting] = useState('Good morning');
+
+  useEffect(() => {
+    setMounted(true);
+    const now = new Date();
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+    setDateStr(`${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`);
+
+    const hr = now.getHours();
+    if (hr < 12) setGreeting('Good morning');
+    else if (hr < 18) setGreeting('Good afternoon');
+    else setGreeting('Good evening');
+  }, []);
+
+  const displayName = user?.username || 'Aaryan';
 
   return (
-    <header className="h-12 border-b border-[#17191c] bg-[#08090a]/95 backdrop-blur-md sticky top-0 z-40 px-3 md:px-5 flex items-center justify-between shrink-0 select-none">
-      <div className="flex items-center gap-2.5 md:gap-3.5">
-        {onMobileMenuToggle && (
-          <button
-            type="button"
-            onClick={onMobileMenuToggle}
-            className="md:hidden p-1 rounded text-[#6e747c] hover:text-[#ededed] hover:bg-[#121417] transition-colors"
-            title="Toggle Menu"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
-        )}
+    <header className="px-6 sm:px-8 pt-6 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 select-none shrink-0">
+      {/* Left: Date + Greeting + Subtitle */}
+      <div className="space-y-0.5">
+        <div className="flex items-center gap-3">
+          {onMobileMenuToggle && (
+            <button
+              type="button"
+              onClick={onMobileMenuToggle}
+              className="lg:hidden p-1.5 rounded-xl bg-white dark:bg-[#14161b] border border-black/[0.06] dark:border-white/[0.06] text-[#64748b] hover:text-[#101217] transition-colors"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+          )}
+          <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-[#94a3b8]">
+            {dateStr}
+          </span>
+        </div>
 
-        <Link href="/dashboard" className="flex items-center gap-2 group">
-          <div className="w-7 h-7 rounded bg-[#121417] border border-[#1f2226] flex items-center justify-center text-[#ededed] group-hover:border-[#2a2d33] group-hover:bg-[#17191c] shadow-tactile-btn transition-colors">
-            <Shield className="w-3.5 h-3.5 text-[#c8ccd0]" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-xs tracking-tight text-[#ededed]">
-              HAWK
-            </span>
-            <span className="text-[9px] font-mono text-[#6e747c] uppercase tracking-wider px-1 py-0.2 rounded bg-[#121417] border border-[#1f2226]">
-              OPS
-            </span>
-          </div>
-        </Link>
+        <h1 className="text-2xl font-bold tracking-tight text-[#101217] dark:text-white flex items-center gap-2">
+          <span>{greeting},</span>
+          <span className="font-extrabold text-[#101217] dark:text-white">{displayName}</span>
+          <span className="text-xl">👋</span>
+        </h1>
 
-        {guildName && (
-          <div className="hidden sm:flex items-center gap-1.5 pl-2.5 border-l border-[#17191c] text-xs">
-            <span className="text-[#3d424a]">/</span>
-            <span className="text-[#c8ccd0] font-medium truncate max-w-[160px]">{guildName}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-success ml-1 shrink-0" title="Operational" />
-          </div>
-        )}
+        <p className="text-xs font-medium text-[#64748b] dark:text-[#94a3b8]">
+          {guildName} is running smoothly.
+        </p>
       </div>
 
-      <div className="flex items-center gap-2.5">
-        {/* Command Palette Trigger */}
-        {onOpenCommandPalette && (
+      {/* Right: Search + Action Icons + SIMPLE POWERFUL YOURS */}
+      <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0">
+        <div className="flex items-center gap-2.5">
+          {/* Search Pill */}
           <button
             type="button"
             onClick={onOpenCommandPalette}
-            className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded bg-[#0d0e10] border border-[#1f2226] hover:border-[#2a2d33] hover:bg-[#121417] text-[#6e747c] hover:text-[#ededed] text-xs shadow-tactile-input transition-colors"
-            title="Search settings, roles, channels (Ctrl+K)"
+            className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/90 dark:bg-[#14161b] border border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[#94a3b8] hover:text-[#101217] dark:hover:text-white hover:border-black/[0.12] dark:hover:border-white/[0.15] transition-all w-60 sm:w-72"
           >
-            <Search className="w-3 h-3 text-[#6e747c]" />
-            <span className="text-[11px] font-sans">Search console...</span>
-            <kbd className="text-[9px] font-mono px-1 py-0.2 rounded bg-[#17191c] border border-[#1f2226] text-[#6e747c] ml-1">
-              ⌘K
+            <Search className="w-3.5 h-3.5 text-[#94a3b8]" />
+            <span className="text-xs font-medium text-[#64748b] dark:text-[#94a3b8] truncate flex-1 text-left">
+              Search servers, modules, settings...
+            </span>
+            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-[#f1f5f9] dark:bg-[#1e222a] border border-black/[0.06] dark:border-white/[0.06] text-[#64748b] dark:text-[#94a3b8]">
+              Ctrl K
             </kbd>
           </button>
-        )}
 
-        {user && (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard"
-              className="btn-outline-secondary text-[11px] py-1 px-2.5 hidden sm:flex items-center gap-1.5"
-            >
-              <LayoutDashboard className="w-3 h-3 text-[#949aa2]" />
-              <span>Servers</span>
-            </Link>
+          {/* Sun / Moon Theme Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full bg-white/90 dark:bg-[#14161b] border border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex items-center justify-center text-[#64748b] dark:text-[#94a3b8] hover:text-[#101217] dark:hover:text-white transition-all hover:scale-105 active:scale-95"
+            title="Toggle light/dark theme"
+          >
+            {mounted && theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Sun className="w-4 h-4 text-[#64748b]" />
+            )}
+          </button>
 
-            <div className="flex items-center gap-2 pl-2 border-l border-[#17191c]">
-              <img
-                src={avatarUrl}
-                alt={user.username}
-                className="w-6 h-6 rounded-full border border-[#1f2226] object-cover"
-              />
-              <span className="text-xs font-medium text-[#ededed] hidden md:inline">{user.username}</span>
-              <a
-                href="/api/auth/logout"
-                title="Log Out"
-                className="p-1 rounded text-[#6e747c] hover:text-critical-text hover:bg-critical-soft transition-colors"
-              >
-                <LogOut className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-        )}
+          {/* Notification Bell */}
+          <button
+            type="button"
+            className="relative w-9 h-9 rounded-full bg-white/90 dark:bg-[#14161b] border border-black/[0.06] dark:border-white/[0.08] shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex items-center justify-center text-[#64748b] dark:text-[#94a3b8] hover:text-[#101217] dark:hover:text-white transition-all hover:scale-105 active:scale-95"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+          </button>
+        </div>
+
+        {/* Small slogan */}
+        <div className="hidden md:block pr-1">
+          <span className="text-[9px] font-mono uppercase tracking-widest text-[#94a3b8]/70">
+            SIMPLE • POWERFUL • YOURS
+          </span>
+        </div>
       </div>
     </header>
   );
