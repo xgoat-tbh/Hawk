@@ -8,7 +8,9 @@ export interface DiscordGuild {
   hasBot?: boolean;
   iconUrl?: string | null;
   approximateMemberCount?: number;
+  approximatePresenceCount?: number;
   memberCount?: number;
+  description?: string | null;
 }
 
 export interface DiscordChannel {
@@ -326,9 +328,19 @@ export async function fetchGuildMember(guildId: string, userId: string): Promise
   }
 }
 
-export async function fetchGuildDetails(guildId: string): Promise<{ id: string; name: string; icon: string | null; owner_id: string } | null> {
+export interface GuildDetails {
+  id: string;
+  name: string;
+  icon: string | null;
+  owner_id: string;
+  description?: string | null;
+  approximate_member_count?: number;
+  approximate_presence_count?: number;
+}
+
+export async function fetchGuildDetails(guildId: string): Promise<GuildDetails | null> {
   const cacheKey = `guild_details_${guildId}`;
-  const cached = getFromCache<{ id: string; name: string; icon: string | null; owner_id: string }>(cacheKey, 60_000);
+  const cached = getFromCache<GuildDetails>(cacheKey, 60_000);
   if (cached) return cached;
 
   // 1. Fast path: Use in-process hawkClient if available
@@ -336,11 +348,14 @@ export async function fetchGuildDetails(guildId: string): Promise<{ id: string; 
   if (hawkClient?.guilds?.cache) {
     const g = hawkClient.guilds.cache.get(guildId);
     if (g) {
-      const details = {
+      const details: GuildDetails = {
         id: g.id,
         name: g.name,
         icon: g.icon,
         owner_id: g.ownerId,
+        description: g.description || null,
+        approximate_member_count: g.memberCount,
+        approximate_presence_count: g.approximatePresenceCount,
       };
       setToCache(cacheKey, details);
       return details;
@@ -351,14 +366,23 @@ export async function fetchGuildDetails(guildId: string): Promise<{ id: string; 
   if (!token) return null;
 
   try {
-    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}`, {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}?with_counts=true`, {
       headers: { Authorization: `Bot ${token}` },
     });
 
     if (!res.ok) return null;
     const data = await res.json();
-    setToCache(cacheKey, data);
-    return data;
+    const details: GuildDetails = {
+      id: data.id,
+      name: data.name,
+      icon: data.icon,
+      owner_id: data.owner_id,
+      description: data.description || null,
+      approximate_member_count: data.approximate_member_count,
+      approximate_presence_count: data.approximate_presence_count,
+    };
+    setToCache(cacheKey, details);
+    return details;
   } catch (error) {
     console.error(`Error fetching guild details for ${guildId}:`, error);
     return null;

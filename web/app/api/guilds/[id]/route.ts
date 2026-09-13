@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, canManageGuild, isGuildOwner, getUserModulePermissions } from '@/lib/auth';
-import { fetchBotGuilds, fetchGuildChannels, fetchGuildRoles, fetchGuildEmojis, fetchBotProfile } from '@/lib/discord';
+import { fetchBotGuilds, fetchGuildDetails, fetchGuildChannels, fetchGuildRoles, fetchGuildEmojis, fetchBotProfile } from '@/lib/discord';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -21,8 +21,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   await ensureDatabaseSchema();
 
   // 1. Fetch live Discord channels, roles, emojis, and bot profile with in-memory cached rate-limit protection
-  const [botGuilds, channels, roles, emojis, botProfile] = await Promise.all([
+  const [botGuilds, guildDetails, channels, roles, emojis, botProfile] = await Promise.all([
     fetchBotGuilds(),
+    fetchGuildDetails(guildId),
     fetchGuildChannels(guildId),
     fetchGuildRoles(guildId),
     fetchGuildEmojis(guildId),
@@ -210,11 +211,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     guild: targetGuild
       ? {
           ...targetGuild,
+          description: guildDetails?.description || targetGuild.description || null,
+          approximateMemberCount:
+            guildDetails?.approximate_member_count ??
+            targetGuild.approximateMemberCount ??
+            targetGuild.memberCount ??
+            null,
+          approximatePresenceCount: guildDetails?.approximate_presence_count ?? null,
           iconUrl: targetGuild.icon
             ? `https://cdn.discordapp.com/icons/${targetGuild.id}/${targetGuild.icon}.png?size=128`
             : null,
         }
-      : { id: guildId, name: 'Discord Server', iconUrl: null },
+      : {
+          id: guildId,
+          name: guildDetails?.name || 'Discord Server',
+          description: guildDetails?.description || null,
+          approximateMemberCount: guildDetails?.approximate_member_count ?? null,
+          approximatePresenceCount: guildDetails?.approximate_presence_count ?? null,
+          iconUrl: guildDetails?.icon
+            ? `https://cdn.discordapp.com/icons/${guildId}/${guildDetails.icon}.png?size=128`
+            : null,
+        },
     bot: botProfile,
     isOwner,
     userPermissions,

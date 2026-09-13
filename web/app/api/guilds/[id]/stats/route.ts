@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import os from 'os';
 import { getSession, canManageGuild } from '@/lib/auth';
-import { fetchBotGuilds } from '@/lib/discord';
+import { fetchBotGuilds, fetchGuildDetails } from '@/lib/discord';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 
 export async function GET(
@@ -19,119 +19,172 @@ export async function GET(
 
   try {
     const hawkClient = (globalThis as any).hawkClient;
-    const botGuilds = await fetchBotGuilds();
+    const [botGuilds, guildDetails] = await Promise.all([
+      fetchBotGuilds(),
+      fetchGuildDetails(guildId),
+    ]);
     const targetGuild = botGuilds.find((g) => g.id === guildId);
     const cachedGuild = hawkClient?.guilds?.cache?.get(guildId);
 
-    // 1. Members count: use cached guild memberCount if available, else approximate
+    // 1. Members count: use real Discord API member count
     const memberCount =
-      cachedGuild?.memberCount ||
-      targetGuild?.approximateMemberCount ||
-      34821;
+      cachedGuild?.memberCount ??
+      guildDetails?.approximate_member_count ??
+      targetGuild?.approximateMemberCount ??
+      targetGuild?.memberCount ??
+      0;
+    const presenceCount =
+      guildDetails?.approximate_presence_count ?? 0;
 
-    // 2. Gateway ping
+    // 2. Gateway ping: real in-process ping or measure roundtrip
     const rawPing = hawkClient?.ws?.ping;
-    const gatewayPing = typeof rawPing === 'number' && rawPing > 0 ? Math.round(rawPing) : 63;
+    let gatewayPing = typeof rawPing === 'number' && rawPing > 0 ? Math.round(rawPing) : null;
+    if (gatewayPing === null) {
+      const pingStart = Date.now();
+      try {
+        await fetch('https://discord.com/api/v10/gateway', {
+          headers: { Authorization: `Bot ${process.env.BOT_TOKEN}` },
+          cache: 'no-store',
+        });
+        gatewayPing = Date.now() - pingStart;
+      } catch {
+        gatewayPing = 42;
+      }
+    }
 
     // 3. System Health (CPU, Memory, Uptime)
     const memUsage = process.memoryUsage();
     const memoryPercent = Math.min(
-      95,
-      Math.max(15, Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100) || 38)
+      99,
+      Math.max(5, Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100) || 28)
     );
 
-    // CPU estimation
     const cpus = os.cpus();
-    let cpuPercent = 14;
+    let cpuPercent = 12;
     if (cpus && cpus.length > 0) {
       const load = os.loadavg()[0];
-      cpuPercent = Math.min(99, Math.max(8, Math.round((load / cpus.length) * 100) || 14));
+      cpuPercent = Math.min(99, Math.max(2, Math.round((load / cpus.length) * 100) || 10));
     }
 
     const uptimeSeconds = process.uptime();
-    const uptimePct = uptimeSeconds > 3600 ? '99.9%' : '99.8%';
+    const uptimeHours = Math.floor(uptimeSeconds / 3600);
+    const uptimeMins = Math.floor((uptimeSeconds % 3600) / 60);
+    const uptimeStr = uptimeHours > 0 ? `${uptimeHours}h ${uptimeMins}m` : `${uptimeMins}m`;
 
-    // 4. Check active modules count
-    let activeModulesCount = 6;
+    // 4. Real Active modules count based on database configuration
+    let activeModulesCount = 0;
     try {
-      const [econ, welcome, stickies, gamePings] = await Promise.all([
-        db`SELECT pvc_jtc_channel_id, daily_reward_amount FROM economy_config WHERE guild_id = ${guildId}`,
-        db`SELECT greet_enabled, greet_channel_id FROM welcome_configs WHERE guild_id = ${guildId}`,
-        db`SELECT COUNT(*)::int as count FROM sticky_messages WHERE guild_id = ${guildId}`,
-        db`SELECT COUNT(*)::int as count FROM game_pings WHERE guild_id = ${guildId}`,
+      const [econ, welcome, stickies, gamePings, store, income, suggestions, confessions] = await Promise.all([
+        db`SELECT pvc_jtc_channel_id, daily_reward_amount, passive_income FROM economy_config WHERE guild_id = ${guildId}`.catch(() => []),
+        db`SELECT greet_enabled, greet_channel_id FROM welcome_configs WHERE guild_id = ${guildId}`.catch(() => []),
+        db`SELECT COUNT(*)::int as count FROM sticky_messages WHERE guild_id = ${guildId}`.catch(() => []),
+        db`SELECT COUNT(*)::int as count FROM game_pings WHERE guild_id = ${guildId}`.catch(() => []),
+        db`SELECT COUNT(*)::int as count FROM store_items WHERE guild_id = ${guildId}`.catch(() => []),
+        db`SELECT COUNT(*)::int as count FROM income_roles WHERE guild_id = ${guildId}`.catch(() => []),
+        db`SELECT channel_id FROM suggestion_configs WHERE guild_id = ${guildId}`.catch(() => []),
+        db`SELECT channel_id FROM confession_configs WHERE guild_id = ${guildId}`.catch(() => []),
       ]);
 
-      let count = 0;
-      if (welcome[0]?.greet_enabled && welcome[0]?.greet_channel_id) count++;
-      if (econ[0]?.pvc_jtc_channel_id) count++;
-      if (econ[0]?.daily_reward_amount) count++;
-      count++; // Store always available
-      if ((stickies[0]?.count || 0) > 0) count++;
-      if ((gamePings[0]?.count || 0) > 0) count++;
-      activeModulesCount = Math.max(count, 6);
-    } catch {
-      activeModulesCount = 6;
+      if (welcome[0]?.greet_enabled && welcome[0]?.greet_channel_id) activeModulesCount++;
+      if (econ[0]?.pvc_jtc_channel_id) activeModulesCount++;
+      if (econ[0]?.daily_reward_amount || econ[0]?.passive_income) activeModulesCount++;
+      if ((store[0]?.count || 0) > 0) activeModulesCount++;
+      if ((stickies[0]?.count || 0) > 0) activeModulesCount++;
+      if ((gamePings[0]?.count || 0) > 0) activeModulesCount++;
+      if ((income[0]?.count || 0) > 0) activeModulesCount++;
+      if (suggestions[0]?.channel_id) activeModulesCount++;
+      if (confessions[0]?.channel_id) activeModulesCount++;
+    } catch (err) {
+      console.warn('Error counting active modules:', err);
     }
 
-    // 5. Activity seed check
-    const countRow = await db`SELECT COUNT(*)::int as count FROM activity_log WHERE guild_id = ${guildId}`;
-    if ((countRow[0]?.count || 0) === 0) {
-      // Seed initial 5 reference events
-      const now = Date.now();
-      await db`
-        INSERT INTO activity_log (guild_id, type, actor_name, target_name, created_at)
-        VALUES
-          (${guildId}, 'welcome', '@aryan', 'joined the server', ${new Date(now - 2 * 60 * 1000)}),
-          (${guildId}, 'role_reward', '@kiara', 'claimed Premium', ${new Date(now - 6 * 60 * 1000)}),
-          (${guildId}, 'voice_create', 'Gaming Lobby #3', 'Temporary voice room created', ${new Date(now - 12 * 60 * 1000)}),
-          (${guildId}, 'store_purchase', '@dev', 'purchased Custom Role', ${new Date(now - 18 * 60 * 1000)}),
-          (${guildId}, 'streak_reward', '@nex', '+120 XP', ${new Date(now - 24 * 60 * 1000)})
-      `;
+    // 5. Real Recent Activity (from activity_log and economy_audit_log, NO fake seeds)
+    const [recentLogs, recentAudits] = await Promise.all([
+      db`
+        SELECT id, type, actor_name, target_name, created_at
+        FROM activity_log
+        WHERE guild_id = ${guildId}
+        ORDER BY created_at DESC
+        LIMIT 5
+      `.catch(() => []),
+      db`
+        SELECT id, action, actor_id, target_id, amount, details, created_at
+        FROM economy_audit_log
+        WHERE guild_id = ${guildId}
+        ORDER BY created_at DESC
+        LIMIT 5
+      `.catch(() => []),
+    ]);
+
+    const combinedEvents: any[] = [];
+    for (const r of recentLogs) {
+      combinedEvents.push({
+        id: `act_${r.id}`,
+        type: r.type,
+        actorName: r.actor_name || 'System',
+        targetName: r.target_name || '',
+        createdAt: new Date(r.created_at).getTime(),
+      });
     }
 
-    // 6. Recent Activity Feed (Top 5)
-    const recentRows = await db`
-      SELECT id, type, actor_name, target_name, created_at
-      FROM activity_log
-      WHERE guild_id = ${guildId}
-      ORDER BY created_at DESC
-      LIMIT 5
-    `;
+    for (const a of recentAudits) {
+      combinedEvents.push({
+        id: `eco_${a.id}`,
+        type: a.action === 'DAILY_CLAIM' ? 'streak_reward' : 'role_reward',
+        actorName: a.actor_id ? `<@${a.actor_id}>` : 'Member',
+        targetName: a.details || `${a.action} (${a.amount || ''})`,
+        createdAt: new Date(a.created_at).getTime(),
+      });
+    }
 
-    const recentActivity = recentRows.map((r: any) => {
-      const diffMs = Date.now() - new Date(r.created_at).getTime();
+    combinedEvents.sort((a, b) => b.createdAt - a.createdAt);
+    const recentActivity = combinedEvents.slice(0, 5).map((e) => {
+      const diffMs = Date.now() - e.createdAt;
       const diffMins = Math.max(1, Math.round(diffMs / (60 * 1000)));
       const relativeTime =
         diffMins < 60
           ? `${diffMins}m ago`
-          : `${Math.round(diffMins / 60)}h ago`;
+          : diffMins < 1440
+          ? `${Math.round(diffMins / 60)}h ago`
+          : `${Math.round(diffMins / 1440)}d ago`;
 
       return {
-        id: r.id,
-        type: r.type,
-        actorName: r.actor_name || 'System',
-        targetName: r.target_name || '',
+        id: e.id,
+        type: e.type,
+        actorName: e.actorName,
+        targetName: e.targetName,
         relativeTime,
-        timestamp: r.created_at,
       };
     });
 
-    // 7. Activity Chart Data (24 hourly buckets)
-    // Reference chart hourly pattern (12AM, 2AM, 4AM, 6AM, 8AM peaking at 1842, 10AM, 12PM, 2PM, 4PM, 6PM, 8PM, 10PM)
-    const baselineMessageCurve = [
-      420, 310, 240, 190, 520, 890, 1420, 1842, 1310, 980, 870, 790,
-      840, 920, 1150, 1380, 1540, 1720, 1610, 1450, 1284, 950, 720, 510
-    ];
+    // 6. Real Messages/Events per hour
+    const [actHr, auditHr, teleHr] = await Promise.all([
+      db`SELECT COUNT(*)::int as c FROM activity_log WHERE guild_id = ${guildId} AND created_at > NOW() - INTERVAL '1 hour'`.catch(() => [{ c: 0 }]),
+      db`SELECT COUNT(*)::int as c FROM economy_audit_log WHERE guild_id = ${guildId} AND created_at > NOW() - INTERVAL '1 hour'`.catch(() => [{ c: 0 }]),
+      db`SELECT COUNT(*)::int as c FROM command_telemetry WHERE guild_id = ${guildId} AND executed_at > NOW() - INTERVAL '1 hour'`.catch(() => [{ c: 0 }]),
+    ]);
+    const currentMessagesPerHr = (actHr[0]?.c || 0) + (auditHr[0]?.c || 0) + (teleHr[0]?.c || 0);
 
-    const baselineMemberCurve = [
-      4, 2, 1, 1, 3, 7, 12, 18, 14, 9, 8, 7,
-      8, 10, 12, 15, 17, 19, 16, 14, 12, 8, 6, 5
-    ];
+    // 7. Real Activity Chart Data: 24 hourly buckets from real database records
+    const [hourlyActivities, hourlyTelemetries] = await Promise.all([
+      db`
+        SELECT EXTRACT(HOUR FROM created_at)::int as hour, COUNT(*)::int as count
+        FROM activity_log
+        WHERE guild_id = ${guildId} AND created_at > NOW() - INTERVAL '24 hours'
+        GROUP BY hour
+      `.catch(() => []),
+      db`
+        SELECT EXTRACT(HOUR FROM executed_at)::int as hour, COUNT(*)::int as count
+        FROM command_telemetry
+        WHERE guild_id = ${guildId} AND executed_at > NOW() - INTERVAL '24 hours'
+        GROUP BY hour
+      `.catch(() => []),
+    ]);
 
-    const baselineCommandCurve = [
-      45, 32, 20, 15, 60, 110, 180, 240, 190, 140, 120, 110,
-      130, 150, 190, 220, 250, 280, 260, 230, 195, 140, 90, 60
-    ];
+    const actMap = new Map<number, number>();
+    for (const row of hourlyActivities) actMap.set(row.hour, row.count);
+    const cmdMap = new Map<number, number>();
+    for (const row of hourlyTelemetries) cmdMap.set(row.hour, row.count);
 
     const currentHour = new Date().getHours();
     const activityChart = [];
@@ -141,25 +194,22 @@ export async function GET(
       const displayH = h % 12 === 0 ? 12 : h % 12;
       const label = `${displayH}${period}`;
 
-      const curveIdx = (23 - i) % 24;
       activityChart.push({
         hour: label,
         fullHour: h,
-        messages: baselineMessageCurve[curveIdx],
-        members: baselineMemberCurve[curveIdx],
-        commands: baselineCommandCurve[curveIdx],
+        messages: actMap.get(h) || 0,
+        members: 0,
+        commands: cmdMap.get(h) || 0,
       });
     }
-
-    // 8. Messages/hr
-    const currentMessagesPerHr = 1284;
 
     return NextResponse.json({
       summary: {
         members: memberCount,
-        memberChangePct: 12,
+        presenceCount,
+        memberChangePct: 0,
         messagesPerHr: currentMessagesPerHr,
-        messagesChangePct: 8,
+        messagesChangePct: 0,
         modulesActive: activeModulesCount,
         modulesTotal: 9,
         gatewayPing,
@@ -168,8 +218,8 @@ export async function GET(
         cpu: cpuPercent,
         memory: memoryPercent,
         gateway: gatewayPing,
-        uptime: uptimePct,
-        status: gatewayPing < 200 ? 'operational' : 'degraded',
+        uptime: uptimeStr,
+        status: gatewayPing < 250 ? 'operational' : 'degraded',
       },
       recentActivity,
       activityChart,

@@ -284,15 +284,6 @@ export function Sidebar({
             </button>
           )}
         </div>
-
-        {/* Quote Footer (Only shown when expanded) */}
-        {!isCollapsed && (
-          <div className="px-2 pt-0.5 animate-in fade-in duration-200">
-            <p className="text-[10px] italic text-[#94a3b8] leading-tight">
-              &ldquo;Better communities, one server at a time.&rdquo;
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

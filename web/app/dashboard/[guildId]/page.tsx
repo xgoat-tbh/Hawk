@@ -83,6 +83,7 @@ export default function GuildOverviewPage() {
   const [stats, setStats] = useState<{
     summary: {
       members: number;
+      presenceCount?: number;
       memberChangePct: number;
       messagesPerHr: number;
       messagesChangePct: number;
@@ -98,7 +99,7 @@ export default function GuildOverviewPage() {
       status: string;
     };
     recentActivity: Array<{
-      id: number;
+      id: string | number;
       type: string;
       actorName: string;
       targetName: string;
@@ -106,36 +107,46 @@ export default function GuildOverviewPage() {
     }>;
     activityChart: Array<{
       hour: string;
+      fullHour?: number;
       messages: number;
       members: number;
       commands: number;
+      count?: number;
     }>;
   }>({
     summary: {
-      members: 34821,
-      memberChangePct: 12,
-      messagesPerHr: 1284,
-      messagesChangePct: 8,
-      modulesActive: 6,
+      members: guild?.approximateMemberCount || guild?.memberCount || 0,
+      presenceCount: guild?.approximatePresenceCount || 0,
+      memberChangePct: 0,
+      messagesPerHr: 0,
+      messagesChangePct: 0,
+      modulesActive: 0,
       modulesTotal: 9,
-      gatewayPing: 63,
+      gatewayPing: 0,
     },
     systemHealth: {
-      cpu: 14,
-      memory: 38,
-      gateway: 63,
-      uptime: '99.9%',
+      cpu: 0,
+      memory: 0,
+      gateway: 0,
+      uptime: '100%',
       status: 'operational',
     },
-    recentActivity: [
-      { id: 1, type: 'welcome', actorName: '@aryan', targetName: 'joined the server', relativeTime: '2m ago' },
-      { id: 2, type: 'role_reward', actorName: '@kiara', targetName: 'claimed Premium', relativeTime: '6m ago' },
-      { id: 3, type: 'voice_create', actorName: 'Gaming Lobby #3', targetName: 'Temporary voice room created', relativeTime: '12m ago' },
-      { id: 4, type: 'store_purchase', actorName: '@dev', targetName: 'purchased Custom Role', relativeTime: '18m ago' },
-      { id: 5, type: 'streak_reward', actorName: '@nex', targetName: '+120 XP', relativeTime: '24m ago' },
-    ],
+    recentActivity: [],
     activityChart: [],
   });
+
+  useEffect(() => {
+    if (guild?.approximateMemberCount) {
+      setStats((prev) => ({
+        ...prev,
+        summary: {
+          ...prev.summary,
+          members: prev.summary.members || guild.approximateMemberCount || 0,
+          presenceCount: prev.summary.presenceCount || guild.approximatePresenceCount || 0,
+        },
+      }));
+    }
+  }, [guild?.approximateMemberCount, guild?.approximatePresenceCount]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -307,9 +318,16 @@ export default function GuildOverviewPage() {
                 </div>
               </div>
               <div className="flex flex-col items-end gap-0.5">
-                <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-md">
-                  ↗ +{stats.summary.memberChangePct}%
-                </span>
+                {stats.summary.presenceCount ? (
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-md flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {stats.summary.presenceCount.toLocaleString()} online
+                  </span>
+                ) : (
+                  <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 rounded-md">
+                    Live
+                  </span>
+                )}
                 <SparklineWave color="#22c55e" width={48} height={16} />
               </div>
             </div>
@@ -330,8 +348,8 @@ export default function GuildOverviewPage() {
                 </div>
               </div>
               <div className="flex flex-col items-end gap-0.5">
-                <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-md">
-                  ↗ +{stats.summary.messagesChangePct}%
+                <span className="px-1.5 py-0.5 text-[9px] font-bold font-mono text-blue-600 dark:text-blue-400 bg-blue-500/10 rounded-md">
+                  Last 1h
                 </span>
                 <SparklineWave color="#3b82f6" width={48} height={16} />
               </div>
@@ -354,8 +372,15 @@ export default function GuildOverviewPage() {
               </div>
               {/* Colored Indicator Dots */}
               <div className="flex items-center gap-1">
-                {[...Array(6)].map((_, i) => (
-                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                {[...Array(stats.summary.modulesTotal || 9)].map((_, i) => (
+                  <span
+                    key={i}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                      i < stats.summary.modulesActive
+                        ? 'bg-emerald-500'
+                        : 'bg-black/10 dark:bg-white/15'
+                    }`}
+                  />
                 ))}
               </div>
             </div>
@@ -445,7 +470,13 @@ export default function GuildOverviewPage() {
             {/* Recharts Bar Chart */}
             <div className="bento-activity-chart h-32 sm:h-36 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.activityChart} margin={{ top: 5, right: 5, left: 5, bottom: 0 }}>
+                <BarChart
+                  data={stats.activityChart.map((item) => ({
+                    ...item,
+                    count: (item as any)[activeTab] ?? item.count ?? 0,
+                  }))}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 0 }}
+                >
                   <XAxis
                     dataKey="hour"
                     stroke="#94a3b8"
@@ -557,7 +588,7 @@ export default function GuildOverviewPage() {
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   </div>
                   <p className="text-[10px] text-white/60 pt-0.5">
-                    Connected since 3 days
+                    Amo Bot Connected • Ready
                   </p>
                 </div>
 
@@ -577,11 +608,13 @@ export default function GuildOverviewPage() {
                 <span>{stats.summary.modulesActive} modules</span>
               </div>
 
-              <div className="bento-server-tagline pt-0.5">
-                <p className="text-[11px] italic text-white/50 font-serif">
-                  &ldquo;A place to belong.&rdquo;
-                </p>
-              </div>
+              {guild?.description ? (
+                <div className="bento-server-tagline pt-0.5">
+                  <p className="text-[11px] italic text-white/50 font-serif line-clamp-2">
+                    &ldquo;{guild.description}&rdquo;
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -671,37 +704,43 @@ export default function GuildOverviewPage() {
             </div>
 
             <div className="space-y-2 pt-0.5">
-              {stats.recentActivity.slice(0, 4).map((item) => (
-                <div key={item.id} className="bento-recent-item flex items-center justify-between gap-2.5 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-[#f8fafc] dark:bg-[#181b21] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-center shrink-0">
-                      {getActivityItemIcon(item.type)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-semibold text-[11px] text-[#101217] dark:text-white truncate">
-                        {item.type === 'welcome'
-                          ? 'Welcome message sent'
-                          : item.type === 'role_reward'
-                          ? 'Role reward claimed'
-                          : item.type === 'voice_create'
-                          ? 'Temporary voice room created'
-                          : item.type === 'store_purchase'
-                          ? 'Store purchase completed'
-                          : item.type === 'streak_reward'
-                          ? 'Streak reward given'
-                          : 'Bot interaction completed'}
-                      </div>
-                      <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8] truncate">
-                        {item.actorName} {item.targetName}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className="text-[9px] font-mono text-[#94a3b8] shrink-0">
-                    {item.relativeTime}
-                  </span>
+              {stats.recentActivity.length === 0 ? (
+                <div className="py-3 text-center text-[10px] text-[#64748b] dark:text-[#94a3b8]">
+                  No recent activity recorded yet.
                 </div>
-              ))}
+              ) : (
+                stats.recentActivity.slice(0, 4).map((item) => (
+                  <div key={item.id} className="bento-recent-item flex items-center justify-between gap-2.5 text-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-[#f8fafc] dark:bg-[#181b21] border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-center shrink-0">
+                        {getActivityItemIcon(item.type)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-[11px] text-[#101217] dark:text-white truncate">
+                          {item.type === 'welcome'
+                            ? 'Welcome message sent'
+                            : item.type === 'role_reward'
+                            ? 'Role reward claimed'
+                            : item.type === 'voice_create'
+                            ? 'Temporary voice room created'
+                            : item.type === 'store_purchase'
+                            ? 'Store purchase completed'
+                            : item.type === 'streak_reward'
+                            ? 'Streak reward given'
+                            : 'Bot interaction completed'}
+                        </div>
+                        <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8] truncate">
+                          {item.actorName} {item.targetName}
+                        </div>
+                      </div>
+                    </div>
+
+                    <span className="text-[9px] font-mono text-[#94a3b8] shrink-0">
+                      {item.relativeTime}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -798,6 +837,8 @@ export default function GuildOverviewPage() {
       <ServerSwitcherModal
         isOpen={serverSwitcherOpen}
         onClose={() => setServerSwitcherOpen(false)}
+        memberCount={stats.summary.members}
+        modulesActive={stats.summary.modulesActive}
       />
     </div>
   );

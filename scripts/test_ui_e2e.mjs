@@ -77,7 +77,23 @@ async function runTests() {
     console.log('HTTP Status:', resp ? resp.status() : 'none', 'Current URL:', page.url());
     await page.waitForSelector('.bento-overview-root', { timeout: 30000 });
     await page.waitForSelector('aside', { timeout: 15000 });
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 2500));
+
+    const overviewDataCheck = await page.evaluate(() => {
+      const text = document.body.innerText;
+      return {
+        hasFakeMemberCount: text.includes('34,821') || text.includes('34821'),
+        hasFakeMessagesHr: text.includes('1,284') || text.includes('1284'),
+        hasFakeTagline: text.includes('A place to belong'),
+        hasFakeConnectionTime: text.includes('Connected since 3 days'),
+        hasFakeAryan: text.includes('@aryan'),
+        hasFakeKiara: text.includes('@kiara'),
+        hasRealReadyStatus: text.includes('Amo Bot Connected • Ready'),
+        hasRealIndiaServer: text.includes('Amo India'),
+      };
+    });
+    console.log('Overview Real Data Audit:', overviewDataCheck);
+    results.realDataCheck = overviewDataCheck;
 
     const viewports = [
       { name: '1080p', width: 1920, height: 1080 },
