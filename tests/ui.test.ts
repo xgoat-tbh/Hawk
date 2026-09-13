@@ -130,7 +130,14 @@ test('PVC Master Panel generates minimal container with 3x3 buttons inside conta
       const expected = expectedGrid[r][c];
       assert.equal(btn.data?.custom_id, expected.id, `Button at [${r}][${c}] should have customId ${expected.id}`);
       assert.equal(btn.data?.label, expected.label, `Button at [${r}][${c}] should have label ${expected.label}`);
-      assert.equal(btn.data?.emoji?.name, expected.emoji, `Button at [${r}][${c}] should have emoji ${expected.emoji}`);
+      if (expected.emoji.startsWith('<:')) {
+        const match = /^<:([^:]+):(\d+)>$/.exec(expected.emoji);
+        assert.ok(match, `Emoji ${expected.emoji} should match custom format`);
+        assert.equal(btn.data?.emoji?.name, match[1], `Button at [${r}][${c}] should have custom emoji name ${match[1]}`);
+        assert.equal(btn.data?.emoji?.id, match[2], `Button at [${r}][${c}] should have custom emoji id ${match[2]}`);
+      } else {
+        assert.equal(btn.data?.emoji?.name, expected.emoji, `Button at [${r}][${c}] should have emoji ${expected.emoji}`);
+      }
     }
   }
 
@@ -138,5 +145,39 @@ test('PVC Master Panel generates minimal container with 3x3 buttons inside conta
   const buyModal = createBuyHoursModal();
   assert.equal(buyModal.data.custom_id, 'pvc_modal_buy');
   assert.equal(buyModal.data.title, 'Add PVC Hours');
+
+  // Verify PVC Info UI has clean container without redundant buttons
+  const { buildPvcInfoPayload } = await import('../src/modules/pvc/pvcInfoUI.js');
+  const infoPayload = buildPvcInfoPayload(
+    {
+      channelId: '123',
+      guildId: '456',
+      ownerId: '789',
+      isLocked: false,
+      isHidden: false,
+      autoPayEnabled: true,
+      userLimit: 5,
+      expiresAt: new Date(Date.now() + 3600000),
+      createdAt: new Date(),
+    },
+    'TestOwner',
+    [],
+  );
+  assert.ok(infoPayload.components.length > 0);
+  const infoContainer = infoPayload.components[0] as any;
+  const infoActionRows = (infoContainer.components || []).filter((c: any) => c.data?.type === 1 || c.components !== undefined);
+  assert.equal(infoActionRows.length, 0, 'PVC Info container should have zero action buttons');
+
+  // Verify dynamic emoji resolution via client cache fallback
+  const originalHawkClient = (globalThis as any).hawkClient;
+  (globalThis as any).hawkClient = {
+    emojis: {
+      cache: [
+        { name: 'testdynamic', id: '999999999999999999', toString: () => '<:testdynamic:999999999999999999>' },
+      ],
+    },
+  };
+  assert.equal(getEmoji('pvc_btn_testdynamic'), '<:testdynamic:999999999999999999>');
+  (globalThis as any).hawkClient = originalHawkClient;
 });
 

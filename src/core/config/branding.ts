@@ -87,22 +87,22 @@ export const branding: BrandingConfig = {
     unlock: '',
     hide: '',
     delete: '',
-    transfer: '',
-    rename: '',
-    limit: '',
+    transfer: '<:transfer:1548735047123869838>',
+    rename: '<:rename:1548735012910924048>',
+    limit: '<:limit:1548734915506475118>',
     economy: '',
     income: '',
     // ── PVC Panel Button Custom Emojis ──────────────────────────
-    // Enter custom emoji IDs (e.g. '<:add:123456789>' or custom emoji identifier) here:
-    pvc_btn_add: '',
-    pvc_btn_autopay: '',
-    pvc_btn_limit: '',
-    pvc_btn_trust: '',
-    pvc_btn_rename: '',
-    pvc_btn_info: '',
-    pvc_btn_transfer: '',
-    pvc_btn_privacy: '',
-    pvc_btn_remove: '',
+    // Custom emoji IDs resolved from mutual server (YOLO):
+    pvc_btn_add: '<:add:1548734813307936799>',
+    pvc_btn_autopay: '<:autopay:1548734856270315644>',
+    pvc_btn_limit: '<:limit:1548734915506475118>',
+    pvc_btn_trust: '<:trust:1548735194683543602>',
+    pvc_btn_rename: '<:rename:1548735012910924048>',
+    pvc_btn_info: '<:info:1548734885814861845>',
+    pvc_btn_transfer: '<:transfer:1548735047123869838>',
+    pvc_btn_privacy: '<:privacy:1548734951355322518>',
+    pvc_btn_remove: '<:remove:1548734982376390686>',
   },
 };
 
@@ -118,6 +118,17 @@ export function getEmoji(key: string): string {
   }
   const custom = branding.emojis[key];
   if (custom) return custom;
+
+  // Dynamic fallback: resolve by name from client.emojis.cache across mutual guilds
+  const client = (globalThis as any).hawkClient;
+  if (client?.emojis?.cache) {
+    const cleanName = key.startsWith('pvc_btn_') ? key.slice('pvc_btn_'.length) : key;
+    const found = client.emojis.cache.find((e: any) => e.name?.toLowerCase() === cleanName.toLowerCase());
+    if (found) {
+      return found.toString();
+    }
+  }
+
   return UNICODE_FALLBACKS[key] ?? '';
 }
 
