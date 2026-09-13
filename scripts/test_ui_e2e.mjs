@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import path from 'path';
+import postgres from 'postgres';
 
 const ARTIFACT_DIR = 'C:/Users/Outcast/.gemini/antigravity/brain/ee2fd59a-a6b8-423e-b53f-1cbb1c697fee';
 const BASE_URL = 'http://localhost:3000';
@@ -9,6 +10,35 @@ const TOKEN = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
 async function runTests() {
   console.log('🚀 Starting Puppeteer E2E UI Test Suite...');
 
+  // Ensure test session exists in PostgreSQL database
+  const sql = postgres(process.env.DATABASE_URL);
+  try {
+    console.log('🔑 Ensuring active test session in dashboard_sessions table...');
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    await sql`
+      INSERT INTO dashboard_sessions (
+        token, user_id, username, discriminator, avatar, is_bot_owner, is_bot_admin, expires_at
+      ) VALUES (
+        ${TOKEN},
+        '1293525264650997842',
+        'Aaryan',
+        '0',
+        null,
+        true,
+        true,
+        ${expiresAt}
+      )
+      ON CONFLICT (token) DO UPDATE SET
+        expires_at = EXCLUDED.expires_at,
+        username = EXCLUDED.username,
+        is_bot_owner = EXCLUDED.is_bot_owner,
+        is_bot_admin = EXCLUDED.is_bot_admin
+    `;
+    console.log('✅ Session active for user Aaryan (1293525264650997842)');
+  } catch (dbErr) {
+    console.warn('⚠️ Could not insert session into DB:', dbErr);
+  }
+
   const browser = await puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
@@ -16,6 +46,9 @@ async function runTests() {
 
   const page = await browser.newPage();
   await page.setViewport({ width: 1920, height: 1080 });
+
+  page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+  page.on('pageerror', (err) => console.error('PAGE ERROR:', err.message));
 
   // Set session cookie
   await page.setCookie({
@@ -37,33 +70,62 @@ async function runTests() {
 
   try {
     // ----------------------------------------------------
-    // Test 1: Overview Page Load & Viewport Non-Scrollable
+    // Test 1: Overview Multi-Viewport Zero Scroll Matrix
     // ----------------------------------------------------
-    console.log(`\nTesting Overview page at ${BASE_URL}/dashboard/${GUILD_ID}...`);
-    await page.goto(`${BASE_URL}/dashboard/${GUILD_ID}`, { waitUntil: 'networkidle2', timeout: 30000 });
-
-    // Wait for loading screen to finish and dashboard shell to mount
+    console.log(`\nNavigating to Overview page at ${BASE_URL}/dashboard/${GUILD_ID}...`);
+    const resp = await page.goto(`${BASE_URL}/dashboard/${GUILD_ID}`, { waitUntil: 'networkidle2', timeout: 30000 });
+    console.log('HTTP Status:', resp ? resp.status() : 'none', 'Current URL:', page.url());
+    await page.waitForSelector('.bento-overview-root', { timeout: 30000 });
     await page.waitForSelector('aside', { timeout: 15000 });
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 1500));
 
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'e2e_overview_dark.png') });
-    console.log('📸 Captured e2e_overview_dark.png');
+    const viewports = [
+      { name: '1080p', width: 1920, height: 1080 },
+      { name: '900p', width: 1440, height: 900 },
+      { name: '768p', width: 1366, height: 768 },
+      { name: '800p', width: 1280, height: 800 },
+      { name: '1440p', width: 2560, height: 1440 },
+    ];
 
-    const scrollMetrics = await page.evaluate(() => {
-      const docHeight = document.documentElement.scrollHeight;
-      const winHeight = window.innerHeight;
-      const bodyHeight = document.body.scrollHeight;
-      return {
-        docHeight,
-        winHeight,
-        bodyHeight,
-        isDocNonScrollable: docHeight <= winHeight,
-        isBodyNonScrollable: bodyHeight <= winHeight,
-      };
-    });
+    results.viewportTests = [];
 
-    console.log('Document Scroll Metrics at 1920x1080:', scrollMetrics);
-    results.overviewScrollable = !scrollMetrics.isDocNonScrollable;
+    for (const vp of viewports) {
+      console.log(`\nTesting viewport ${vp.name} (${vp.width}x${vp.height})...`);
+      await page.setViewport({ width: vp.width, height: vp.height });
+      await new Promise((r) => setTimeout(r, 600));
+
+      const scrollMetrics = await page.evaluate(() => {
+        const docHeight = document.documentElement.scrollHeight;
+        const winHeight = window.innerHeight;
+        const bodyHeight = document.body.scrollHeight;
+        const mainEl = document.querySelector('main');
+        const mainScrollHeight = mainEl ? mainEl.scrollHeight : 0;
+        const mainClientHeight = mainEl ? mainEl.clientHeight : 0;
+        return {
+          docHeight,
+          winHeight,
+          bodyHeight,
+          mainScrollHeight,
+          mainClientHeight,
+          isDocNonScrollable: docHeight <= winHeight,
+          isMainNonScrollable: mainScrollHeight <= mainClientHeight + 1,
+        };
+      });
+
+      console.log(`Metrics at ${vp.width}x${vp.height}:`, scrollMetrics);
+      const passed = scrollMetrics.isDocNonScrollable && scrollMetrics.isMainNonScrollable;
+      results.viewportTests.push({ ...vp, ...scrollMetrics, passed });
+
+      const shotName = `e2e_overview_${vp.width}x${vp.height}.png`;
+      await page.screenshot({ path: path.join(ARTIFACT_DIR, shotName) });
+      console.log(`📸 Captured ${shotName}`);
+    }
+
+    results.allViewportsPassed = results.viewportTests.every((t) => t.passed);
+
+    // Reset to 1920x1080 for remaining tests
+    await page.setViewport({ width: 1920, height: 1080 });
+    await new Promise((r) => setTimeout(r, 400));
 
     // ----------------------------------------------------
     // Test 2: Sidebar User Display
@@ -174,6 +236,9 @@ async function runTests() {
     console.error('❌ Test failed with error:', err);
   } finally {
     await browser.close();
+    try {
+      await sql.end({ timeout: 5 });
+    } catch {}
   }
 }
 

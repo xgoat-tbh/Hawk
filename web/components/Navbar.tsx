@@ -44,7 +44,7 @@ export function Navbar({
   const displayName = user?.username || 'Aaryan';
 
   return (
-    <header className="px-6 pt-3 pb-2 flex flex-col md:flex-row md:items-center justify-between gap-2.5 select-none shrink-0">
+    <header className="dashboard-navbar px-6 pt-3 pb-2 flex flex-col md:flex-row md:items-center justify-between gap-2.5 select-none shrink-0">
       {/* Left: Date + Greeting + Subtitle */}
       <div className="space-y-0.5">
         <div className="flex items-center gap-2.5">
@@ -62,13 +62,13 @@ export function Navbar({
           </span>
         </div>
 
-        <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[#101217] dark:text-white flex items-center gap-2">
+        <h1 className="dashboard-navbar-greeting text-lg sm:text-xl font-bold tracking-tight text-[#101217] dark:text-white flex items-center gap-2">
           <span>{greeting},</span>
           <span className="font-extrabold text-[#101217] dark:text-white">{displayName}</span>
           <span className="text-lg">👋</span>
         </h1>
 
-        <p className="text-[11px] font-medium text-[#64748b] dark:text-[#94a3b8]">
+        <p className="dashboard-navbar-sub text-[11px] font-medium text-[#64748b] dark:text-[#94a3b8]">
           {guildName} is running smoothly.
         </p>
       </div>

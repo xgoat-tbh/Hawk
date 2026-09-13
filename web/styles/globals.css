@@ -141,3 +141,159 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ========================================================================= */
+/* Zero-Scroll Height-Responsive Rules for Desktop & Laptop Viewports        */
+/* ========================================================================= */
+
+@media (min-width: 1024px) and (max-height: 920px) {
+  .dashboard-navbar {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  .dashboard-navbar-greeting {
+    font-size: 1.05rem !important;
+  }
+  .bento-overview-root {
+    gap: 0.5rem !important;
+  }
+  .bento-overview-container {
+    gap: 0.65rem !important;
+  }
+  .bento-overview-left,
+  .bento-overview-right {
+    gap: 0.5rem !important;
+  }
+  .bento-stat-card {
+    padding: 0.55rem 0.65rem !important;
+    border-radius: 0.75rem !important;
+  }
+  .bento-stat-icon {
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+  }
+  .bento-stat-val {
+    font-size: 0.95rem !important;
+  }
+  .bento-activity-card {
+    padding: 0.75rem !important;
+    border-radius: 0.75rem !important;
+  }
+  .bento-activity-chart {
+    height: 6.5rem !important;
+  }
+  .bento-modules-grid {
+    gap: 0.4rem !important;
+  }
+  .bento-module-card {
+    padding: 0.45rem 0.6rem !important;
+    border-radius: 0.75rem !important;
+  }
+  .bento-module-icon {
+    width: 1.65rem !important;
+    height: 1.65rem !important;
+  }
+  .bento-right-card {
+    padding: 0.65rem !important;
+    border-radius: 0.75rem !important;
+  }
+  .bento-server-card {
+    padding: 0.75rem !important;
+    border-radius: 0.75rem !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 820px) {
+  .dashboard-navbar {
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.15rem !important;
+  }
+  .dashboard-navbar-greeting {
+    font-size: 0.95rem !important;
+  }
+  .dashboard-navbar-sub {
+    font-size: 0.68rem !important;
+  }
+  .bento-overview-root {
+    gap: 0.35rem !important;
+  }
+  .bento-overview-container {
+    gap: 0.5rem !important;
+  }
+  .bento-overview-left,
+  .bento-overview-right {
+    gap: 0.35rem !important;
+  }
+  .bento-stat-grid {
+    gap: 0.4rem !important;
+  }
+  .bento-stat-card {
+    padding: 0.45rem 0.55rem !important;
+  }
+  .bento-stat-icon {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+  .bento-stat-val {
+    font-size: 0.85rem !important;
+  }
+  .bento-activity-card {
+    padding: 0.6rem !important;
+    gap: 0.35rem !important;
+  }
+  .bento-activity-chart {
+    height: 5.25rem !important;
+  }
+  .bento-modules-grid {
+    gap: 0.3rem !important;
+  }
+  .bento-module-card {
+    padding: 0.35rem 0.5rem !important;
+  }
+  .bento-module-icon {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+  .bento-right-card {
+    padding: 0.55rem !important;
+  }
+  .bento-server-card {
+    padding: 0.6rem !important;
+  }
+  /* Show only top 2 recent events on constrained heights */
+  .bento-recent-item:nth-child(n+3) {
+    display: none !important;
+  }
+  .bento-quick-btn {
+    padding: 0.35rem !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 720px) {
+  .dashboard-navbar {
+    padding-top: 0.2rem !important;
+    padding-bottom: 0.1rem !important;
+  }
+  .dashboard-navbar-greeting {
+    font-size: 0.85rem !important;
+  }
+  .bento-overview-container {
+    gap: 0.35rem !important;
+  }
+  .bento-stat-card {
+    padding: 0.35rem 0.45rem !important;
+  }
+  .bento-activity-chart {
+    height: 4.25rem !important;
+  }
+  .bento-module-card {
+    padding: 0.25rem 0.45rem !important;
+  }
+  .bento-server-tagline {
+    display: none !important;
+  }
+  .bento-right-card {
+    padding: 0.45rem !important;
+  }
+}
+

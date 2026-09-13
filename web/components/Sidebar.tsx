@@ -55,9 +55,21 @@ export function Sidebar({
 
   useEffect(() => {
     const saved = localStorage.getItem('amo_sidebar_collapsed');
-    if (saved === 'true') {
-      setInternalCollapsed(true);
+    if (saved !== null) {
+      setInternalCollapsed(saved === 'true');
+    } else if (typeof window !== 'undefined') {
+      setInternalCollapsed(window.innerWidth < 1280);
     }
+
+    const handleResize = () => {
+      const manual = localStorage.getItem('amo_sidebar_collapsed');
+      if (manual === null && typeof window !== 'undefined') {
+        setInternalCollapsed(window.innerWidth < 1280);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;

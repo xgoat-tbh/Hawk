@@ -73,7 +73,7 @@ export function GuildDashboardShell({
             <div
               className={`flex-1 ${
                 isOverview
-                  ? 'overflow-y-auto xl:overflow-hidden px-4 sm:px-6 lg:px-8 pt-1 pb-1'
+                  ? 'overflow-y-auto lg:overflow-hidden px-4 sm:px-6 lg:px-8 pt-1 pb-1'
                   : 'overflow-y-auto px-4 sm:px-6 lg:px-8 pb-12'
               }`}
             >
