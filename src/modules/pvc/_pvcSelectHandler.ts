@@ -35,14 +35,14 @@ export async function handlePvcSelect(interaction: AnySelectMenuInteraction): Pr
     if (channel && channel.isVoiceBased()) {
       for (const id of ids) {
         await removeAccess(session.channelId, id);
-        await channel.permissionOverwrites.delete(id);
+        await channel.permissionOverwrites.edit(id, { Connect: false }).catch(() => {});
         const member = channel.members.get(id);
         if (member) {
           await member.voice.disconnect('Removed from PVC').catch(() => {});
         }
       }
     }
-    await interaction.reply({ content: `Removed ${ids.length} users from your PVC.`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `Removed and kicked ${ids.length} user(s) from your PVC.`, flags: MessageFlags.Ephemeral });
   }
   else if (interaction.customId === 'pvc_select_transfer' && interaction.isUserSelectMenu()) {
     const newOwnerId = interaction.values[0];

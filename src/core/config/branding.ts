@@ -29,6 +29,16 @@ const UNICODE_FALLBACKS: Record<string, string> = {
   warning: '',
   info: '',
   denied: '',
+  // PVC Panel Button Fallbacks
+  pvc_btn_add: '➕',
+  pvc_btn_autopay: '💳',
+  pvc_btn_limit: '👥',
+  pvc_btn_trust: '🛡️',
+  pvc_btn_rename: '✏️',
+  pvc_btn_info: 'ℹ️',
+  pvc_btn_transfer: '🔁',
+  pvc_btn_privacy: '🔒',
+  pvc_btn_remove: '🗑️',
 };
 
 export const branding: BrandingConfig = {
@@ -82,6 +92,17 @@ export const branding: BrandingConfig = {
     limit: '',
     economy: '',
     income: '',
+    // ── PVC Panel Button Custom Emojis ──────────────────────────
+    // Enter custom emoji IDs (e.g. '<:add:123456789>' or custom emoji identifier) here:
+    pvc_btn_add: '',
+    pvc_btn_autopay: '',
+    pvc_btn_limit: '',
+    pvc_btn_trust: '',
+    pvc_btn_rename: '',
+    pvc_btn_info: '',
+    pvc_btn_transfer: '',
+    pvc_btn_privacy: '',
+    pvc_btn_remove: '',
   },
 };
 

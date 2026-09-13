@@ -35,3 +35,23 @@ export function createLimitModal(): ModalBuilder {
 
   return modal;
 }
+
+export function createBuyHoursModal(): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId('pvc_modal_buy')
+    .setTitle('Add PVC Hours');
+
+  const hoursInput = new TextInputBuilder()
+    .setCustomId('hours')
+    .setLabel('Hours to add (e.g. 1, 2, 24)')
+    .setPlaceholder('Enter number of hours')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(4);
+
+  const row = new ActionRowBuilder<TextInputBuilder>().addComponents(hoursInput);
+  modal.addComponents(row);
+
+  return modal;
+}
+

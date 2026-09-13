@@ -6,7 +6,7 @@ import {
   MessageFlags
 } from 'discord.js';
 import { getSessionByOwner, setLocked, setHidden, setAutoPayEnabled, deleteSession } from './pvcService.js';
-import { createRenameModal, createLimitModal } from './pvcModals.js';
+import { createRenameModal, createLimitModal, createBuyHoursModal } from './pvcModals.js';
 import { buildPvcInfoEmbed } from './pvcInfoUI.js';
 import { getAccessList } from './pvcService.js';
 
@@ -121,34 +121,55 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
       break;
     }
 
-    case 'btn_master_add_user': {
-      const select = new UserSelectMenuBuilder()
-        .setCustomId('pvc_select_add_user')
-        .setPlaceholder('Select users to add to PVC')
-        .setMinValues(1)
-        .setMaxValues(10);
-      const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(select);
-      await interaction.reply({ content: 'Select users to add:', components: [row], flags: MessageFlags.Ephemeral });
+    case 'pvc_btn_add_hours':
+    case 'btn_master_add_hours': {
+      const modal = createBuyHoursModal();
+      await interaction.showModal(modal);
       break;
     }
 
+    case 'pvc_btn_trust':
+    case 'btn_master_trust':
+    case 'btn_master_add_user': {
+      const select = new UserSelectMenuBuilder()
+        .setCustomId('pvc_select_add_user')
+        .setPlaceholder('Select users to trust/permit in PVC')
+        .setMinValues(1)
+        .setMaxValues(10);
+      const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(select);
+      await interaction.reply({ content: 'Select users to trust/permit in your PVC:', components: [row], flags: MessageFlags.Ephemeral });
+      break;
+    }
+
+    case 'pvc_btn_remove_user':
     case 'btn_master_remove_user': {
       const accessList = await getAccessList(session.channelId);
       const allowedUsers = accessList.filter(a => a.access === 'ALLOW' && a.targetType === 'USER');
-      if (allowedUsers.length === 0) {
-        await interaction.reply({ content: 'No users to remove.', flags: MessageFlags.Ephemeral });
+      const userMap = new Map<string, string>();
+      for (const a of allowedUsers) {
+        userMap.set(a.targetId, `Allowed Member: ${a.targetId}`);
+      }
+      if (channel && channel.isVoiceBased()) {
+        for (const [memberId, member] of channel.members) {
+          if (memberId !== userId) {
+            userMap.set(memberId, member.user.username ? `${member.user.username} (in voice)` : `Member in VC: ${memberId}`);
+          }
+        }
+      }
+      if (userMap.size === 0) {
+        await interaction.reply({ content: 'No users to remove or kick.', flags: MessageFlags.Ephemeral });
         return;
       }
       const select = new StringSelectMenuBuilder()
         .setCustomId('pvc_select_remove_user')
-        .setPlaceholder('Select users to remove')
+        .setPlaceholder('Select users to untrust / kick from VC')
         .setMinValues(1)
-        .setMaxValues(Math.min(allowedUsers.length, 10));
-      for (const a of allowedUsers.slice(0, 25)) {
-        select.addOptions({ label: `User: ${a.targetId}`, value: a.targetId });
+        .setMaxValues(Math.min(userMap.size, 10));
+      for (const [targetId, label] of Array.from(userMap.entries()).slice(0, 25)) {
+        select.addOptions({ label: label.slice(0, 100), value: targetId });
       }
       const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
-      await interaction.reply({ content: 'Select users to remove:', components: [row], flags: MessageFlags.Ephemeral });
+      await interaction.reply({ content: 'Select users to untrust and kick:', components: [row], flags: MessageFlags.Ephemeral });
       break;
     }
     

@@ -85,3 +85,58 @@ test('Welcome UI generates clean Components V2 payloads without emoji buttons', 
   assert.ok(leavePanel.components.length > 0);
   assert.ok(leavePanel.flags > 0);
 });
+
+test('PVC Master Panel generates minimal container with 3x3 buttons inside container', async () => {
+  const { buildMasterPanel } = await import('../src/modules/pvc/pvcMasterPanel.js');
+  const { createBuyHoursModal } = await import('../src/modules/pvc/pvcModals.js');
+  const { branding, getEmoji } = await import('../src/core/config/branding.js');
+
+  const panel = buildMasterPanel();
+  assert.ok(panel.components.length > 0, 'Panel should have components');
+  assert.ok(panel.flags > 0, 'Panel should have Components V2 flags');
+
+  const container = panel.components[0] as any;
+  assert.ok(container, 'Container should exist');
+
+  // Verify container components: text display + separator + action rows
+  const containerComponents = container.components || [];
+  const actionRows = containerComponents.filter((c: any) => c.data?.type === 1 || c.components !== undefined);
+  assert.equal(actionRows.length, 3, 'Should have exactly 3 action rows inside container');
+
+  const expectedGrid = [
+    [
+      { id: 'btn_master_add_hours', label: 'Add', emoji: getEmoji('pvc_btn_add') },
+      { id: 'btn_master_fastag', label: 'Autopay', emoji: getEmoji('pvc_btn_autopay') },
+      { id: 'btn_master_limit', label: 'Limit', emoji: getEmoji('pvc_btn_limit') },
+    ],
+    [
+      { id: 'btn_master_trust', label: 'Trust', emoji: getEmoji('pvc_btn_trust') },
+      { id: 'btn_master_rename', label: 'Rename', emoji: getEmoji('pvc_btn_rename') },
+      { id: 'btn_master_info', label: 'Info', emoji: getEmoji('pvc_btn_info') },
+    ],
+    [
+      { id: 'btn_master_transfer', label: 'Transfer', emoji: getEmoji('pvc_btn_transfer') },
+      { id: 'btn_master_privacy', label: 'Privacy', emoji: getEmoji('pvc_btn_privacy') },
+      { id: 'btn_master_remove_user', label: 'Remove', emoji: getEmoji('pvc_btn_remove') },
+    ],
+  ];
+
+  for (let r = 0; r < 3; r++) {
+    const row = actionRows[r];
+    const buttons = row.components || [];
+    assert.equal(buttons.length, 3, `Row ${r + 1} should have exactly 3 buttons`);
+    for (let c = 0; c < 3; c++) {
+      const btn = buttons[c];
+      const expected = expectedGrid[r][c];
+      assert.equal(btn.data?.custom_id, expected.id, `Button at [${r}][${c}] should have customId ${expected.id}`);
+      assert.equal(btn.data?.label, expected.label, `Button at [${r}][${c}] should have label ${expected.label}`);
+      assert.equal(btn.data?.emoji?.name, expected.emoji, `Button at [${r}][${c}] should have emoji ${expected.emoji}`);
+    }
+  }
+
+  // Verify modal
+  const buyModal = createBuyHoursModal();
+  assert.equal(buyModal.data.custom_id, 'pvc_modal_buy');
+  assert.equal(buyModal.data.title, 'Add PVC Hours');
+});
+
