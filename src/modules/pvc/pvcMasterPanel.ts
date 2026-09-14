@@ -54,15 +54,12 @@ export function buildMasterPanel(): { embeds: any[]; components: any[]; files: a
     buildPvcButton('btn_master_add_hours', 'pvc_btn_add'),
     buildPvcButton('btn_master_fastag', 'pvc_btn_autopay'),
     buildPvcButton('btn_master_limit', 'pvc_btn_limit'),
+    buildPvcButton('btn_master_trust', 'pvc_btn_trust'),
+    buildPvcButton('btn_master_rename', 'pvc_btn_rename'),
   );
 
   const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    buildPvcButton('btn_master_trust', 'pvc_btn_trust'),
-    buildPvcButton('btn_master_rename', 'pvc_btn_rename'),
     buildPvcButton('btn_master_info', 'pvc_btn_info'),
-  );
-
-  const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
     buildPvcButton('btn_master_transfer', 'pvc_btn_transfer'),
     buildPvcButton('btn_master_privacy', 'pvc_btn_privacy'),
     buildPvcButton('btn_master_remove_user', 'pvc_btn_remove'),
@@ -70,7 +67,7 @@ export function buildMasterPanel(): { embeds: any[]; components: any[]; files: a
 
   return {
     embeds: [embed],
-    components: [row1, row2, row3],
+    components: [row1, row2],
     files,
   };
 }

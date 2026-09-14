@@ -93,7 +93,7 @@ test('PVC Master Panel generates TempVoice embed with 3x3 icon-only buttons', as
 
   const panel = buildMasterPanel();
   assert.ok(panel.embeds?.length === 1, 'Panel should have 1 embed');
-  assert.ok(panel.components?.length === 3, 'Panel should have 3 action rows');
+  assert.ok(panel.components?.length === 2, 'Panel should have 2 action rows');
   assert.ok(panel.files?.length === 1, 'Panel should have 1 file attachment');
   assert.equal(panel.files[0].name, 'pvc_guide.png');
 
@@ -109,24 +109,22 @@ test('PVC Master Panel generates TempVoice embed with 3x3 icon-only buttons', as
       { id: 'btn_master_add_hours', emoji: getEmoji('pvc_btn_add') },
       { id: 'btn_master_fastag', emoji: getEmoji('pvc_btn_autopay') },
       { id: 'btn_master_limit', emoji: getEmoji('pvc_btn_limit') },
-    ],
-    [
       { id: 'btn_master_trust', emoji: getEmoji('pvc_btn_trust') },
       { id: 'btn_master_rename', emoji: getEmoji('pvc_btn_rename') },
-      { id: 'btn_master_info', emoji: getEmoji('pvc_btn_info') },
     ],
     [
+      { id: 'btn_master_info', emoji: getEmoji('pvc_btn_info') },
       { id: 'btn_master_transfer', emoji: getEmoji('pvc_btn_transfer') },
       { id: 'btn_master_privacy', emoji: getEmoji('pvc_btn_privacy') },
       { id: 'btn_master_remove_user', emoji: getEmoji('pvc_btn_remove') },
     ],
   ];
 
-  for (let r = 0; r < 3; r++) {
+  for (let r = 0; r < expectedGrid.length; r++) {
     const row = actionRows[r];
     const buttons = row.components || [];
-    assert.equal(buttons.length, 3, `Row ${r + 1} should have exactly 3 buttons`);
-    for (let c = 0; c < 3; c++) {
+    assert.equal(buttons.length, expectedGrid[r].length, `Row ${r + 1} should have ${expectedGrid[r].length} buttons`);
+    for (let c = 0; c < expectedGrid[r].length; c++) {
       const btn = buttons[c];
       const expected = expectedGrid[r][c];
       assert.equal(btn.data?.custom_id, expected.id, `Button at [${r}][${c}] should have customId ${expected.id}`);
