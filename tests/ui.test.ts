@@ -86,38 +86,39 @@ test('Welcome UI generates clean Components V2 payloads without emoji buttons', 
   assert.ok(leavePanel.flags > 0);
 });
 
-test('PVC Master Panel generates minimal container with 3x3 buttons inside container', async () => {
+test('PVC Master Panel generates TempVoice embed with 3x3 icon-only buttons', async () => {
   const { buildMasterPanel } = await import('../src/modules/pvc/pvcMasterPanel.js');
   const { createBuyHoursModal } = await import('../src/modules/pvc/pvcModals.js');
-  const { branding, getEmoji } = await import('../src/core/config/branding.js');
+  const { getEmoji } = await import('../src/core/config/branding.js');
 
   const panel = buildMasterPanel();
-  assert.ok(panel.components.length > 0, 'Panel should have components');
-  assert.ok(panel.flags > 0, 'Panel should have Components V2 flags');
+  assert.ok(panel.embeds?.length === 1, 'Panel should have 1 embed');
+  assert.ok(panel.components?.length === 3, 'Panel should have 3 action rows');
+  assert.ok(panel.files?.length === 1, 'Panel should have 1 file attachment');
+  assert.equal(panel.files[0].name, 'pvc_guide.png');
 
-  const container = panel.components[0] as any;
-  assert.ok(container, 'Container should exist');
+  const embed = panel.embeds[0];
+  assert.equal(embed.data.title, 'PVC Panel');
+  assert.equal(embed.data.description, 'Manage your temporary voice channel and its settings from the controls below.');
+  assert.equal(embed.data.image?.url, 'attachment://pvc_guide.png');
+  assert.equal(embed.data.footer?.text, 'Use the buttons below to use the interface');
 
-  // Verify container components: text display + separator + action rows
-  const containerComponents = container.components || [];
-  const actionRows = containerComponents.filter((c: any) => c.data?.type === 1 || c.components !== undefined);
-  assert.equal(actionRows.length, 3, 'Should have exactly 3 action rows inside container');
-
+  const actionRows = panel.components;
   const expectedGrid = [
     [
-      { id: 'btn_master_add_hours', label: 'Add', emoji: getEmoji('pvc_btn_add') },
-      { id: 'btn_master_fastag', label: 'Autopay', emoji: getEmoji('pvc_btn_autopay') },
-      { id: 'btn_master_limit', label: 'Limit', emoji: getEmoji('pvc_btn_limit') },
+      { id: 'btn_master_add_hours', emoji: getEmoji('pvc_btn_add') },
+      { id: 'btn_master_fastag', emoji: getEmoji('pvc_btn_autopay') },
+      { id: 'btn_master_limit', emoji: getEmoji('pvc_btn_limit') },
     ],
     [
-      { id: 'btn_master_trust', label: 'Trust', emoji: getEmoji('pvc_btn_trust') },
-      { id: 'btn_master_rename', label: 'Rename', emoji: getEmoji('pvc_btn_rename') },
-      { id: 'btn_master_info', label: 'Info', emoji: getEmoji('pvc_btn_info') },
+      { id: 'btn_master_trust', emoji: getEmoji('pvc_btn_trust') },
+      { id: 'btn_master_rename', emoji: getEmoji('pvc_btn_rename') },
+      { id: 'btn_master_info', emoji: getEmoji('pvc_btn_info') },
     ],
     [
-      { id: 'btn_master_transfer', label: 'Transfer', emoji: getEmoji('pvc_btn_transfer') },
-      { id: 'btn_master_privacy', label: 'Privacy', emoji: getEmoji('pvc_btn_privacy') },
-      { id: 'btn_master_remove_user', label: 'Remove', emoji: getEmoji('pvc_btn_remove') },
+      { id: 'btn_master_transfer', emoji: getEmoji('pvc_btn_transfer') },
+      { id: 'btn_master_privacy', emoji: getEmoji('pvc_btn_privacy') },
+      { id: 'btn_master_remove_user', emoji: getEmoji('pvc_btn_remove') },
     ],
   ];
 
@@ -129,7 +130,7 @@ test('PVC Master Panel generates minimal container with 3x3 buttons inside conta
       const btn = buttons[c];
       const expected = expectedGrid[r][c];
       assert.equal(btn.data?.custom_id, expected.id, `Button at [${r}][${c}] should have customId ${expected.id}`);
-      assert.equal(btn.data?.label, expected.label, `Button at [${r}][${c}] should have label ${expected.label}`);
+      assert.equal(btn.data?.label, undefined, `Button at [${r}][${c}] should be icon-only (no label)`);
       if (expected.emoji.startsWith('<:')) {
         const match = /^<:([^:]+):(\d+)>$/.exec(expected.emoji);
         assert.ok(match, `Emoji ${expected.emoji} should match custom format`);

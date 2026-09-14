@@ -259,22 +259,6 @@ export default function GuildOverviewPage() {
     },
   ];
 
-  const CustomChartTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-[#181b21] border border-black/[0.08] dark:border-white/[0.08] px-3.5 py-2 rounded-xl shadow-xl text-center select-none animate-in fade-in zoom-in-95 duration-100">
-          <div className="text-sm font-bold text-[#101217] dark:text-white font-mono">
-            {Number(payload[0].value).toLocaleString()}
-          </div>
-          <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8] capitalize">
-            {activeTab}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
   const getActivityItemIcon = (type: string) => {
     switch (type) {
       case 'welcome':
@@ -293,15 +277,15 @@ export default function GuildOverviewPage() {
   };
 
   return (
-    <div className="bento-overview-root space-y-3 max-w-[1400px] mx-auto pb-0 select-none">
+    <div className="bento-overview-root h-full flex flex-col justify-between space-y-3 max-w-[1400px] mx-auto pb-0 select-none">
       {/* 2-Column Bento Grid Container */}
-      <div className="bento-overview-container grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
+      <div className="bento-overview-container grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch flex-1 min-h-0">
         {/* ======================================================== */}
         {/* LEFT COLUMN (Wider): 4 StatCards, Activity Chart, Modules */}
         {/* ======================================================== */}
-        <div className="bento-overview-left lg:col-span-8 space-y-3">
+        <div className="bento-overview-left lg:col-span-8 flex flex-col justify-between h-full space-y-3 min-h-0">
           {/* 1. Four Stat Cards */}
-          <div className="bento-stat-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+          <div className="bento-stat-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 shrink-0">
             {/* Card 1: Members */}
             <div className="bento-stat-card p-3 rounded-2xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] shadow-sm flex items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5">
@@ -515,8 +499,8 @@ export default function GuildOverviewPage() {
           </div>
 
           {/* 3. Nine Modules Grid */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
+          <div className="bento-modules-section flex-1 min-h-0 flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between px-1 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-[#101217] dark:text-white">
                   Modules
@@ -536,14 +520,14 @@ export default function GuildOverviewPage() {
             </div>
 
             {/* 3x3 Bento Module Cards */}
-            <div className="bento-modules-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+            <div className="bento-modules-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 flex-1 items-stretch">
               {moduleCards.map((m) => {
                 const Icon = m.icon;
                 return (
                   <Link
                     key={m.id}
                     href={m.path}
-                    className="bento-module-card p-2.5 rounded-2xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] hover:border-black/[0.12] dark:hover:border-white/[0.15] shadow-sm flex items-center justify-between gap-2.5 transition-all hover:scale-[1.01] group"
+                    className="bento-module-card p-2.5 rounded-2xl bg-white/80 dark:bg-[#121418] border border-black/[0.05] dark:border-white/[0.06] hover:border-black/[0.12] dark:hover:border-white/[0.15] shadow-sm flex items-center justify-between gap-2.5 transition-all hover:scale-[1.01] group h-full"
                   >
                     <div className="flex items-center gap-2.5">
                       <div className={`bento-module-icon w-8 h-8 rounded-xl ${m.color} flex items-center justify-center shrink-0`}>
@@ -575,7 +559,7 @@ export default function GuildOverviewPage() {
         {/* ======================================================== */}
         {/* RIGHT COLUMN: Server Card, Health, Recent, Quick Actions */}
         {/* ======================================================== */}
-        <div className="bento-overview-right lg:col-span-4 space-y-3">
+        <div className="bento-overview-right lg:col-span-4 flex flex-col justify-between h-full space-y-3 min-h-0">
           {/* 1. Amo India Server Card (Dark Smoky Glass Aesthetic) */}
           <div className="bento-server-card relative overflow-hidden rounded-2xl p-4 bg-gradient-to-br from-[#1a1c22] via-[#15171c] to-[#0d0e12] text-white shadow-md border border-white/[0.08]">
             <div className="relative z-10 space-y-2.5">

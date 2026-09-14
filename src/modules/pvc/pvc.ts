@@ -65,7 +65,6 @@ export default defineCommand({
     
     if (sub === 'panel') {
       await deployMasterPanel(ctx.message.channel as TextChannel);
-      await ctx.respond.success('Master panel deployed.');
       return;
     }
     

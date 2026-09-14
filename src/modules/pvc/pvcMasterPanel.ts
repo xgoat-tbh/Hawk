@@ -1,11 +1,21 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, TextChannel } from 'discord.js';
-import { ui } from '../../core/ui/index.js';
-import { getEmoji } from '../../core/config/branding.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  AttachmentBuilder,
+  TextChannel,
+} from 'discord.js';
+import path from 'node:path';
+import url from 'node:url';
+import { getEmoji, branding } from '../../core/config/branding.js';
 
-function buildPvcButton(customId: string, label: string, emojiKey: string): ButtonBuilder {
+const currentDir = path.dirname(url.fileURLToPath(import.meta.url));
+const GUIDE_IMAGE_PATH = path.join(currentDir, 'assets', 'pvc_guide.png');
+
+function buildPvcButton(customId: string, emojiKey: string): ButtonBuilder {
   const btn = new ButtonBuilder()
     .setCustomId(customId)
-    .setLabel(label)
     .setStyle(ButtonStyle.Secondary);
   const emoji = getEmoji(emojiKey);
   if (emoji) {
@@ -14,32 +24,39 @@ function buildPvcButton(customId: string, label: string, emojiKey: string): Butt
   return btn;
 }
 
-export function buildMasterPanel(): { components: any[]; flags?: any } {
+export function buildMasterPanel(): { embeds: any[]; components: any[]; files: any[] } {
+  const embed = new EmbedBuilder()
+    .setTitle('PVC Panel')
+    .setDescription('Manage your temporary voice channel and its settings from the controls below.')
+    .setImage('attachment://pvc_guide.png')
+    .setFooter({ text: 'Use the buttons below to use the interface' })
+    .setColor(branding.defaultColor ?? 0x2b2d31);
+
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    buildPvcButton('btn_master_add_hours', 'Add', 'pvc_btn_add'),
-    buildPvcButton('btn_master_fastag', 'Autopay', 'pvc_btn_autopay'),
-    buildPvcButton('btn_master_limit', 'Limit', 'pvc_btn_limit'),
+    buildPvcButton('btn_master_add_hours', 'pvc_btn_add'),
+    buildPvcButton('btn_master_fastag', 'pvc_btn_autopay'),
+    buildPvcButton('btn_master_limit', 'pvc_btn_limit'),
   );
 
   const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    buildPvcButton('btn_master_trust', 'Trust', 'pvc_btn_trust'),
-    buildPvcButton('btn_master_rename', 'Rename', 'pvc_btn_rename'),
-    buildPvcButton('btn_master_info', 'Info', 'pvc_btn_info'),
+    buildPvcButton('btn_master_trust', 'pvc_btn_trust'),
+    buildPvcButton('btn_master_rename', 'pvc_btn_rename'),
+    buildPvcButton('btn_master_info', 'pvc_btn_info'),
   );
 
   const row3 = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    buildPvcButton('btn_master_transfer', 'Transfer', 'pvc_btn_transfer'),
-    buildPvcButton('btn_master_privacy', 'Privacy', 'pvc_btn_privacy'),
-    buildPvcButton('btn_master_remove_user', 'Remove', 'pvc_btn_remove'),
+    buildPvcButton('btn_master_transfer', 'pvc_btn_transfer'),
+    buildPvcButton('btn_master_privacy', 'pvc_btn_privacy'),
+    buildPvcButton('btn_master_remove_user', 'pvc_btn_remove'),
   );
 
-  const payload = ui.standard({
-    title: 'PVC Panel',
-    text: 'Use the buttons below to manage your PVC.',
-    components: [row1, row2, row3],
-  });
+  const file = new AttachmentBuilder(GUIDE_IMAGE_PATH, { name: 'pvc_guide.png' });
 
-  return { components: payload.components, flags: payload.flags as any };
+  return {
+    embeds: [embed],
+    components: [row1, row2, row3],
+    files: [file],
+  };
 }
 
 export async function deployMasterPanel(channel: TextChannel, existingMsgId?: string): Promise<void> {

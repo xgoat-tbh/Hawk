@@ -2,15 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession, canManageGuild, isGuildOwner } from '@/lib/auth';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 import { logAuditEvent } from '@/lib/audit';
-import { BOT_COMMAND_CATALOG } from '@/lib/commands';
-import { fetchGuildMember, fetchDiscordUser } from '@/lib/discord';
-import {
-  DEFAULT_PRESET_PROFILES,
-  PermissionProfile,
-  RolePolicy,
-  UserOverride,
-  CommandAcl,
-} from '@/lib/permissions';
+import { PermissionProfile, UserOverride } from '@/lib/permissions';
 import { fetchGuildPermissions } from '@/lib/permissionsService';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

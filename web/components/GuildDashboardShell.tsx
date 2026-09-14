@@ -77,7 +77,7 @@ export function GuildDashboardShell({
                   : 'overflow-y-auto px-4 sm:px-6 lg:px-8 pb-12'
               }`}
             >
-              <div className="max-w-[1400px] mx-auto w-full">
+              <div className={`max-w-[1400px] mx-auto w-full ${isOverview ? 'h-full' : ''}`}>
                 {children}
               </div>
             </div>
