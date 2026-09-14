@@ -6,12 +6,24 @@ import {
   AttachmentBuilder,
   TextChannel,
 } from 'discord.js';
+import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
 import { getEmoji, branding } from '../../core/config/branding.js';
 
-const currentDir = path.dirname(url.fileURLToPath(import.meta.url));
-const GUIDE_IMAGE_PATH = path.join(currentDir, 'assets', 'pvc_guide.png');
+function resolveGuideImagePath(): string | null {
+  const currentDir = path.dirname(url.fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(currentDir, 'assets', 'pvc_guide.png'),
+    path.join(process.cwd(), 'src', 'modules', 'pvc', 'assets', 'pvc_guide.png'),
+    path.join(process.cwd(), 'dist', 'modules', 'pvc', 'assets', 'pvc_guide.png'),
+    path.join(process.cwd(), 'assets', 'pvc_guide.png'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
 
 function buildPvcButton(customId: string, emojiKey: string): ButtonBuilder {
   const btn = new ButtonBuilder()
@@ -28,9 +40,15 @@ export function buildMasterPanel(): { embeds: any[]; components: any[]; files: a
   const embed = new EmbedBuilder()
     .setTitle('PVC Panel')
     .setDescription('Manage your temporary voice channel and its settings from the controls below.')
-    .setImage('attachment://pvc_guide.png')
     .setFooter({ text: 'Use the buttons below to use the interface' })
     .setColor(branding.defaultColor ?? 0x2b2d31);
+
+  const files: AttachmentBuilder[] = [];
+  const imagePath = resolveGuideImagePath();
+  if (imagePath) {
+    embed.setImage('attachment://pvc_guide.png');
+    files.push(new AttachmentBuilder(imagePath, { name: 'pvc_guide.png' }));
+  }
 
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
     buildPvcButton('btn_master_add_hours', 'pvc_btn_add'),
@@ -50,12 +68,10 @@ export function buildMasterPanel(): { embeds: any[]; components: any[]; files: a
     buildPvcButton('btn_master_remove_user', 'pvc_btn_remove'),
   );
 
-  const file = new AttachmentBuilder(GUIDE_IMAGE_PATH, { name: 'pvc_guide.png' });
-
   return {
     embeds: [embed],
     components: [row1, row2, row3],
-    files: [file],
+    files,
   };
 }
 
