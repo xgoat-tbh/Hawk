@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 import { apiFetch } from '@/lib/api';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useParams } from 'next/navigation';
 import { ChannelPicker } from '@/components/ui/ChannelPicker';
@@ -11,17 +11,8 @@ import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useToast } from '@/components/ui/Toast';
 import {
-  Sliders,
-  Terminal,
-  FileText,
-  Globe,
-  Shield,
   Clock,
   RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  Hash,
-  ChevronRight,
 } from 'lucide-react';
 
 interface GeneralFormData {

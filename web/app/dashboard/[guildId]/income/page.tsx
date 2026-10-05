@@ -13,12 +13,9 @@ import {
   Plus,
   Trash2,
   Shield,
-  Coins,
   Clock,
-  TrendingUp,
   RefreshCw,
   Loader2,
-  Sliders,
 } from 'lucide-react';
 
 interface IncomeRoleItem {

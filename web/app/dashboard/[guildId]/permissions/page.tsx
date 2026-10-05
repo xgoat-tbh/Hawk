@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import * as Tabs from '@radix-ui/react-tabs';
 import { apiFetch } from '@/lib/api';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -6,7 +6,6 @@ import { AnimatedDrawer } from '@/components/ui/AnimatedDrawer';
 import { HawkSelect } from '@/components/ui/HawkSelect';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useGuildData } from '@/context/GuildContext';
 import { useToast } from '@/components/ui/Toast';
@@ -25,13 +24,8 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
-  Clock,
-  Filter,
   RefreshCw,
   Loader2,
-  ChevronRight,
-  ShieldAlert,
-  Sliders,
 } from 'lucide-react';
 import {
   PermissionProfile,
@@ -51,7 +45,7 @@ export default function PermissionsMasterPage() {
   const initialTab = searchParams.get('tab') === 'simulator' ? 'preview' : searchParams.get('tab') || 'commands';
 
   const { roles } = useGuildData();
-  const { success, error, info } = useToast();
+  const { success, error } = useToast();
 
   const [activeTab, setActiveTab] = useState(initialTab);
   useEffect(() => { setActiveTab(initialTab); setCommandSearch(searchParams.get("command") || ""); }, [initialTab, searchParams]);

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { cleanSnowflake, cleanString, HandlerResult } from '../helpers';
+import { cleanSnowflake, HandlerResult } from '../helpers';
 
 export async function handleGeneral(guildId: string, data: any): Promise<HandlerResult> {
   const prefix = typeof data.prefix === 'string' ? data.prefix : '';

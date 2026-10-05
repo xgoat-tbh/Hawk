@@ -1,7 +1,7 @@
 'use client';
 import { apiFetch } from '@/lib/api';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -14,18 +14,8 @@ import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { DiscordEmbedSimulator } from '@/components/DiscordEmbedSimulator';
 import { WelcomeFormState } from '@/components/Welcome/types';
 import {
-  HeartHandshake,
   Send,
-  Copy,
-  RotateCcw,
-  Check,
-  Loader2,
-  Sparkles,
-  Sliders,
   Code,
-  Hash,
-  MessageSquare,
-  Users,
 } from 'lucide-react';
 
 export default function WelcomeGreetingsPage() {
@@ -220,7 +210,7 @@ export default function WelcomeGreetingsPage() {
             <textarea ref={textareaRef} id="welcome-message" rows={7} className="glass-input leading-relaxed" aria-describedby="welcome-count" aria-invalid={current.description.length > limit} value={current.description} onFocus={e => { activeEditor.current = { element: e.currentTarget, field: 'description' }; }} onChange={e => setField('description', e.target.value)}/>
             {current.description.length > limit && <p role="alert" className="text-critical-text text-xs">Shorten the message to fit Discord's character limit.</p>}
           </div>
-          <div><h3 className="text-xs text-text-secondary mb-2">Insert a variable into the active field</h3><div className="flex flex-wrap gap-2">{tokenVariables.map(t => <button key={t.label} type="button" onClick={e => {  insertToken(t.label); }} className="btn-secondary font-mono text-xs" title={t.desc}>{t.label}</button>)}</div></div>
+          <div><h3 className="text-xs text-text-secondary mb-2">Insert a variable into the active field</h3><div className="flex flex-wrap gap-2">{tokenVariables.map(t => <button key={t.label} type="button" onClick={() => {  insertToken(t.label); }} className="btn-secondary font-mono text-xs" title={t.desc}>{t.label}</button>)}</div></div>
         </section>
         {current.isEmbed && <section className="hawk-settings-section space-y-4"><h2>Embed appearance</h2><div><label htmlFor="welcome-color" className="text-sm block mb-2">Accent color</label><div className="flex gap-3"><input aria-label="Choose embed color" type="color" value={/^#[0-9a-f]{6}$/i.test(current.color) ? current.color : '#8899aa'} onChange={e => setField('color', e.target.value)} className="w-10 h-10 bg-transparent"/><input id="welcome-color" value={current.color} onChange={e => setField('color', e.target.value)} className="glass-input font-mono max-w-40"/></div></div>
           {fields.filter(([field]) => field !== 'title').map(([field,label,max]) => <div key={field}><label htmlFor={`welcome-${field}`} className="text-sm block mb-2">{label}</label><input id={`welcome-${field}`} value={current[field] || ''} maxLength={max} className="glass-input" onFocus={e => { activeEditor.current = { element: e.currentTarget, field }; }} onChange={e => setField(field, e.target.value)}/></div>)}

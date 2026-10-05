@@ -1,9 +1,8 @@
-﻿'use client';
+'use client';
 import { apiFetch } from '@/lib/api';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { useGuildData } from '@/context/GuildContext';
@@ -18,20 +17,17 @@ import {
   AlertCircle,
   Loader2,
   Sparkles,
-  ShieldCheck,
   Zap,
   Save,
   X,
   Search,
   Clock,
-  Radio,
-  FileText,
 } from 'lucide-react';
 
 export default function StickyNoticesPage() {
   const { guildId } = useParams() as { guildId: string };
   const { channels, config, refreshData } = useGuildData();
-  const { success, error, info } = useToast();
+  const { success, error } = useToast();
 
   const stickyMessages = config?.stickyMessages || [];
 

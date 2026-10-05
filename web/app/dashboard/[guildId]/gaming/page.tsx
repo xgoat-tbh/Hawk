@@ -1,9 +1,8 @@
-﻿'use client';
+'use client';
 import { apiFetch } from '@/lib/api';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { RolePicker } from '@/components/ui/RolePicker';
 import { ChannelPicker } from '@/components/ui/ChannelPicker';
@@ -17,13 +16,11 @@ import {
   Shield,
   Radio,
   Clock,
-  Zap,
   CheckCircle2,
   AlertCircle,
   Loader2,
   Sparkles,
   Search,
-  ChevronRight,
 } from 'lucide-react';
 
 interface GamePreset {
@@ -45,7 +42,7 @@ const POPULAR_GAME_PRESETS: GamePreset[] = [
 export default function GamingLfgPage() {
   const { guildId } = useParams() as { guildId: string };
   const { channels, roles, config, refreshData, updateConfigLocally } = useGuildData();
-  const { success, error, info } = useToast();
+  const { success, error } = useToast();
 
   const [activeTab, setActiveTab] = useState<'triggers' | 'create' | 'routing'>('triggers');
 

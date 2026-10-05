@@ -6,10 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import {
-  Coins,
   Wallet,
-  Landmark,
-  Users,
   Trophy,
   History,
   Settings,

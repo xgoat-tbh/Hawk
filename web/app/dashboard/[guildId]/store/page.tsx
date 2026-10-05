@@ -6,15 +6,11 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
-  ShoppingBag,
   Plus,
   Trash2,
   Edit2,
   Package,
-  X,
   RefreshCw,
-  Shield,
-  Layers,
 } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
