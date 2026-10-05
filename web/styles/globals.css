@@ -425,3 +425,44 @@ tbody tr:hover { background: #ffffff03; }
 .nav-item-active { color: var(--text-primary); border-color: var(--accent); }
 }
 @media (max-width: 639px) { button, [role="combobox"] { min-height: 40px; } }
+
+/* ========================================================================= */
+/* React Flow Node Canvas Styles                                             */
+/* ========================================================================= */
+.react-flow__node {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  border: 2px solid #0f1117 !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.35);
+}
+
+.react-flow__controls {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border-panel) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+  fill: var(--text-primary) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--surface-4) !important;
+}
