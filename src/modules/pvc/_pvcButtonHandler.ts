@@ -16,7 +16,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
   if (!guildId) return;
 
   // Resolve session (owner or master panel action)
-  let session = await getSessionByOwner(guildId, userId);
+  const session = await getSessionByOwner(guildId, userId);
   
   // If master panel buttons, user might be acting on their PVC from the panel
   if (!session) {

@@ -33,6 +33,7 @@ export async function setPrefix(guildId: string, prefix: string): Promise<void> 
     DO UPDATE SET prefix = ${prefix}, updated_at = NOW()
   `;
   prefixCache.set(guildId, prefix);
+  await db`SELECT pg_notify('dashboard_events', ${JSON.stringify({ guildId, event: 'config:changed' })})`;
 }
 
 export async function getLogChannel(guildId: string): Promise<string | null> {
@@ -111,3 +112,5 @@ export function invalidatePrefixCache(guildId: string): void {
 export function invalidateLogChannelCache(guildId: string): void {
   logChannelCache.invalidate(guildId);
 }
+
+export function invalidateGuildConfig(guildId: string) { prefixCache.invalidate(guildId); logChannelCache.invalidate(guildId); }

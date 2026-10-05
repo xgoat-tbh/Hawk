@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
 import { db } from './db';
-import { fetchGuildDetails, fetchGuildMember, fetchGuildRoles } from './discord';
+import { fetchGuildDetails, fetchGuildMember, fetchGuildRoles, fetchBotGuilds } from './discord';
+import { supportedGuildIds } from './guilds';
 
 export const COOKIE_NAME = 'hawk_session';
 
@@ -51,7 +52,7 @@ export async function ensureAuthTables(): Promise<void> {
  * Creates a server-side session in PostgreSQL with a cryptographically random 64-char token.
  * Defaults to 24-hour expiration.
  */
-export async function createSession(payload: UserSession, durationHours = 24): Promise<string> {
+export async function createSession(payload: UserSession, durationHours = sessionDurationHours()): Promise<string> {
   await ensureAuthTables();
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + durationHours * 60 * 60 * 1000);
@@ -78,13 +79,18 @@ export async function createSession(payload: UserSession, durationHours = 24): P
  * Validates session from cookie against PostgreSQL dashboard_sessions table.
  */
 export async function getSession(): Promise<UserSession | null> {
-  await ensureAuthTables();
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token || typeof token !== 'string' || token.length !== 64) {
-    return null;
-  }
+  return getSessionFromToken(cookieStore.get(COOKIE_NAME)?.value || '');
+}
 
+export function sessionDurationHours(): number {
+  const value = Number(process.env.SESSION_DURATION_HOURS || 24);
+  return Number.isFinite(value) ? Math.max(1, Math.min(168, value)) : 24;
+}
+
+export async function getSessionFromToken(token: string): Promise<UserSession | null> {
+  if (!/^[a-f0-9]{64}$/.test(token)) return null;
+  await ensureAuthTables();
   try {
     const rows = await db`
       SELECT user_id, username, discriminator, avatar, is_bot_owner, is_bot_admin, expires_at
@@ -104,8 +110,8 @@ export async function getSession(): Promise<UserSession | null> {
       username: row.username,
       discriminator: row.discriminator,
       avatar: row.avatar,
-      isBotOwner: row.is_bot_owner,
-      isBotAdmin: row.is_bot_admin,
+      isBotOwner: isBotOwner(row.user_id),
+      isBotAdmin: isBotAdmin(row.user_id),
     };
   } catch (err) {
     console.error('Error querying dashboard_sessions:', err);
@@ -118,11 +124,7 @@ export async function getSession(): Promise<UserSession | null> {
  */
 export async function deleteSession(token: string): Promise<void> {
   if (!token) return;
-  try {
-    await db`DELETE FROM dashboard_sessions WHERE token = ${token}`;
-  } catch (err) {
-    console.error('Error deleting session:', err);
-  }
+  await db`DELETE FROM dashboard_sessions WHERE token = ${token}`;
 }
 
 
@@ -182,7 +184,7 @@ export async function isGuildOwner(userId: string, guildId: string): Promise<boo
   }
 }
 
-export async function canManageGuild(userId: string, guildId: string): Promise<boolean> {
+async function hasDiscordViewAccess(userId: string, guildId: string): Promise<boolean> {
   const cleanUserId = userId.trim();
   const cleanGuildId = guildId.trim();
 
@@ -223,7 +225,7 @@ export async function canManageGuild(userId: string, guildId: string): Promise<b
       // Role-based permissions check using Discord permission bitfields
       if (member.roles && member.roles.length > 0) {
         const roles = await fetchGuildRoles(cleanGuildId);
-        const memberRoleIds = new Set(member.roles);
+        const memberRoleIds = new Set([cleanGuildId, ...member.roles]);
         for (const role of roles) {
           if (memberRoleIds.has(role.id) && role.permissions) {
             const rolePerms = BigInt(role.permissions);
@@ -236,18 +238,6 @@ export async function canManageGuild(userId: string, guildId: string): Promise<b
       }
     }
 
-    // 4. Check user_overrides in PostgreSQL database
-    const overrides = await db`
-      SELECT 1 FROM user_overrides
-      WHERE guild_id = ${cleanGuildId}
-        AND user_id = ${cleanUserId}
-        AND effect = 'ALLOW'
-      LIMIT 1
-    `;
-    if (overrides.length > 0) {
-      setGuildAuthCache(cacheKey, true);
-      return true;
-    }
   } catch (error) {
     console.error(`Error checking guild authorization for user ${cleanUserId} on ${cleanGuildId}:`, error);
   }
@@ -256,63 +246,29 @@ export async function canManageGuild(userId: string, guildId: string): Promise<b
   return false;
 }
 
-export async function getUserModulePermissions(userId: string, guildId: string): Promise<{
-  isOwner: boolean;
-  isAdmin: boolean;
-  modules: Record<string, { view: boolean; manage: boolean }>;
-}> {
-  const cleanUserId = userId.trim();
-  const cleanGuildId = guildId.trim();
-  const isOwner = await isGuildOwner(cleanUserId, cleanGuildId);
-  const isGlobalAdmin = await isAuthorizedUser(cleanUserId);
-
-  const allModulesList = ['general', 'economy', 'pvc', 'gaming', 'media', 'sticky', 'permissions', 'community'];
-
-  if (isOwner || isGlobalAdmin) {
-    const modules: Record<string, { view: boolean; manage: boolean }> = {};
-    for (const m of allModulesList) {
-      modules[m] = { view: true, manage: true };
-    }
-    return { isOwner: true, isAdmin: true, modules };
-  }
-
-  // Check Discord admin
-  let isDiscordAdmin = false;
-  try {
-    const member = await fetchGuildMember(cleanGuildId, cleanUserId);
-    if (member?.permissions) {
-      const perms = BigInt(member.permissions);
-      if ((perms & 0x8n) === 0x8n || (perms & 0x20n) === 0x20n) isDiscordAdmin = true;
-    }
-  } catch (error) {
-    console.debug('Could not fetch guild member permissions:', error);
-  }
-
-  // Fetch overrides
-  let userOverrides: { module: string; action: string; effect: string }[] = [];
-  try {
-    userOverrides = await db`
-      SELECT module, action, effect FROM user_overrides
-      WHERE guild_id = ${cleanGuildId} AND user_id = ${cleanUserId}
-    `;
-  } catch (error) {
-    console.debug('Could not fetch user_overrides:', error);
-  }
-
-  const modules: Record<string, { view: boolean; manage: boolean }> = {};
-
-  for (const m of allModulesList) {
-    if (userOverrides.length > 0) {
-      const viewOv = userOverrides.find((o) => o.module === m && o.action === 'view');
-      const manageOv = userOverrides.find((o) => o.module === m && o.action === 'manage');
-      const canManage = manageOv?.effect === 'ALLOW';
-      const canView = canManage || viewOv?.effect === 'ALLOW';
-      modules[m] = { view: canView, manage: canManage };
-    } else {
-      // Default to discord admin access if no explicit overrides
-      modules[m] = { view: isDiscordAdmin, manage: isDiscordAdmin };
-    }
-  }
-
-  return { isOwner, isAdmin: isDiscordAdmin, modules };
+export type AccessLevel = 'owner' | 'admin' | 'editor' | 'viewer' | 'none';
+export async function getAccessLevel(userId: string, guildId: string): Promise<AccessLevel> {
+  if (!supportedGuildIds.includes(guildId)) return 'none';
+  if (isBotOwner(userId)) return 'owner';
+  if (isBotAdmin(userId)) return 'admin';
+  if (await isAuthorizedUser(userId)) return 'editor';
+  return await hasDiscordViewAccess(userId, guildId) ? 'viewer' : 'none';
+}
+export async function canManageGuild(userId: string, guildId: string) {
+  return ['owner', 'admin', 'editor'].includes(await getAccessLevel(userId, guildId));
+}
+export async function canViewGuild(userId: string, guildId: string) {
+  return (await getAccessLevel(userId, guildId)) !== 'none';
+}
+export async function canLogin(userId: string) {
+  if (await isAuthorizedUser(userId)) return true;
+  const guilds = await fetchBotGuilds();
+  return (await Promise.all(guilds.filter(g => supportedGuildIds.includes(g.id)).map(g => canViewGuild(userId, g.id)))).some(Boolean);
+}
+export async function getUserModulePermissions(userId: string, guildId: string) {
+  const level = await getAccessLevel(userId, guildId);
+  const manage = ['owner', 'admin', 'editor'].includes(level);
+  const names = ['general', 'welcome', 'economy', 'income', 'store', 'games', 'pvc', 'gaming', 'sticky', 'permissions', 'community', 'developers', 'commands'];
+  const modules = Object.fromEntries(names.map(name => [name, { view: level !== 'none', manage }]));
+  return { isOwner: level === 'owner', isAdmin: level === 'admin', accessLevel: level, modules };
 }

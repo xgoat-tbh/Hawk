@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import '@/lib/env';
 import { db } from '@/lib/db';
-import { isAuthorizedUser, ensureAuthTables } from '@/lib/auth';
+import { canLogin, ensureAuthTables } from '@/lib/auth';
 import { sendDirectMessage } from '@/lib/discord';
 
 export async function POST(req: NextRequest) {
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Pre-check authorization: Only Bot Owners, Bot Admins, or users in dashboard_access can receive an OTP
-    const authorized = await isAuthorizedUser(cleanId);
+    const authorized = await canLogin(cleanId);
     if (!authorized) {
       return NextResponse.json(
         {
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     const expiresAt = new Date(now.getTime() + 2 * 60 * 1000); // 2 minutes expiry
 
     // Upsert into database
-    await db`
+    const issued = await db`
       INSERT INTO dashboard_otps (user_id, otp_code, attempts, created_at, expires_at, locked_until)
       VALUES (${cleanId}, ${otpCode}, 0, NOW(), ${expiresAt}, NULL)
       ON CONFLICT (user_id) DO UPDATE SET
@@ -79,13 +79,18 @@ export async function POST(req: NextRequest) {
         created_at = NOW(),
         expires_at = ${expiresAt},
         locked_until = NULL
+      WHERE dashboard_otps.created_at <= NOW() - INTERVAL '30 seconds'
+        AND (dashboard_otps.locked_until IS NULL OR dashboard_otps.locked_until <= NOW())
+      RETURNING user_id
     `;
+    if (!issued.length) return NextResponse.json({ error: 'Please wait before requesting another code.' }, { status: 429 });
 
     // Deliver plain text DM with bold numbers to user
     const dmText = `Your Hawk Dashboard verification code is: **${otpCode}**\nThis code will expire in 2 minutes. Do not share this code with anyone.`;
     const dmResult = await sendDirectMessage(cleanId, dmText);
 
     if (!dmResult.success) {
+      await db`DELETE FROM dashboard_otps WHERE user_id = ${cleanId} AND otp_code = ${otpCode}`;
       return NextResponse.json(
         {
           error:

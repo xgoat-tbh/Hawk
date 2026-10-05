@@ -17,11 +17,23 @@ export async function POST(
     const body = await req.json();
     const { action, channelId, autoPay } = body;
 
-    if (!channelId) {
+    if (typeof channelId !== 'string' || !/^\d{17,20}$/.test(channelId)) {
       return NextResponse.json({ error: 'channelId is required' }, { status: 400 });
     }
 
     if (action === 'delete') {
+      const rows = await db`SELECT channel_id FROM pvc_sessions WHERE guild_id = ${guildId} AND channel_id = ${channelId}`;
+      if (!rows.length) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      const token = process.env.BOT_TOKEN;
+      if (!token) throw new Error('Bot token unavailable');
+      const headers = { Authorization: `Bot ${token}` };
+      const channel = await fetch(`https://discord.com/api/v10/channels/${channelId}`, { headers, cache: 'no-store' });
+      if (channel.ok) {
+        const details = await channel.json();
+        if (details.guild_id !== guildId || details.type !== 2) return NextResponse.json({ error: 'Voice channel is not in this server' }, { status: 403 });
+        const deleted = await fetch(`https://discord.com/api/v10/channels/${channelId}`, { method: 'DELETE', headers });
+        if (!deleted.ok && deleted.status !== 404) throw new Error('Discord rejected channel termination');
+      } else if (channel.status !== 404) throw new Error('Unable to verify voice channel');
       await db`
         DELETE FROM pvc_sessions
         WHERE guild_id = ${guildId} AND channel_id = ${channelId}

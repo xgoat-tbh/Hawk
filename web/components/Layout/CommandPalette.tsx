@@ -1,235 +1,59 @@
 'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '@/lib/api';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Search,
-  Command,
-  Sliders,
-  Coins,
-  Radio,
-  ShoppingBag,
-  Gamepad2,
-  Briefcase,
-  MessageSquare,
-  Pin,
-  Lock,
-  ArrowRight,
-  HeartHandshake,
-  Hash,
-  Shield,
-} from 'lucide-react';
-import { BOT_COMMAND_CATALOG } from '@/lib/commands';
-import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
-import { animateModalOpen, animateModalClose } from '@/lib/animations';
+import { Search, ArrowUpRight } from 'lucide-react';
+import { AnimatedModal } from '@/components/ui/AnimatedModal';
+import { Command as Cmdk } from 'cmdk';
 import { useGuildData } from '@/context/GuildContext';
-
-interface CommandPaletteProps {
-  guildId: string;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-interface PaletteItem {
-  label: string;
-  subLabel?: string;
-  path: string;
-  icon: any;
-  category: string;
-}
-
+import { useMemberSearch } from '@/hooks/useMemberSearch';
+import { navigation } from '@/components/Sidebar';
+interface CommandPaletteProps { guildId: string; isOpen: boolean; onClose: () => void; }
+interface Result { id: string; label: string; description?: string; path: string; category: string; }
 export function CommandPalette({ guildId, isOpen, onClose }: CommandPaletteProps) {
-  const router = useRouter();
-  const [query, setQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const { channels = [], roles = [] } = useGuildData();
-
-  const backdropRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const navigationItems: PaletteItem[] = [
-    { label: 'Server Overview', path: `/dashboard/${guildId}`, icon: Sliders, category: 'Navigation' },
-    { label: 'General Settings', path: `/dashboard/${guildId}/general`, icon: Sliders, category: 'Navigation' },
-    { label: 'Permissions & Rules', path: `/dashboard/${guildId}/permissions`, icon: Lock, category: 'Navigation' },
-    { label: 'Access Simulator', path: `/dashboard/${guildId}/permissions?tab=simulator`, icon: Lock, category: 'Navigation' },
-    { label: 'Welcome Greetings & Embed Designer', path: `/dashboard/${guildId}/welcome`, icon: HeartHandshake, category: 'Navigation' },
-    { label: 'Economy & Rewards', path: `/dashboard/${guildId}/economy`, icon: Coins, category: 'Navigation' },
-    { label: 'Private Voice Channels (PVC)', path: `/dashboard/${guildId}/pvc`, icon: Radio, category: 'Navigation' },
-    { label: 'Role Salaries & Income', path: `/dashboard/${guildId}/income`, icon: Briefcase, category: 'Navigation' },
-    { label: 'Store Catalog', path: `/dashboard/${guildId}/store`, icon: ShoppingBag, category: 'Navigation' },
-    { label: 'Gaming LFG Alerts', path: `/dashboard/${guildId}/gaming`, icon: Gamepad2, category: 'Navigation' },
-    { label: 'Community Tools', path: `/dashboard/${guildId}/community`, icon: MessageSquare, category: 'Navigation' },
-    { label: 'Sticky Notices', path: `/dashboard/${guildId}/sticky`, icon: Pin, category: 'Navigation' },
-  ];
-
-  const channelItems: PaletteItem[] = channels.slice(0, 30).map((ch) => ({
-    label: `#${ch.name}`,
-    subLabel: `Channel ID: ${ch.id}`,
-    path: `/dashboard/${guildId}/general`,
-    icon: Hash,
-    category: 'Server Channels',
-  }));
-
-  const roleItems: PaletteItem[] = roles.slice(0, 30).map((r) => ({
-    label: `@${r.name}`,
-    subLabel: `Role ID: ${r.id}`,
-    path: `/dashboard/${guildId}/permissions`,
-    icon: Shield,
-    category: 'Server Roles',
-  }));
-
-  const commandItems: PaletteItem[] = BOT_COMMAND_CATALOG.map((cmd) => ({
-    label: `!${cmd.name}`,
-    subLabel: `${cmd.description} (${cmd.category})`,
-    path: `/dashboard/${guildId}/permissions?tab=commands`,
-    icon: Command,
-    category: 'Bot Commands',
-  }));
-
-  const allItems: PaletteItem[] = [
-    ...navigationItems,
-    ...channelItems,
-    ...roleItems,
-    ...commandItems,
-  ];
-
-  const filtered = query.trim()
-    ? allItems.filter(
-        (item) =>
-          item.label.toLowerCase().includes(query.toLowerCase()) ||
-          (item.subLabel && item.subLabel.toLowerCase().includes(query.toLowerCase())) ||
-          item.category.toLowerCase().includes(query.toLowerCase())
-      )
-    : navigationItems;
-
+  const router = useRouter(); const { channels, roles, config } = useGuildData();
+  const [query,setQuery] = useState('');
+  const [commands,setCommands] = useState<{name:string;description:string;category:string}[]>([]);
+  const [audit,setAudit] = useState<any[]>([]); const [failure,setFailure] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const members = useMemberSearch(guildId, isOpen ? query : '');
   useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-      setSelectedIndex(0);
-      animateModalOpen(containerRef.current, backdropRef.current);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
-  }, [isOpen]);
-
-  const handleClose = () => {
-    animateModalClose(containerRef.current, backdropRef.current, onClose);
-  };
-
-  const handleSelect = (path: string) => {
-    handleClose();
-    router.push(path);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev < filtered.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (filtered[selectedIndex]) {
-        handleSelect(filtered[selectedIndex].path);
-      }
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      handleClose();
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4 overflow-hidden select-none">
-      {/* Backdrop */}
-      <div
-        ref={backdropRef}
-        onClick={handleClose}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm"
-      />
-
-      {/* Palette Surface */}
-      <div
-        ref={containerRef}
-        className="relative z-10 w-full max-w-xl bg-[#0d0e10] border border-[#1f2226] rounded-lg shadow-popover-clean overflow-hidden flex flex-col max-h-[75vh]"
-        onKeyDown={handleKeyDown}
-      >
-        {/* Search Header */}
-        <div className="px-3 py-2.5 border-b border-[#17191c] flex items-center gap-2.5 bg-[#0a0b0d]">
-          <Search className="w-4 h-4 text-[#6e747c] shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelectedIndex(0);
-            }}
-            placeholder="Type a page, command, channel, or role..."
-            className="w-full bg-transparent text-xs text-[#ededed] placeholder:text-[#6e747c] focus:outline-none"
-          />
-          <kbd className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#121417] border border-[#1f2226] text-[#6e747c]">
-            ESC
-          </kbd>
-        </div>
-
-        {/* Results List */}
-        <HawkScrollArea className="flex-1 p-1.5 space-y-0.5 max-h-96">
-          {filtered.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[#6e747c]">
-              No matching pages, commands, or server resources found.
-            </div>
-          ) : (
-            filtered.map((item, idx) => {
-              const Icon = item.icon;
-              const isSelected = idx === selectedIndex;
-
-              return (
-                <div
-                  key={`${item.category}-${item.label}-${idx}`}
-                  onClick={() => handleSelect(item.path)}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-md text-xs cursor-pointer select-none transition-colors ${
-                    isSelected
-                      ? 'bg-[#17191c] text-[#ededed]'
-                      : 'text-[#949aa2] hover:bg-[#121417] hover:text-[#ededed]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-success' : 'text-[#6e747c]'}`} />
-                    <div className="flex flex-col truncate">
-                      <span className="font-medium truncate">{item.label}</span>
-                      {item.subLabel && (
-                        <span className="text-[10px] text-[#6e747c] truncate font-mono">
-                          {item.subLabel}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-[#121417] border border-[#1f2226] text-[#6e747c]">
-                      {item.category}
-                    </span>
-                    {isSelected && <ArrowRight className="w-3.5 h-3.5 text-success shrink-0" />}
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </HawkScrollArea>
-
-        {/* Footer */}
-        <div className="px-3 py-1.5 border-t border-[#17191c] bg-[#0a0b0d] flex items-center justify-between text-[10px] text-[#6e747c] font-mono">
-          <div className="flex items-center gap-3">
-            <span>↑↓ Navigate</span>
-            <span>↵ Select</span>
-          </div>
-          <span>Hawk Ops Quick Console</span>
-        </div>
-      </div>
-    </div>
-  );
+    if (!isOpen) return;
+    setQuery(''); setFailure(null);
+    const controller = new AbortController();
+    Promise.all([apiFetch('/api/commands',{signal:controller.signal}),apiFetch(`/api/guilds/${guildId}/audit`,{signal:controller.signal})]).then(async ([c,a]) => {
+      if (c.ok) setCommands((await c.json()).commands || []); else setFailure('Commands unavailable.');
+      if (a.ok) setAudit((await a.json()).logs || []); else setFailure('Audit search unavailable for this account.');
+    }).catch(() => { if (!controller.signal.aborted) setFailure('Some resources could not be loaded. Close and reopen to retry.'); });
+    const timer = requestAnimationFrame(() => input.current?.focus());
+    return () => { controller.abort(); cancelAnimationFrame(timer); };
+  },[isOpen,guildId]);
+  const base = `/dashboard/${guildId}`;
+  const pages: Result[] = navigation.flatMap(g => g.items.map(([label,path]) => ({id:path,label,path:base+path,category:'Pages'})));
+  const settings: Result[] = [['Command prefix','/general'],['Bot commander role','/general'],['Server activity channel','/general'],['Welcome message','/welcome'],['Daily rewards','/economy'],['Voice room defaults','/pvc']].map(([label,path]) => ({id:label,label,path:base+path,category:'Settings'}));
+  const actions: Result[] = [{id:'simulator',label:'Simulate access',description:'Inspect real permission resolution',path:base+'/permissions?tab=simulator',category:'Actions'}];
+  const q = query.trim().toLowerCase();
+  const all: Result[] = [...pages,...settings,...actions,
+    ...roles.map(r => ({id:r.id,label:r.name,description:r.id,path:`${base}/permissions?tab=simulator&role=${r.id}`,category:'Roles'})),
+    ...channels.map(c => ({id:c.id,label:`#${c.name}`,description:c.id,path:base+'/general',category:'Channels'})),
+    ...commands.map(c => ({id:c.name,label:`${config?.general?.prefix || '!'}${c.name}`,description:`${c.category} · ${c.description}`,path:`${base}/permissions?tab=commands&command=${encodeURIComponent(c.name)}`,category:'Commands'})),
+    ...members.users.map(u => ({id:u.id,label:u.displayName || u.username,description:`${u.username} · ${u.id}`,path:`${base}/permissions?tab=simulator&user=${u.id}`,category:'Users'})),
+    ...audit.map(a => ({id:a.id,label:a.action,description:`${a.userName || a.userId} · ${a.module}`,path:`${base}/permissions?tab=audit&entry=${encodeURIComponent(a.id)}`,category:'Recent audit'})),
+  ];
+  const results = (q ? all.filter(item => `${item.label} ${item.description || ''} ${item.category}`.toLowerCase().includes(q)) : [...pages,...actions]).slice(0,80);
+  const pick = (item:Result) => { onClose(); router.push(item.path); };
+  return <AnimatedModal isOpen={isOpen} onClose={onClose} title="Search workspace" subtitle="Pages, settings, members, roles, channels, commands, and recent audit entries." maxWidth="max-w-2xl">
+    <Cmdk shouldFilter={false} loop>
+      <div className="flex gap-3 items-center mb-4"><Search size={18} className="text-text-muted"/><Cmdk.Input ref={input} value={query} onValueChange={setQuery} className="glass-input" aria-label="Search workspace" placeholder="Where would you like to go?"/></div>
+      {(failure || members.error) && <p role="status" className="text-warning-text text-xs pb-3">{failure || members.error}</p>}
+      <Cmdk.List aria-label="Search results" className="max-h-[50vh] overflow-y-auto">
+        <Cmdk.Empty className="hawk-empty">{members.loading ? 'Searching members…' : 'No results. Try another name or keyword.'}</Cmdk.Empty>
+        {[...new Set(results.map(item => item.category))].map(category => <Cmdk.Group key={category} heading={category} className="text-xs text-text-muted [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-4 [&_[cmdk-group-heading]]:pb-2">
+          {results.filter(item => item.category === category).map(item => <Cmdk.Item key={`${item.category}-${item.id}`} value={`${item.category}-${item.id}`} onSelect={() => pick(item)} className="flex items-center justify-between gap-3 px-3 py-3 rounded-md cursor-pointer data-[selected=true]:bg-surface-4 text-text-primary">
+            <div className="min-w-0"><div className="text-sm truncate">{item.label}</div>{item.description && <div className="text-xs text-text-muted truncate mt-1">{item.description}</div>}</div><ArrowUpRight size={14} className="text-text-muted shrink-0"/>
+          </Cmdk.Item>)}
+        </Cmdk.Group>)}
+      </Cmdk.List>
+    </Cmdk><div className="text-[11px] text-text-muted border-t border-border mt-4 pt-3">↑↓ Navigate · Enter Open · Esc Close{q && ' · Showing up to 80 matches'}</div>
+  </AnimatedModal>;
 }

@@ -1,5 +1,6 @@
 import { getDb } from '../../core/database/pool.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
+import { incomeIntervalSeconds } from '../../core/utils/incomeInterval.js';
 import { getBalance, ensureBalance, addCash, removeCash, transferCash } from '../economy/economyService.js';
 
 export function checkCooldown(lastTime: Date | null, cooldownSeconds: number): { onCooldown: boolean; remaining: number } {
@@ -229,8 +230,8 @@ export async function collectIncome(guildId: string, userId: string, memberRoleI
     await ensureBalance(guildId, userId);
     const balance = await getBalance(guildId, userId);
     
-    // Hardcoding a 24-hour (86400s) cooldown for income collection
-    const cooldown = checkCooldown(balance.passiveLast, 86400);
+    const config = await getEconomyConfig(guildId);
+    const cooldown = checkCooldown(balance.passiveLast, incomeIntervalSeconds(config.incomeReset));
     if (cooldown.onCooldown) {
         return { success: false, amount: 0, cooldown: cooldown.remaining };
     }

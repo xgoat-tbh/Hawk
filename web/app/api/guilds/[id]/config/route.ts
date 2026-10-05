@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, canManageGuild } from '@/lib/auth';
-import { ensureDatabaseSchema } from '@/lib/db';
+import { ensureDatabaseSchema, db } from '@/lib/db';
+import { logDashboardAction } from '@/lib/auditLogger';
+import { cleanJSON } from './helpers';
 import { handleConfigModule } from './dispatcher';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -27,11 +29,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
     }
 
-    const result = await handleConfigModule(guildId, module, data);
+    const result = await handleConfigModule(guildId, module, cleanJSON(data));
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: result.status || 400 });
     }
 
+    // The handler has already committed. Preserve truthful save feedback.
+    try {
+      await logDashboardAction({ userId: session.id, guildId, action: 'config_saved', module, after: data });
+      await db`SELECT pg_notify('dashboard_events', ${JSON.stringify({ guildId, event: 'config:changed' })})`;
+    } catch (error) { console.error('Configuration saved; audit delivery failed:', error); }
     return NextResponse.json({
       success: true,
       data: result.data,

@@ -35,7 +35,7 @@ export class ResponseBuilder {
 
   private scheduleClean(msg: Message | null, forceClean = false): void {
     if (this.autoCleanEnabled || forceClean) {
-      this.message.delete().catch(() => {});
+      if (this.message.guild?.members.me?.permissionsIn(this.message.channel as GuildTextBasedChannel).has('ManageMessages')) this.message.delete().catch(() => {});
       if (msg && typeof msg.delete === 'function') {
         setTimeout(() => {
           msg.delete().catch(() => {});

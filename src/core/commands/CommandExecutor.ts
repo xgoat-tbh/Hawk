@@ -19,6 +19,7 @@ import { AuthorityLevel } from '../../types/permission.js';
 import { isNoPrefixEnabled } from '../config/NoPrefixConfig.js';
 import { presenceManager } from '../presence/PresenceManager.js';
 import { getMaintenanceState } from '../database/repositories/systemRepo.js';
+import { resolveCustomCommand } from './CustomCommandExecutor.js';
 
 function recordCommandLog(client: any, event: CommandLogEvent): void {
   logCommand(event);
@@ -63,7 +64,7 @@ export async function handleMessage(message: Message): Promise<void> {
   }
   if (!parsed) return;
 
-  const command = resolveCommand(parsed.commandName);
+  const command = resolveCommand(parsed.commandName) || await resolveCustomCommand(message.guild.id, parsed.commandName);
   if (!command) {
     if (wasPrefixed) {
       recordCommandLog(message.client, {

@@ -1,3 +1,4 @@
+import registry from './commandRegistry.json';
 export interface CommandCatalogItem {
   name: string;
   aliases: string[];
@@ -9,7 +10,7 @@ export interface CommandCatalogItem {
   requiredDiscordPerm?: string;
 }
 
-export const BOT_COMMAND_CATALOG: CommandCatalogItem[] = [
+const DISPLAY_COMMAND_CATALOG: CommandCatalogItem[] = [
   // Moderation
   {
     name: 'purge',
@@ -236,3 +237,14 @@ export const BOT_COMMAND_CATALOG: CommandCatalogItem[] = [
     defaultRoleProfile: 'moderator',
   },
 ];
+
+// Names and modules come from the same definitions the bot registers. The
+// generated file is verified in tests and regenerated before build/dev/start.
+export const BUILT_IN_COMMANDS = registry;
+export function resolveBuiltInCommand(name: string) {
+  return registry.find(command => command.name === name || command.aliases.includes(name));
+}
+export const BOT_COMMAND_CATALOG: CommandCatalogItem[] = registry.filter(command => !command.ownerOnly && !command.hidden && command.module !== 'owner').map(command => {
+  const display = DISPLAY_COMMAND_CATALOG.find(item => item.name === command.name || command.aliases.includes(item.name));
+  return { name: command.name, aliases: command.aliases, category: command.module, description: command.description, usage: command.usage, dangerLevel: display?.dangerLevel || (command.module === 'moderation' ? 'HIGH' : 'LOW'), defaultRoleProfile: display?.defaultRoleProfile || 'custom', requiredDiscordPerm: display?.requiredDiscordPerm };
+});

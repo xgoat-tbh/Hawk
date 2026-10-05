@@ -1,4 +1,7 @@
 'use client';
+import { apiFetch } from '@/lib/api';
+import { AnimatedModal } from '@/components/ui/AnimatedModal';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
@@ -15,12 +18,9 @@ import {
   AlertOctagon,
   RefreshCw,
 } from 'lucide-react';
-import { StatCard } from '@/components/ui/StatCard';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { SaveBar } from '@/components/SaveBar';
-import { SettingRow } from '@/components/ui/SettingRow';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useToast } from '@/components/ui/Toast';
@@ -77,7 +77,7 @@ export default function EconomyDashboardPage() {
   const { config, updateConfigLocally } = useGuildData();
   const toast = useToast();
 
-  const [activeTab, setActiveTab] = useState<'config' | 'balances' | 'leaderboard' | 'transactions'>('balances');
+  const [activeTab, setActiveTab] = useState<'balances' | 'leaderboard' | 'transactions' | 'config'>('balances');
 
   // Stats state
   const [stats, setStats] = useState<EconomyStats>({
@@ -112,7 +112,7 @@ export default function EconomyDashboardPage() {
   // Fetch Summary Stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`/api/guilds/${guildId}/economy/stats`);
+      const res = await apiFetch(`/api/guilds/${guildId}/economy/stats`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -125,7 +125,7 @@ export default function EconomyDashboardPage() {
   // Fetch Balances
   const fetchBalances = useCallback(async () => {
     try {
-      const res = await fetch(`/api/guilds/${guildId}/economy/users`);
+      const res = await apiFetch(`/api/guilds/${guildId}/economy/users`);
       if (res.ok) {
         const data = await res.json();
         setUserBalances(data.users || []);
@@ -138,7 +138,7 @@ export default function EconomyDashboardPage() {
   // Fetch Leaderboard
   const fetchLeaderboard = useCallback(async () => {
     try {
-      const res = await fetch(`/api/guilds/${guildId}/economy/leaderboard`);
+      const res = await apiFetch(`/api/guilds/${guildId}/economy/leaderboard`);
       if (res.ok) {
         const data = await res.json();
         setLeaderboard(data.leaderboard || []);
@@ -151,7 +151,7 @@ export default function EconomyDashboardPage() {
   // Fetch Transactions
   const fetchTransactions = useCallback(async () => {
     try {
-      const res = await fetch(`/api/guilds/${guildId}/economy/transactions`);
+      const res = await apiFetch(`/api/guilds/${guildId}/economy/transactions`);
       if (res.ok) {
         const data = await res.json();
         setTransactions(data.transactions || []);
@@ -193,7 +193,7 @@ export default function EconomyDashboardPage() {
     reset,
     save,
   } = useFormDraft<EconomyFormData>({
-    initialData: initialFormData,
+    autoSaveMs: 1500, initialData: initialFormData,
     onSave: async (formValues) => {
       const payload = {
         currency_symbol: formValues.currencySymbol.trim() || '$',
@@ -204,7 +204,7 @@ export default function EconomyDashboardPage() {
         passiveAmount: formValues.passiveAmount,
       };
 
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ module: 'economy', data: payload }),
@@ -227,7 +227,7 @@ export default function EconomyDashboardPage() {
     if (!editUser) return;
     setIsEditing(true);
     try {
-      const res = await fetch(`/api/guilds/${guildId}/economy/users`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/economy/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -258,7 +258,7 @@ export default function EconomyDashboardPage() {
     if (!resetTargetUser) return;
     setModalLoading(true);
     try {
-      const res = await fetch(`/api/guilds/${guildId}/economy/users`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/economy/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -286,7 +286,7 @@ export default function EconomyDashboardPage() {
   const handleConfirmResetAll = async () => {
     setModalLoading(true);
     try {
-      const res = await fetch(`/api/guilds/${guildId}/economy/users`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/economy/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reset_all' }),
@@ -314,9 +314,7 @@ export default function EconomyDashboardPage() {
       header: 'User ID',
       sortable: true,
       render: (row) => (
-        <div className="font-mono text-xs text-[#101217] dark:text-[#ededed] flex items-center gap-2">
-          <span>{row.userId}</span>
-        </div>
+        <span className="font-sans text-xs text-text-primary">{row.userId}</span>
       ),
     },
     {
@@ -324,7 +322,7 @@ export default function EconomyDashboardPage() {
       header: 'Wallet Cash',
       sortable: true,
       render: (row) => (
-        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+        <span className="font-sans text-xs font-semibold text-success-text">
           {stats.currencySymbol}{row.cash.toLocaleString()}
         </span>
       ),
@@ -334,7 +332,7 @@ export default function EconomyDashboardPage() {
       header: 'Bank Balance',
       sortable: true,
       render: (row) => (
-        <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+        <span className="font-sans text-xs font-semibold text-info-text">
           {stats.currencySymbol}{row.bank.toLocaleString()}
         </span>
       ),
@@ -344,7 +342,7 @@ export default function EconomyDashboardPage() {
       header: 'Net Worth',
       sortable: true,
       render: (row) => (
-        <span className="font-bold text-[#101217] dark:text-[#f0f2f5]">
+        <span className="font-sans text-xs font-bold text-text-primary">
           {stats.currencySymbol}{row.netWorth.toLocaleString()}
         </span>
       ),
@@ -354,24 +352,26 @@ export default function EconomyDashboardPage() {
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 font-sans">
           <button
             onClick={() => {
               setEditUser(row);
               setEditCash(row.cash);
               setEditBank(row.bank);
             }}
-            className="p-1.5 rounded-lg bg-white dark:bg-[#16181d] hover:bg-slate-100 dark:hover:bg-[#20232b] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33] shadow-xs transition-colors"
+            className="btn-secondary py-1 px-2 text-[11px]"
             title="Edit balance"
           >
-            <Edit2 className="w-3.5 h-3.5" />
+            <Edit2 className="w-3 h-3 mr-1 text-text-secondary" />
+            edit
           </button>
           <button
             onClick={() => setResetTargetUser(row.userId)}
-            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
+            className="btn-outline-danger py-1 px-2 text-[11px]"
             title="Reset balance"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3 h-3 mr-1" />
+            reset
           </button>
         </div>
       ),
@@ -384,39 +384,43 @@ export default function EconomyDashboardPage() {
       key: 'rank',
       header: 'Rank',
       sortable: true,
-      width: 'w-16',
+      width: 'w-20',
       render: (row) => {
-        let badge = `#${row.rank}`;
-        if (row.rank === 1) badge = '🥇 1st';
-        if (row.rank === 2) badge = '🥈 2nd';
-        if (row.rank === 3) badge = '🥉 3rd';
-        return <span className="font-bold text-xs text-[#101217] dark:text-[#ededed]">{badge}</span>;
+        let tagClass = 'text-text-secondary bg-white/[0.04] border-white/[0.08]';
+        if (row.rank === 1) tagClass = 'text-warning-text bg-warning/10 border-warning/25 font-bold';
+        if (row.rank === 2) tagClass = 'text-text-primary bg-white/[0.1] border-white/[0.2] font-semibold';
+        if (row.rank === 3) tagClass = 'text-[#fb923c] bg-[#f97316]/10 border-[#f97316]/25';
+        return (
+          <span className={`console-tag ${tagClass}`}>
+            #{row.rank}
+          </span>
+        );
       },
     },
     {
       key: 'userId',
       header: 'User Snowflake',
       sortable: true,
-      render: (row) => <span className="font-mono text-xs text-slate-600 dark:text-[#c1c7cd]">{row.userId}</span>,
+      render: (row) => <span className="font-sans text-xs text-text-secondary">{row.userId}</span>,
     },
     {
       key: 'cash',
       header: 'Wallet',
       sortable: true,
-      render: (row) => <span>{stats.currencySymbol}{row.cash.toLocaleString()}</span>,
+      render: (row) => <span className="font-sans text-xs text-text-primary">{stats.currencySymbol}{row.cash.toLocaleString()}</span>,
     },
     {
       key: 'bank',
       header: 'Bank',
       sortable: true,
-      render: (row) => <span>{stats.currencySymbol}{row.bank.toLocaleString()}</span>,
+      render: (row) => <span className="font-sans text-xs text-text-primary">{stats.currencySymbol}{row.bank.toLocaleString()}</span>,
     },
     {
       key: 'netWorth',
       header: 'Total Net Worth',
       sortable: true,
       render: (row) => (
-        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+        <span className="font-sans text-xs font-bold text-success-text">
           {stats.currencySymbol}{row.netWorth.toLocaleString()}
         </span>
       ),
@@ -430,21 +434,21 @@ export default function EconomyDashboardPage() {
       header: 'Timestamp',
       sortable: true,
       render: (row) => (
-        <span className="text-[11px] text-slate-500 dark:text-[#717882]">
+        <span className="font-sans text-[11px] text-text-secondary">
           {new Date(row.createdAt).toLocaleString()}
         </span>
       ),
     },
     {
       key: 'userId',
-      header: 'User',
-      render: (row) => <span className="font-mono text-xs text-slate-600 dark:text-[#c1c7cd]">{row.userId}</span>,
+      header: 'User ID',
+      render: (row) => <span className="font-sans text-xs text-text-secondary">{row.userId}</span>,
     },
     {
       key: 'actionType',
       header: 'Type',
       render: (row) => (
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-indigo-50 dark:bg-[#16181d] border border-indigo-200 dark:border-[#262a33] text-indigo-600 dark:text-indigo-400">
+        <span className="console-tag console-tag-economy">
           {row.actionType}
         </span>
       ),
@@ -454,7 +458,7 @@ export default function EconomyDashboardPage() {
       header: 'Amount',
       sortable: true,
       render: (row) => (
-        <span className={row.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-rose-600 dark:text-rose-400 font-medium'}>
+        <span className={`font-sans text-xs font-medium ${row.amount >= 0 ? 'text-success-text' : 'text-critical-text'}`}>
           {row.amount >= 0 ? '+' : ''}{stats.currencySymbol}{row.amount.toLocaleString()}
         </span>
       ),
@@ -462,131 +466,148 @@ export default function EconomyDashboardPage() {
     {
       key: 'reason',
       header: 'Details / Reason',
-      render: (row) => <span className="text-xs text-slate-600 dark:text-[#8c949e]">{row.reason || '—'}</span>,
+      render: (row) => <span className="font-sans text-xs text-text-secondary">{row.reason || '—'}</span>,
     },
   ];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
-            <Coins className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-            Economy & Financial System
-          </h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
-            Manage server money supply, inspect real-time user balances, rewards, and transaction audit trails.
-          </p>
+    <div className="space-y-4 max-w-6xl mx-auto pb-24">
+      <PageHeader guildId={guildId} title="Economy & rewards" description="Manage rewards, member balances, and transactions." actions={<div className="flex items-center gap-2 font-sans">
+            <button
+              onClick={() => {
+                fetchStats();
+                if (activeTab === 'balances') fetchBalances();
+                if (activeTab === 'leaderboard') fetchLeaderboard();
+                if (activeTab === 'transactions') fetchTransactions();
+              }}
+              className="btn-secondary"
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </button>
+
+            <button
+              onClick={() => setIsResetAllOpen(true)}
+              className="btn-outline-danger"
+            >
+              <AlertOctagon className="w-3.5 h-3.5 mr-1.5" />
+              Reset all balances
+            </button>
+          </div>}/>
+
+      {/* Top 4 Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Net Worth</span>
+            <span className="console-tag console-tag-economy">TOTAL</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-text-primary tracking-tight">
+            {stats.currencySymbol}{stats.totalNetWorth.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            circulating money supply
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              fetchStats();
-              if (activeTab === 'balances') fetchBalances();
-              if (activeTab === 'leaderboard') fetchLeaderboard();
-              if (activeTab === 'transactions') fetchTransactions();
-              toast.info('Telemetry refreshed.');
-            }}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Refresh
-          </button>
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Liquid Cash</span>
+            <span className="console-tag console-tag-readv">WALLETS</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-success-text tracking-tight">
+            {stats.currencySymbol}{stats.totalCash.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            active user cash
+          </div>
+        </div>
 
-          <button
-            onClick={() => setIsResetAllOpen(true)}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-colors"
-          >
-            <AlertOctagon className="w-3.5 h-3.5" />
-            Reset All Balances
-          </button>
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Bank Deposits</span>
+            <span className="console-tag console-tag-readv">VAULT</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-info-text tracking-tight">
+            {stats.currencySymbol}{stats.totalBank.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            safely deposited funds
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Active Accounts</span>
+            <span className="console-tag console-tag-readv">USERS</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-text-primary tracking-tight">
+            {stats.totalAccounts.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            avg: {stats.currencySymbol}{stats.avgNetWorth.toLocaleString()}
+          </div>
         </div>
       </div>
 
-      {/* Top Summary Metrics Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Money Supply"
-          value={`${stats.currencySymbol}${stats.totalNetWorth.toLocaleString()}`}
-          subtitle="Circulating cash & deposits"
-          icon={Coins}
-        />
-        <StatCard
-          title="Wallet Cash"
-          value={`${stats.currencySymbol}${stats.totalCash.toLocaleString()}`}
-          subtitle="Liquid user wallets"
-          icon={Wallet}
-        />
-        <StatCard
-          title="Bank Deposits"
-          value={`${stats.currencySymbol}${stats.totalBank.toLocaleString()}`}
-          subtitle="Safely deposited funds"
-          icon={Landmark}
-        />
-        <StatCard
-          title="Active Accounts"
-          value={stats.totalAccounts.toLocaleString()}
-          subtitle={`Avg: ${stats.currencySymbol}${stats.avgNetWorth.toLocaleString()}`}
-          icon={Users}
-        />
-      </div>
-
-      {/* Tabs Navigation */}
-      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
+      {/* Terminal Tab Strip */}
+      <div className="flex items-center gap-1 border-b border-white/[0.06] pb-2 text-xs font-sans">
         <button
           onClick={() => setActiveTab('balances')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
             activeTab === 'balances'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+              ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <Wallet className="w-4 h-4" />
-          User Balances
-        </button>
-
-        <button
-          onClick={() => setActiveTab('config')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'config'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          Configuration & Rewards
+          <Wallet className="w-3.5 h-3.5" />
+          <span>balances</span>
         </button>
 
         <button
           onClick={() => setActiveTab('leaderboard')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
             activeTab === 'leaderboard'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+              ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <Trophy className="w-4 h-4" />
-          Leaderboard
+          <Trophy className="w-3.5 h-3.5" />
+          <span>leaderboard</span>
         </button>
 
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
             activeTab === 'transactions'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+              ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <History className="w-4 h-4" />
-          Audit Log
+          <History className="w-3.5 h-3.5" />
+          <span>transactions</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('config')}
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
+            activeTab === 'config'
+              ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>config</span>
         </button>
       </div>
 
       {/* TAB 1: User Balances */}
       {activeTab === 'balances' && (
-        <div className="space-y-4">
+        <div className="surface-container">
+          <div className="panel-header">
+            <span>member account balances</span>
+            <span className="text-text-secondary">{userBalances.length} records</span>
+          </div>
           <DataTable
             columns={balanceColumns}
             data={userBalances}
@@ -599,111 +620,13 @@ export default function EconomyDashboardPage() {
         </div>
       )}
 
-      {/* TAB 2: Configuration & Rewards */}
-      {activeTab === 'config' && draft && (
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-            <SectionHeader
-              title="Currency & Starting Capital"
-              description="Define the currency symbol and default balance for new server members."
-            />
-            <SettingRow
-              label="Currency Symbol"
-              description="Displayed next to all currency amounts in Discord messages and dashboard."
-            >
-              <input
-                type="text"
-                maxLength={5}
-                value={draft.currencySymbol}
-                onChange={(e) => setField('currencySymbol', e.target.value)}
-                className="w-24 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
-              />
-            </SettingRow>
-
-            <SettingRow
-              label="Starting Wallet Balance"
-              description="Initial cash granted when a user first interacts with the economy."
-            >
-              <input
-                type="number"
-                min={0}
-                value={draft.startBalance}
-                onChange={(e) => setField('startBalance', Number(e.target.value))}
-                className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
-              />
-            </SettingRow>
-          </div>
-
-          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-            <SectionHeader
-              title="Daily Rewards & Streak Incentives"
-              description="Configure rewards earned via the !daily command."
-            />
-            <SettingRow
-              label="Daily Base Reward"
-              description="Base payout received every 24 hours."
-            >
-              <input
-                type="number"
-                min={0}
-                value={draft.dailyRewardAmount}
-                onChange={(e) => setField('dailyRewardAmount', Number(e.target.value))}
-                className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
-              />
-            </SettingRow>
-
-            <SettingRow
-              label="Daily Streak Bonus"
-              description="Bonus cash added per consecutive daily streak day."
-            >
-              <input
-                type="number"
-                min={0}
-                value={draft.dailyStreakBonus}
-                onChange={(e) => setField('dailyStreakBonus', Number(e.target.value))}
-                className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
-              />
-            </SettingRow>
-          </div>
-
-          <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-            <SectionHeader
-              title="Passive Chat Income"
-              description="Reward members automatically as they chat in active channels."
-            />
-            <SettingRow
-              label="Enable Chat Passive Income"
-              description="Randomly awards cash when active messages are detected."
-            >
-              <input
-                type="checkbox"
-                checked={draft.passiveIncome}
-                onChange={(e) => setField('passiveIncome', e.target.checked)}
-                className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#121418] border-black/[0.08] dark:border-[#20242c] text-indigo-600 focus:ring-0 cursor-pointer"
-              />
-            </SettingRow>
-
-            {draft.passiveIncome && (
-              <SettingRow
-                label="Passive Payout Rate"
-                description="Coins rewarded per qualified chat message interval."
-              >
-                <input
-                  type="number"
-                  min={1}
-                  value={draft.passiveAmount}
-                  onChange={(e) => setField('passiveAmount', Number(e.target.value))}
-                  className="w-36 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-[#ededed] focus:outline-none focus:border-indigo-500"
-                />
-              </SettingRow>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: Leaderboard */}
+      {/* TAB 2: Leaderboard */}
       {activeTab === 'leaderboard' && (
-        <div className="space-y-4">
+        <div className="surface-container">
+          <div className="panel-header">
+            <span>server net worth ranking</span>
+            <span className="text-text-secondary">top holders</span>
+          </div>
           <DataTable
             columns={leaderboardColumns}
             data={leaderboard}
@@ -714,14 +637,18 @@ export default function EconomyDashboardPage() {
         </div>
       )}
 
-      {/* TAB 4: Transactions */}
+      {/* TAB 3: Transactions */}
       {activeTab === 'transactions' && (
-        <div className="space-y-4">
+        <div className="surface-container">
+          <div className="panel-header">
+            <span>audit trail & transaction ledger</span>
+            <span className="text-text-secondary">{transactions.length} entries</span>
+          </div>
           <DataTable
             columns={transactionColumns}
             data={transactions}
             pageSize={15}
-            searchPlaceholder="Filter transactions by user ID..."
+            searchPlaceholder="Filter transactions by user ID or reason..."
             searchFilter={(row, q) => row.userId.toLowerCase().includes(q) || (row.reason || '').toLowerCase().includes(q)}
             emptyMessage="No transaction logs recorded yet."
             rowKey={(r) => r.id}
@@ -729,56 +656,159 @@ export default function EconomyDashboardPage() {
         </div>
       )}
 
+      {/* TAB 4: Configuration & Rewards */}
+      {activeTab === 'config' && draft && (
+        <div className="space-y-4 font-sans">
+          <div className="surface-container p-4 space-y-4">
+            <div className="panel-header -mx-4 -mt-4 mb-4">
+              <span>currency & starting capital</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.04]">
+              <div>
+                <div className="text-xs text-text-primary font-semibold">Currency Symbol</div>
+                <div className="text-[11px] text-text-secondary">Symbol displayed before amounts across all modules and Discord commands.</div>
+              </div>
+              <input
+                type="text"
+                maxLength={5}
+                value={draft.currencySymbol}
+                onChange={(e) => setField('currencySymbol', e.target.value)}
+                className="glass-input font-sans w-28 text-center"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="text-xs text-text-primary font-semibold">Starting Wallet Balance</div>
+                <div className="text-[11px] text-text-secondary">Initial currency deposited into new members' wallets upon joining.</div>
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={draft.startBalance}
+                onChange={(e) => setField('startBalance', Number(e.target.value))}
+                className="glass-input font-sans w-36 text-right"
+              />
+            </div>
+          </div>
+
+          <div className="surface-container p-4 space-y-4">
+            <div className="panel-header -mx-4 -mt-4 mb-4">
+              <span>daily rewards & streak incentives</span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/[0.04]">
+              <div>
+                <div className="text-xs text-text-primary font-semibold">Daily Reward Base</div>
+                <div className="text-[11px] text-text-secondary">Base currency granted every 24 hours via daily reward command.</div>
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={draft.dailyRewardAmount}
+                onChange={(e) => setField('dailyRewardAmount', Number(e.target.value))}
+                className="glass-input font-sans w-36 text-right"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="text-xs text-text-primary font-semibold">Daily Streak Bonus</div>
+                <div className="text-[11px] text-text-secondary">Additional payout accumulated per consecutive daily claim.</div>
+              </div>
+              <input
+                type="number"
+                min={0}
+                value={draft.dailyStreakBonus}
+                onChange={(e) => setField('dailyStreakBonus', Number(e.target.value))}
+                className="glass-input font-sans w-36 text-right"
+              />
+            </div>
+          </div>
+
+          <div className="surface-container p-4 space-y-4">
+            <div className="panel-header -mx-4 -mt-4 mb-4">
+              <span>passive chat income</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/[0.04]">
+              <div>
+                <div className="text-xs text-text-primary font-semibold">Chat Activity Rewards</div>
+                <div className="text-[11px] text-text-secondary">Automatically grant coins to active members while chatting.</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={draft.passiveIncome}
+                onChange={(e) => setField('passiveIncome', e.target.checked)}
+                className="w-4 h-4 rounded bg-surface-1 border border-white/[0.08] text-success-text focus:ring-0 cursor-pointer"
+              />
+            </div>
+
+            {draft.passiveIncome && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs text-text-primary font-semibold">Payout per Message Cycle</div>
+                  <div className="text-[11px] text-text-secondary">Coins rewarded when chat activity cooldown elapses.</div>
+                </div>
+                <input
+                  type="number"
+                  min={1}
+                  value={draft.passiveAmount}
+                  onChange={(e) => setField('passiveAmount', Number(e.target.value))}
+                  className="glass-input font-sans w-36 text-right"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Edit User Balance Modal */}
       {editUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm bg-white dark:bg-[#0e1013] border border-black/[0.08] dark:border-[#20232b] rounded-xl p-6 shadow-2xl space-y-4">
-            <h3 className="text-sm font-semibold text-[#101217] dark:text-[#f0f2f5]">Edit User Balance</h3>
-            <p className="text-xs text-slate-500 dark:text-[#717882] font-mono">User: {editUser.userId}</p>
-
-            <div className="space-y-3">
+        <AnimatedModal isOpen={Boolean(editUser)} onClose={() => { if (!isEditing) setEditUser(null); }} title="Edit user balance" subtitle={editUser.userId} maxWidth="max-w-sm">
+            <div className="p-4 space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Wallet Cash</label>
+                <label className="text-[11px] font-sans text-text-secondary">Wallet Cash ({stats.currencySymbol})</label>
                 <input
                   type="number"
                   min={0}
                   value={editCash}
                   onChange={(e) => setEditCash(Number(e.target.value))}
-                  className="w-full mt-1 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
+                  className="glass-input font-sans mt-1"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Bank Balance</label>
+                <label className="text-[11px] font-sans text-text-secondary">Bank Balance ({stats.currencySymbol})</label>
                 <input
                   type="number"
                   min={0}
                   value={editBank}
                   onChange={(e) => setEditBank(Number(e.target.value))}
-                  className="w-full mt-1 px-3 py-1.5 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
+                  className="glass-input font-sans mt-1"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-black/[0.08] dark:border-[#1a1d24]">
+            <div className="flex items-center justify-end gap-2 p-3 border-t border-white/[0.06] bg-surface-1">
               <button
                 type="button"
                 onClick={() => setEditUser(null)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-slate-100 dark:bg-[#16181d] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33]"
+                className="btn-secondary"
               >
-                Cancel
+                cancel
               </button>
               <button
                 type="button"
                 onClick={handleSaveUserBalance}
                 disabled={isEditing}
-                className="px-3 py-1.5 text-xs rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
+                className="btn-primary"
               >
-                {isEditing ? 'Saving...' : 'Save Balance'}
+                {isEditing ? 'saving...' : 'save balance'}
               </button>
             </div>
-          </div>
-        </div>
+        </AnimatedModal>
       )}
 
       {/* Confirm Reset Single User Modal */}
@@ -786,9 +816,9 @@ export default function EconomyDashboardPage() {
         isOpen={Boolean(resetTargetUser)}
         onClose={() => setResetTargetUser(null)}
         onConfirm={handleConfirmResetUser}
-        title="Reset User Balance"
+        title="// reset user balance"
         description={`Are you sure you want to reset all wallet and bank balances for user ${resetTargetUser} to 0? This action cannot be undone.`}
-        confirmLabel="Reset to 0"
+        confirmLabel="reset to 0"
         variant="danger"
         isLoading={modalLoading}
       />
@@ -798,9 +828,9 @@ export default function EconomyDashboardPage() {
         isOpen={isResetAllOpen}
         onClose={() => setIsResetAllOpen(false)}
         onConfirm={handleConfirmResetAll}
-        title="CRITICAL: Reset Entire Server Economy"
+        title="// CRITICAL: wipe server economy"
         description="Are you sure you want to reset ALL user wallet and bank balances across the entire server to 0? This will wipe the global leaderboard and cannot be undone."
-        confirmLabel="Wipe All Balances"
+        confirmLabel="wipe all balances"
         variant="danger"
         isLoading={modalLoading}
       />

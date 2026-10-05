@@ -1,14 +1,17 @@
 import { getDb } from '../pool.js';
 
 export async function getGameCooldown(guildId: string, gameName: string): Promise<number> {
+  return (await getGameSettings(guildId, gameName)).cooldown;
+}
+export async function getGameSettings(guildId: string, gameName: string): Promise<{ cooldown: number; enabled: boolean }> {
   const db = getDb();
   const rows = await db`
-    SELECT cooldown_seconds
+    SELECT cooldown_seconds, enabled
     FROM game_cooldowns
     WHERE guild_id = ${guildId} AND game_name = ${gameName.toLowerCase()}
   `;
 
-  return rows[0]?.cooldown_seconds ?? 15;
+  return { cooldown: rows[0]?.cooldown_seconds ?? 15, enabled: rows[0]?.enabled ?? true };
 }
 
 export async function setGameCooldown(

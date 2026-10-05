@@ -13,6 +13,8 @@ export async function handleCommunity(guildId: string, data: any): Promise<Handl
         channel_id = EXCLUDED.channel_id,
         updated_at = NOW()
     `;
+  } else if (suggestion !== undefined) {
+    await db`UPDATE suggestion_configs SET channel_id = NULL, updated_at = NOW() WHERE guild_id = ${guildId}`;
   }
 
   const confChannel = cleanSnowflake(confession?.submission_channel_id);
@@ -27,6 +29,8 @@ export async function handleCommunity(guildId: string, data: any): Promise<Handl
         log_channel_id = EXCLUDED.log_channel_id,
         updated_at = NOW()
     `;
+  } else if (confession !== undefined) {
+    await db`UPDATE confession_configs SET channel_id = NULL, log_channel_id = ${confLog || null}, updated_at = NOW() WHERE guild_id = ${guildId}`;
   }
 
   return {

@@ -62,7 +62,7 @@ export default defineCommand({
 
     if (scopeArg.startsWith('module:')) {
       const modName = scopeArg.slice(7).trim();
-      const allModules = getModules();
+      const allModules = getModules(false, true);
       if (!allModules.includes(modName)) {
         await respond.error(`Unknown module \`${modName}\`. Available modules: ${allModules.join(', ')}`);
         return;
@@ -74,7 +74,7 @@ export default defineCommand({
         commandName = cmd.name;
         moduleName = cmd.module;
       } else {
-        const allModules = getModules();
+        const allModules = getModules(false, true);
         if (allModules.includes(scopeArg)) {
           moduleName = scopeArg;
         } else {

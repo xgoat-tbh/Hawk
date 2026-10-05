@@ -1,12 +1,13 @@
-'use client';
+﻿'use client';
+import { apiFetch } from '@/lib/api';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ChannelPicker } from '@/components/ui/ChannelPicker';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { SettingRow } from '@/components/ui/SettingRow';
-import { StatCard } from '@/components/ui/StatCard';
 import { useGuildData } from '@/context/GuildContext';
+import { useToast } from '@/components/ui/Toast';
 import {
   Pin,
   Plus,
@@ -21,15 +22,21 @@ import {
   Zap,
   Save,
   X,
+  Search,
+  Clock,
+  Radio,
+  FileText,
 } from 'lucide-react';
 
-export default function StickyMessagesPage() {
+export default function StickyNoticesPage() {
   const { guildId } = useParams() as { guildId: string };
   const { channels, config, refreshData } = useGuildData();
+  const { success, error, info } = useToast();
 
   const stickyMessages = config?.stickyMessages || [];
 
-  const [activeTab, setActiveTab] = useState<'notices' | 'create' | 'variables'>('notices');
+  const [activeTab, setActiveTab] = useState<'notices' | 'create' | 'tokens'>('notices');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Create Form State
   const [newChannelId, setNewChannelId] = useState<string | null>(null);
@@ -40,8 +47,9 @@ export default function StickyMessagesPage() {
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  // Feedback State
+  // Feedback Banners
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -68,7 +76,7 @@ export default function StickyMessagesPage() {
     setActionSuccess(null);
 
     try {
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -84,13 +92,17 @@ export default function StickyMessagesPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to update sticky notice.');
 
       const targetChannel = channels.find((c) => c.id === channelId);
-      setActionSuccess(`Sticky notice for #${targetChannel?.name || 'channel'} updated.`);
+      const msg = `Sticky notice for #${targetChannel?.name || 'channel'} updated.`;
+      setActionSuccess(msg);
+      success(msg);
       setEditingChannelId(null);
       setEditContent('');
       await refreshData();
-      setTimeout(() => setActionSuccess(null), 5000);
+      setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
-      setActionError(err.message || 'Error updating sticky notice.');
+      const msg = err.message || 'Error updating sticky notice.';
+      setActionError(msg);
+      error(msg);
     } finally {
       setIsSavingEdit(false);
     }
@@ -99,7 +111,7 @@ export default function StickyMessagesPage() {
   const handleAddSticky = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChannelId || !newMessage.trim()) {
-      setActionError('Please select a target channel and enter a notice text.');
+      setActionError('Please select a target text channel and provide message content.');
       return;
     }
 
@@ -108,7 +120,7 @@ export default function StickyMessagesPage() {
     setActionSuccess(null);
 
     try {
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -121,25 +133,30 @@ export default function StickyMessagesPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create sticky message.');
+      if (!res.ok) throw new Error(data.error || 'Failed to deploy sticky notice.');
 
       const targetChannel = channels.find((c) => c.id === newChannelId);
+      const msg = `Sticky notice active in #${targetChannel?.name || 'channel'}.`;
       setNewChannelId(null);
       setNewMessage('');
-      setActionSuccess(`Sticky notice for #${targetChannel?.name || 'channel'} active.`);
+      setActionSuccess(msg);
+      success(msg);
       await refreshData();
       setActiveTab('notices');
-      setTimeout(() => setActionSuccess(null), 5000);
+      setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
-      setActionError(err.message || 'Error creating sticky message.');
+      const msg = err.message || 'Error deploying sticky notice.';
+      setActionError(msg);
+      error(msg);
     } finally {
       setIsAdding(false);
     }
   };
 
   const handleDeleteSticky = async (channelId: string) => {
+    setIsDeleting(channelId);
     try {
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,224 +168,266 @@ export default function StickyMessagesPage() {
       if (!res.ok) throw new Error('Failed to delete notice');
 
       const targetChannel = channels.find((c) => c.id === channelId);
-      setActionSuccess(`Sticky notice for #${targetChannel?.name || 'channel'} removed.`);
+      const msg = `Sticky notice for #${targetChannel?.name || 'channel'} removed.`;
+      setActionSuccess(msg);
+      success(msg);
       if (editingChannelId === channelId) cancelEditing();
       await refreshData();
-      setTimeout(() => setActionSuccess(null), 5000);
+      setTimeout(() => setActionSuccess(null), 4000);
     } catch (err: any) {
-      setActionError(err.message || 'Failed to delete sticky message.');
+      const msg = err.message || 'Failed to delete sticky message.';
+      setActionError(msg);
+      error(msg);
+    } finally {
+      setIsDeleting(null);
     }
   };
 
-  const insertVariable = (tag: string) => {
+  const insertToken = (token: string) => {
     if (editingChannelId) {
-      setEditContent((prev) => `${prev} ${tag}`);
+      setEditContent((prev) => `${prev} ${token}`);
     } else {
-      setNewMessage((prev) => `${prev} ${tag}`);
+      setNewMessage((prev) => `${prev} ${token}`);
     }
   };
 
-  const variables = ['{user}', '{server}', '{rules}', '⚠️', '📌', '✨'];
+  const dynamicTokens = [
+    { tag: '{user}', label: 'Member Mention' },
+    { tag: '{server}', label: 'Server Name' },
+    { tag: '{rules}', label: 'Rules Channel' },
+    { tag: '⚠️', label: 'Warning Icon' },
+    { tag: '📌', label: 'Pin Icon' },
+    { tag: '✨', label: 'Sparkle Icon' },
+  ];
+
+  const filteredStickies = stickyMessages.filter((item: any) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const channel = channels.find((c) => c.id === item.channel_id);
+    const content = (item.content || item.message || '').toLowerCase();
+    const chanName = (channel?.name || '').toLowerCase();
+    return content.includes(q) || chanName.includes(q) || (item.channel_id || '').includes(q);
+  });
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
-            <Pin className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-            Persistent Sticky Notices
-          </h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
-            Keep important guidelines, rule reminders, or announcements continuously visible at the bottom of active channels.
-          </p>
-        </div>
+    <div className="space-y-4 max-w-7xl mx-auto pb-16">
+      <PageHeader guildId={guildId} title="Sticky notices" description="Keep recurring announcements visible in active channels." actions={<button className="btn-primary" onClick={() => setActiveTab('create')}>Create notice</button>}/>
 
-        <button
-          onClick={() => setActiveTab('create')}
-          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 transition-colors shadow-xs"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Create Sticky Notice
-        </button>
-      </div>
-
+      {/* Alert Banners */}
       {actionSuccess && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-md bg-success/10 border border-success/20 flex items-center gap-2 text-xs font-sans text-success-text">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-success-text" />
           <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2 text-xs text-rose-600 dark:text-rose-400">
-          <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+        <div className="p-3 rounded-md bg-critical/10 border border-critical/20 flex items-center gap-2 text-xs font-sans text-critical-text">
+          <AlertCircle className="w-4 h-4 shrink-0 text-critical-text" />
           <span>{actionError}</span>
         </div>
       )}
 
-      {/* Overview StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Active Stickies"
-          value={stickyMessages.length}
-          subtitle="Channels with notices"
-          icon={Pin}
-        />
-        <StatCard
-          title="Resurfacing"
-          value="Real-time"
-          subtitle="Repositioned on new chat"
-          icon={Sparkles}
-        />
-        <StatCard
-          title="Capacity Limit"
-          value="1 / Channel"
-          subtitle="Prevents room flooding"
-          icon={ShieldCheck}
-        />
-        <StatCard
-          title="Bot Engine"
-          value="Synchronized"
-          subtitle="Across all Discord shards"
-          icon={Zap}
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
+      {/* 3. Numbered Navigation Tabs */}
+      <div className="flex items-center gap-1 border-b border-white/[0.06] pb-0 font-sans text-xs">
         <button
           onClick={() => setActiveTab('notices')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+          className={`px-3 py-2 border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'notices'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+              ? 'border-success text-white font-semibold bg-surface-4/50'
+              : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <Pin className="w-4 h-4" />
-          Active Notices ({stickyMessages.length})
+          <Pin className="w-3.5 h-3.5" />
+          <span>notices ({stickyMessages.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('create')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+          className={`px-3 py-2 border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
             activeTab === 'create'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+              ? 'border-success text-white font-semibold bg-surface-4/50'
+              : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <Plus className="w-4 h-4" />
-          Create Notice
+          <Plus className="w-3.5 h-3.5" />
+          <span>new notice</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('variables')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'variables'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+          onClick={() => setActiveTab('tokens')}
+          className={`px-3 py-2 border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'tokens'
+              ? 'border-success text-white font-semibold bg-surface-4/50'
+              : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
-          Formatting & Variables
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>tokens &amp; formatting</span>
         </button>
       </div>
 
-      {/* TAB 1: Notices List */}
+      {/* 4. TAB CONTENTS */}
+
+      {/* TAB 1: Active Notices List */}
       {activeTab === 'notices' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Managed Channel Stickies"
-            description="The bot automatically repositions these notices as regular chat messages arrive, deleting the previous iteration."
-          />
+        <div className="surface-container space-y-0">
+          <div className="panel-header">
+            <div className="flex items-center gap-2">
+              <span className="text-success-text">stickies &gt;</span>
+              <span className="text-text-secondary">active notices with interval ({filteredStickies.length})</span>
+            </div>
+            <div className="relative w-48 sm:w-64">
+              <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                type="text"
+                placeholder="search by channel or text..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="glass-input pl-7 text-[11px] py-1 font-sans"
+              />
+            </div>
+          </div>
 
           {stickyMessages.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-500 dark:text-[#717882]">
-              <Pin className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm font-semibold text-[#101217] dark:text-white">No sticky notices configured</p>
-              <p className="mt-1">Create a notice above to keep announcements permanently visible in a channel.</p>
+            <div className="py-14 text-center space-y-2">
+              <Pin className="w-8 h-8 mx-auto text-text-muted opacity-40" />
+              <p className="font-sans text-xs font-semibold text-text-primary">no sticky notices deployed</p>
+              <p className="font-sans text-[11px] text-text-secondary">
+                create a persistent notice to keep important guidelines visible in any channel.
+              </p>
+              <div className="pt-2">
+                <button
+                  onClick={() => setActiveTab('create')}
+                  className="btn-secondary text-xs"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  deploy first notice
+                </button>
+              </div>
+            </div>
+          ) : filteredStickies.length === 0 ? (
+            <div className="py-10 text-center font-sans text-xs text-text-secondary">
+              no notices matching query &quot;{searchQuery}&quot;
             </div>
           ) : (
-            <div className="divide-y divide-black/[0.06] dark:divide-[#1a1d24] border border-black/[0.08] dark:border-[#1a1d24] rounded-lg overflow-hidden bg-slate-50/50 dark:bg-[#121418]">
-              {stickyMessages.map((item: any) => {
+            <div className="divide-y divide-white/[0.04]">
+              {filteredStickies.map((item: any) => {
                 const targetChannel = channels.find((c) => c.id === item.channel_id);
                 const noticeText = item.content || item.message || '';
                 const isEditing = editingChannelId === item.channel_id;
+                const isThisDeleting = isDeleting === item.channel_id;
 
                 return (
-                  <div key={item.channel_id} className="p-4 hover:bg-slate-100/50 dark:hover:bg-[#16181d]/50 transition-colors space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <div
+                    key={item.channel_id}
+                    className="p-4 hover:bg-white/[0.02] transition-colors space-y-3"
+                  >
+                    {/* Header Row: Channel + Interval + Action buttons */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="w-7 h-7 rounded bg-white/[0.04] border border-white/[0.08] flex items-center justify-center font-sans text-success-text shrink-0">
                           <Hash className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-xs font-semibold text-[#101217] dark:text-white">
+                        <span className="font-sans text-xs font-semibold text-text-primary">
                           #{targetChannel?.name || 'unknown-channel'}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400 dark:text-[#717882]">{item.channel_id}</span>
+                        <span className="font-sans text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-text-secondary">
+                          ID: {item.channel_id}
+                        </span>
+
+                        {/* Interval Specification Badge (Explicit User Requirement) */}
+                        <span className="font-sans text-[10px] px-2 py-0.5 rounded bg-success/10 border border-success/20 text-success-text flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>INTERVAL: IMMEDIATE ON CHAT</span>
+                        </span>
+                        <span className="font-sans text-[10px] px-1.5 py-0.5 rounded bg-white/[0.04] text-text-muted">
+                          5s anti-spam throttle
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
                         {isEditing ? (
                           <>
                             <button
                               onClick={() => handleSaveEdit(item.channel_id)}
                               disabled={isSavingEdit}
-                              className="px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1 transition-colors"
+                              className="btn-primary py-1 px-2.5 text-[11px] flex items-center gap-1"
                             >
-                              <Save className="w-3 h-3" />
-                              Save
+                              {isSavingEdit ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Save className="w-3 h-3" />
+                              )}
+                              <span>save notice</span>
                             </button>
                             <button
                               onClick={cancelEditing}
-                              className="p-1.5 rounded-md bg-slate-100 dark:bg-[#16181d] text-slate-500 dark:text-[#717882] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33] transition-colors"
+                              className="btn-secondary py-1 px-2 text-[11px]"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              <X className="w-3 h-3" />
                             </button>
                           </>
                         ) : (
                           <>
                             <button
                               onClick={() => startEditing(item.channel_id, noticeText)}
-                              className="p-1.5 rounded-md bg-white dark:bg-[#16181d] hover:bg-slate-100 dark:hover:bg-[#20232b] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33] shadow-xs transition-colors"
+                              className="btn-secondary py-1 px-2.5 text-[11px] flex items-center gap-1"
                               title="Edit notice"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-3 h-3" />
+                              <span>edit</span>
                             </button>
                             <button
                               onClick={() => handleDeleteSticky(item.channel_id)}
-                              className="p-1.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
+                              disabled={isThisDeleting}
+                              className="btn-outline-danger py-1 px-2.5 text-[11px] flex items-center gap-1"
                               title="Delete notice"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              {isThisDeleting ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3 h-3" />
+                              )}
+                              <span>delete</span>
                             </button>
                           </>
                         )}
                       </div>
                     </div>
 
+                    {/* Notice Content Body */}
                     {isEditing ? (
-                      <div className="space-y-2">
+                      <div className="space-y-2 pt-1">
                         <textarea
                           value={editContent}
                           onChange={(e) => setEditContent(e.target.value)}
-                          rows={3}
-                          className="w-full bg-white dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg p-3 text-xs text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500 font-sans"
+                          rows={4}
+                          maxLength={4000}
+                          className="glass-input font-sans text-xs p-3 leading-relaxed w-full resize-y"
+                          placeholder="write persistent announcement..."
                         />
-                        <div className="flex items-center gap-1.5">
-                          {variables.map((v) => (
-                            <button
-                              key={v}
-                              type="button"
-                              onClick={() => insertVariable(v)}
-                              className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#16181d] hover:bg-slate-200 dark:hover:bg-[#20232b] border border-black/[0.08] dark:border-[#262a33] text-[10px] font-mono text-slate-600 dark:text-[#8c949e] hover:text-black dark:hover:text-white transition-colors"
-                            >
-                              {v}
-                            </button>
-                          ))}
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-sans text-[10px] text-text-muted">tokens:</span>
+                            {dynamicTokens.map((t) => (
+                              <button
+                                key={t.tag}
+                                type="button"
+                                onClick={() => insertToken(t.tag)}
+                                className="px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.2] font-sans text-[10px] text-text-secondary hover:text-text-primary transition-colors"
+                              >
+                                {t.tag}
+                              </button>
+                            ))}
+                          </div>
+                          <span className="font-sans text-[10px] text-text-muted">
+                            {editContent.length} / 4000 chars
+                          </span>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-3 rounded-lg bg-white dark:bg-[#14161b] border border-black/[0.08] dark:border-[#1e222a] text-xs text-slate-800 dark:text-[#c1c7cd] leading-relaxed whitespace-pre-wrap font-sans shadow-xs">
+                      <div className="p-3 rounded-md bg-surface-1 border border-white/[0.04] font-sans text-xs text-text-primary whitespace-pre-wrap leading-relaxed select-text">
                         {noticeText}
                       </div>
                     )}
@@ -380,113 +439,168 @@ export default function StickyMessagesPage() {
         </div>
       )}
 
-      {/* TAB 2: Create Notice */}
+      {/* TAB 2: Create Notice Form */}
       {activeTab === 'create' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Create Persistent Notice"
-            description="Designate a channel and write the notice content that will automatically follow new messages."
-          />
+        <div className="surface-container">
+          <div className="panel-header">
+            <span className="text-success-text">deploy &gt;</span>
+            <span className="text-text-secondary">new persistent channel sticky notice</span>
+          </div>
 
-          <form onSubmit={handleAddSticky} className="space-y-5">
-            <SettingRow
-              label="Target Channel"
-              description="The channel where this notice will stay pinned to the bottom."
-            >
-              <div className="w-72">
+          <form onSubmit={handleAddSticky} className="p-4 sm:p-6 space-y-5">
+            {/* Target Channel */}
+            <div className="space-y-1.5 max-w-xl">
+              <label className="block font-sans text-xs text-text-primary">
+                Target Text Channel <span className="text-critical-text">*</span>
+              </label>
+              <p className="font-sans text-[11px] text-text-secondary">
+                Select the channel where Hawk will keep this notice pinned at the bottom of the message stream.
+              </p>
+              <div className="pt-1">
                 <ChannelPicker
                   channels={channels}
                   value={newChannelId}
                   onChange={setNewChannelId}
-                  placeholder="Select text channel..."
+                  placeholder="select text channel..."
                   allowedTypes={[0, 5]}
                 />
               </div>
-            </SettingRow>
+            </div>
 
-            <div className="space-y-2">
+            {/* Notice Content */}
+            <div className="space-y-1.5 max-w-3xl">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-[#101217] dark:text-white">Notice Content</label>
-                <div className="flex items-center gap-1.5">
-                  {variables.map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => insertVariable(v)}
-                      className="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#16181d] hover:bg-slate-200 dark:hover:bg-[#20232b] border border-black/[0.08] dark:border-[#262a33] text-[10px] font-mono text-slate-600 dark:text-[#8c949e] hover:text-black dark:hover:text-white transition-colors"
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
+                <label className="block font-sans text-xs text-text-primary">
+                  Notice Content <span className="text-critical-text">*</span>
+                </label>
+                <span className="font-sans text-[10px] text-text-muted">
+                  {newMessage.length} / 4000 characters
+                </span>
               </div>
-
+              <p className="font-sans text-[11px] text-text-secondary">
+                Standard markdown and dynamic placeholders are parsed when dispatched to Discord.
+              </p>
               <textarea
+                required
+                maxLength={4000}
+                rows={5}
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                rows={4}
-                maxLength={4000}
-                placeholder="⚠️ Remember to stay respectful and follow server guidelines."
-                className="w-full bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg p-3 text-xs text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500 font-sans"
+                placeholder="write persistent notice content (markdown supported)..."
+                className="glass-input font-sans text-xs p-3 leading-relaxed w-full resize-y"
               />
-              <div className="text-right text-[10px] font-mono text-slate-400 dark:text-[#717882]">
-                {newMessage.length} / 4000 characters
+
+              {/* Dynamic Tokens Quick Bar */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="font-sans text-[10px] text-text-muted mr-1">insert placeholder:</span>
+                {dynamicTokens.map((t) => (
+                  <button
+                    key={t.tag}
+                    type="button"
+                    onClick={() => insertToken(t.tag)}
+                    className="px-2 py-0.5 rounded bg-surface-4 border border-white/[0.08] hover:border-white/[0.2] font-sans text-[11px] text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    {t.tag} ({t.label})
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="pt-3 border-t border-black/[0.08] dark:border-[#1a1d24] flex justify-end">
+            {/* Resurfacing Policy Notice */}
+            <div className="p-3 rounded-md bg-white/[0.02] border border-white/[0.06] font-sans text-[11px] text-text-secondary flex items-start gap-2 max-w-3xl">
+              <Zap className="w-3.5 h-3.5 text-success-text shrink-0 mt-0.5" />
+              <span>
+                <strong>Interval Policy:</strong> The notice is automatically deleted and re-posted at the very bottom whenever new messages are typed in the channel. A 5-second anti-rate-limit throttle ensures compliance with Discord API rate limits.
+              </span>
+            </div>
+
+            <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between max-w-3xl">
+              <button
+                type="button"
+                onClick={() => setActiveTab('notices')}
+                className="btn-secondary text-xs"
+              >
+                cancel
+              </button>
+
               <button
                 type="submit"
-                disabled={isAdding || !newChannelId || !newMessage.trim()}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors disabled:opacity-40 shadow-xs"
+                disabled={isAdding}
+                className="btn-primary flex items-center gap-2 text-xs"
               >
-                {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                <span>{isAdding ? 'Dispatching...' : 'Dispatch Sticky Notice'}</span>
+                {isAdding ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Pin className="w-3.5 h-3.5" />
+                )}
+                <span>{isAdding ? 'deploying notice...' : 'deploy sticky notice'}</span>
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* TAB 3: Variables & Documentation */}
-      {activeTab === 'variables' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Dynamic Placeholders & Formatting"
-            description="Variables supported inside your sticky messages that are dynamically populated by the bot."
-          />
+      {/* TAB 3: Tokens & Formatting Guide */}
+      {activeTab === 'tokens' && (
+        <div className="surface-container">
+          <div className="panel-header">
+            <span className="text-success-text">tokens &gt;</span>
+            <span className="text-text-secondary">dynamic message variables &amp; syntax</span>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg bg-slate-50 dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] space-y-1">
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                &#123;user&#125;
-              </span>
-              <p className="text-xs text-[#101217] dark:text-white font-medium mt-1">Author / Last Speaker</p>
-              <p className="text-xs text-slate-500 dark:text-[#8c949e]">Mentions the member who triggered the sticky resurface.</p>
-            </div>
+          <div className="p-4 sm:p-6 space-y-4 max-w-3xl">
+            <p className="font-sans text-xs text-text-secondary">
+              You can incorporate live dynamic variables into sticky notices. When Hawk renders the notice in Discord, these tokens are dynamically substituted with guild parameters:
+            </p>
 
-            <div className="p-4 rounded-lg bg-slate-50 dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] space-y-1">
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                &#123;server&#125;
-              </span>
-              <p className="text-xs text-[#101217] dark:text-white font-medium mt-1">Guild Display Name</p>
-              <p className="text-xs text-slate-500 dark:text-[#8c949e]">Replaced with the server name automatically.</p>
-            </div>
+            <div className="divide-y divide-white/[0.04] border border-white/[0.06] rounded-md overflow-hidden bg-surface-1">
+              <div className="p-3 flex items-start justify-between gap-4 font-sans text-xs">
+                <div>
+                  <span className="text-success-text font-semibold">{'{user}'}</span>
+                  <p className="text-[11px] text-text-secondary mt-0.5">
+                    Mentions the author of the triggering message or latest chatter.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => insertToken('{user}')}
+                  className="btn-secondary text-[11px] py-0.5 px-2 shrink-0"
+                >
+                  insert
+                </button>
+              </div>
 
-            <div className="p-4 rounded-lg bg-slate-50 dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] space-y-1">
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                &#123;rules&#125;
-              </span>
-              <p className="text-xs text-[#101217] dark:text-white font-medium mt-1">Rules Channel Link</p>
-              <p className="text-xs text-slate-500 dark:text-[#8c949e]">Resolves to the primary rules channel mention if detected.</p>
-            </div>
+              <div className="p-3 flex items-start justify-between gap-4 font-sans text-xs">
+                <div>
+                  <span className="text-success-text font-semibold">{'{server}'}</span>
+                  <p className="text-[11px] text-text-secondary mt-0.5">
+                    Replaced with the real server name.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => insertToken('{server}')}
+                  className="btn-secondary text-[11px] py-0.5 px-2 shrink-0"
+                >
+                  insert
+                </button>
+              </div>
 
-            <div className="p-4 rounded-lg bg-slate-50 dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] space-y-1">
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                Standard Markdown
-              </span>
-              <p className="text-xs text-[#101217] dark:text-white font-medium mt-1">Discord Styling</p>
-              <p className="text-xs text-slate-500 dark:text-[#8c949e]">Supports bold (**text**), italics (*text*), spoilers, and links.</p>
+              <div className="p-3 flex items-start justify-between gap-4 font-sans text-xs">
+                <div>
+                  <span className="text-success-text font-semibold">{'{rules}'}</span>
+                  <p className="text-[11px] text-text-secondary mt-0.5">
+                    Generates a direct channel link to the server community rules room.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => insertToken('{rules}')}
+                  className="btn-secondary text-[11px] py-0.5 px-2 shrink-0"
+                >
+                  insert
+                </button>
+              </div>
             </div>
           </div>
         </div>

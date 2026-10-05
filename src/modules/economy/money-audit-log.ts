@@ -17,7 +17,7 @@ export default defineCommand({
   async execute(ctx: CommandContext): Promise<void> {
     const db = getDb();
     const logs = await db`
-      SELECT * FROM economy_audit_logs
+      SELECT * FROM economy_audit_log
       WHERE guild_id = ${ctx.guild.id}
       ORDER BY created_at DESC
       LIMIT 15

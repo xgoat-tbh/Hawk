@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, canManageGuild } from '@/lib/auth';
+import { getSession, canViewGuild } from '@/lib/auth';
 import { fetchGuildRoles } from '@/lib/discord';
 import { db } from '@/lib/db';
 import { BOT_COMMAND_CATALOG } from '@/lib/commands';
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
-  const allowed = await canManageGuild(session.id, guildId);
+  const allowed = await canViewGuild(session.id, guildId);
   if (!allowed) {
     return NextResponse.json(
       { error: 'Forbidden: You do not have permissions to simulate access on this server.' },

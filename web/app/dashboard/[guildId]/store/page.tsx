@@ -1,4 +1,7 @@
 'use client';
+import { apiFetch } from '@/lib/api';
+import { AnimatedModal } from '@/components/ui/AnimatedModal';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
@@ -9,6 +12,9 @@ import {
   Edit2,
   Package,
   X,
+  RefreshCw,
+  Shield,
+  Layers,
 } from 'lucide-react';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -70,7 +76,7 @@ export default function StoreCatalogPage() {
   // Fetch Items
   const fetchItems = useCallback(async () => {
     try {
-      const res = await fetch(`/api/guilds/${guildId}/store/items`);
+      const res = await apiFetch(`/api/guilds/${guildId}/store/items`);
       if (res.ok) {
         const data = await res.json();
         setItems(data.items || []);
@@ -114,17 +120,24 @@ export default function StoreCatalogPage() {
     setUsable(item.usable);
     setSellable(item.sellable);
     setStock(item.stock);
-    setRoleRequired(item.roleRequired);
-    setRoleGiven(item.roleGiven || item.inventoryRoleId);
-    setRoleRemoved(item.roleRemoved);
+    setRoleRequired(item.roleRequired || null);
+    setRoleGiven(item.roleGiven || null);
+    setRoleRemoved(item.roleRemoved || null);
     setReplyMessage(item.replyMessage || '');
     setModalTab('info');
     setIsModalOpen(true);
   };
 
-  const handleSaveItem = async () => {
+  const handleSaveItem = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!name.trim()) {
       toast.error('Item name is required');
+      return;
+    }
+
+    const price = parseInt(rawPrice, 10);
+    if (isNaN(price) || price < 0) {
+      toast.error('Valid non-negative price is required');
       return;
     }
 
@@ -133,10 +146,9 @@ export default function StoreCatalogPage() {
     const payload = {
       itemId,
       name: name.trim(),
-      price: rawPrice.trim(),
-      description: description.trim() || null,
-      iconUrl: iconUrl.trim() || null,
-      inventoryRoleId: roleGiven || null,
+      price,
+      description: description.trim(),
+      iconUrl: iconUrl.trim(),
       inventoryEnabled,
       usable,
       sellable,
@@ -144,40 +156,43 @@ export default function StoreCatalogPage() {
       roleRequired,
       roleGiven,
       roleRemoved,
-      replyMessage: replyMessage.trim() || null,
+      replyMessage: replyMessage.trim(),
     };
 
     try {
-      const res = await fetch(`/api/guilds/${guildId}/store/items`, {
-        method: modalMode === 'create' ? 'POST' : 'PUT',
+      const url = `/api/guilds/${guildId}/store/items`;
+      const method = modalMode === 'create' ? 'POST' : 'PUT';
+
+      const res = await apiFetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (res.ok) {
-        toast.success(
-          modalMode === 'create'
-            ? `Item "${name}" created successfully!`
-            : `Item "${name}" updated successfully!`
-        );
-        setIsModalOpen(false);
-        fetchItems();
-      } else {
+      if (!res.ok) {
         const err = await res.json();
-        toast.error(err.error || 'Failed to save item');
+        throw new Error(err.error || 'Failed to save store item');
       }
-    } catch {
-      toast.error('Network error saving item');
+
+      toast.success(
+        modalMode === 'create'
+          ? `Created item "${payload.name}"`
+          : `Updated item "${payload.name}"`
+      );
+      setIsModalOpen(false);
+      fetchItems();
+    } catch (err: any) {
+      toast.error(err.message || 'Error saving store item');
     } finally {
       setModalLoading(false);
     }
   };
 
-  const handleDeleteItem = async () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/guilds/${guildId}/store/items?itemId=${deleteTarget.itemId}`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/store/items?itemId=${deleteTarget.itemId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -200,21 +215,21 @@ export default function StoreCatalogPage() {
       key: 'name',
       header: 'Item',
       render: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+        <div className="flex items-center gap-2.5 font-sans">
+          <div className="w-7 h-7 rounded bg-surface-4 border border-white/[0.08] flex items-center justify-center shrink-0 overflow-hidden">
             {row.iconUrl ? (
               <img src={row.iconUrl} alt={row.name} className="w-full h-full object-cover" />
             ) : (
-              <Package className="w-4 h-4 text-slate-400 dark:text-[#717882]" />
+              <Package className="w-3.5 h-3.5 text-text-secondary" />
             )}
           </div>
           <div>
-            <div className="font-semibold text-xs text-[#101217] dark:text-[#ededed] flex items-center gap-1.5">
+            <div className="text-xs text-text-primary font-medium flex items-center gap-1.5">
               <span>{row.name}</span>
-              <span className="font-mono text-[10px] text-slate-400 dark:text-[#717882]">#{row.itemId}</span>
+              <span className="text-[10px] text-text-muted">#{row.itemId}</span>
             </div>
             {row.description && (
-              <p className="text-[11px] text-slate-500 dark:text-[#717882] truncate max-w-xs">{row.description}</p>
+              <p className="text-[11px] text-text-secondary truncate max-w-xs">{row.description}</p>
             )}
           </div>
         </div>
@@ -225,7 +240,7 @@ export default function StoreCatalogPage() {
       header: 'Price',
       sortable: true,
       render: (row) => (
-        <span className="font-semibold text-xs text-emerald-600 dark:text-emerald-400">
+        <span className="font-sans text-xs font-semibold text-success-text">
           {currencySymbol}{row.price.toLocaleString()}
         </span>
       ),
@@ -235,53 +250,70 @@ export default function StoreCatalogPage() {
       header: 'Stock',
       sortable: true,
       render: (row) => (
-        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-[#16181d] border border-black/[0.08] dark:border-[#262a33] text-slate-700 dark:text-[#c1c7cd]">
-          {row.stock === -1 ? 'Unlimited' : `${row.stock} left`}
+        <span className="console-tag console-tag-readv">
+          {row.stock === -1 ? 'unlimited' : `${row.stock} left`}
         </span>
       ),
     },
     {
-      key: 'flags',
+      key: 'type',
       header: 'Properties',
       render: (row) => (
-        <div className="flex items-center gap-1.5 text-[10px]">
+        <div className="flex items-center gap-1 font-sans">
           {row.usable && (
-            <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-              Usable
+            <span className="console-tag text-info-text bg-info/10 border-info/25">
+              USABLE
             </span>
           )}
           {row.sellable && (
-            <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Sellable
+            <span className="console-tag text-success-text bg-success/10 border-success/25">
+              SELLABLE
             </span>
           )}
           {row.roleRequired && (
-            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              Requires Role
+            <span className="console-tag text-warning-text bg-warning/10 border-warning/25">
+              ROLE REQ
             </span>
           )}
         </div>
       ),
     },
     {
+      key: 'roles',
+      header: 'Role Actions',
+      render: (row) => {
+        const given = roles.find((r) => r.id === row.roleGiven);
+        const removed = roles.find((r) => r.id === row.roleRemoved);
+        if (!given && !removed) return <span className="font-sans text-[11px] text-text-muted">—</span>;
+        return (
+          <div className="font-sans text-[11px] space-y-0.5">
+            {given && <span className="text-success-text block">+@{given.name}</span>}
+            {removed && <span className="text-critical-text block">-@{removed.name}</span>}
+          </div>
+        );
+      },
+    },
+    {
       key: 'actions',
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 font-sans">
           <button
             onClick={() => openEditModal(row)}
-            className="p-1.5 rounded-lg bg-white dark:bg-[#16181d] hover:bg-slate-100 dark:hover:bg-[#20232b] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white border border-black/[0.08] dark:border-[#262a33] shadow-xs transition-colors"
+            className="btn-secondary py-1 px-2 text-[11px]"
             title="Edit item"
           >
-            <Edit2 className="w-3.5 h-3.5" />
+            <Edit2 className="w-3 h-3 mr-1 text-text-secondary" />
+            edit
           </button>
           <button
             onClick={() => setDeleteTarget(row)}
-            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-colors"
+            className="btn-outline-danger py-1 px-2 text-[11px]"
             title="Delete item"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-3 h-3 mr-1" />
+            delete
           </button>
         </div>
       ),
@@ -289,286 +321,273 @@ export default function StoreCatalogPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
-            <ShoppingBag className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-            Store Catalog & Items
-          </h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
-            Design store goods, stock levels, role granting triggers, and requirements rules.
-          </p>
-        </div>
+    <div className="space-y-4 max-w-6xl mx-auto pb-24">
+      <PageHeader guildId={guildId} title="Store catalog" description="Manage items, pricing, stock, and role rewards." actions={<div className="flex items-center gap-2 font-sans">
+            <button
+              onClick={() => {
+                fetchItems();
+              }}
+              className="btn-secondary"
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Refresh
+            </button>
 
-        <button
-          onClick={openCreateModal}
-          className="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-2 transition-colors shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          Create New Item
-        </button>
+            <button
+              onClick={openCreateModal}
+              className="btn-primary"
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Create item
+            </button>
+          </div>}/>
+
+      {/* Catalog Table Panel */}
+      <div className="surface-container">
+        <div className="panel-header">
+          <span>store catalog</span>
+          <span className="text-text-secondary">{items.length} items cataloged</span>
+        </div>
+        <DataTable
+          columns={columns}
+          data={items}
+          pageSize={15}
+          searchPlaceholder="Search items by name or ID..."
+          searchFilter={(row, q) =>
+            row.name.toLowerCase().includes(q) || String(row.itemId).includes(q)
+          }
+          emptyMessage="No items in store catalog. Click 'Create item' to begin."
+          rowKey={(r) => r.itemId}
+        />
       </div>
 
-      {/* Catalog Table */}
-      <DataTable
-        columns={columns}
-        data={items}
-        pageSize={15}
-        searchPlaceholder="Search items by name or ID..."
-        searchFilter={(row, q) => row.name.toLowerCase().includes(q) || String(row.itemId).includes(q)}
-        emptyMessage="No items in the store yet. Click 'Create New Item' to begin."
-        rowKey={(r) => r.itemId}
-      />
-
-      {/* UnbelievaBoat-style Modal for Item Creation / Editing */}
+      {/* Create / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div
-            className="w-full max-w-xl bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#20232b] rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="p-4 border-b border-black/[0.08] dark:border-[#1a1d24] flex items-center justify-between bg-slate-50 dark:bg-[#101216]">
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-                <h3 className="text-sm font-semibold text-[#101217] dark:text-[#f0f2f5]">
-                  {modalMode === 'create' ? 'Create Store Item' : `Edit Item #${itemId}`}
-                </h3>
-              </div>
+        <AnimatedModal isOpen={isModalOpen} onClose={() => { if (!modalLoading) setIsModalOpen(false); }} title={modalMode === 'create' ? 'Create store item' : `Edit item #${itemId}`} maxWidth="max-w-xl">
+            {/* Modal Tab Strip */}
+            <div className="flex items-center gap-1 border-b border-white/[0.06] px-4 py-2 text-xs bg-surface-1">
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-black dark:text-[#717882] dark:hover:text-white p-1 rounded transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Tabs */}
-            <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] px-4 gap-4 text-xs font-medium bg-slate-100/50 dark:bg-[#0e1013]">
-              <button
+                type="button"
                 onClick={() => setModalTab('info')}
-                className={`py-2.5 border-b-2 transition-colors ${
+                className={`px-2.5 py-1 rounded text-xs transition-colors ${
                   modalTab === 'info'
-                    ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+                    ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                Item Information
+                info
               </button>
+
               <button
+                type="button"
                 onClick={() => setModalTab('inventory')}
-                className={`py-2.5 border-b-2 transition-colors ${
+                className={`px-2.5 py-1 rounded text-xs transition-colors ${
                   modalTab === 'inventory'
-                    ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+                    ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                Stock & Behavior
+                stock & flags
               </button>
+
               <button
+                type="button"
                 onClick={() => setModalTab('roles')}
-                className={`py-2.5 border-b-2 transition-colors ${
+                className={`px-2.5 py-1 rounded text-xs transition-colors ${
                   modalTab === 'roles'
-                    ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
+                    ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                Role Triggers & Reply
+                role triggers
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+            {/* Modal Body Form */}
+            <form onSubmit={handleSaveItem} className="flex-1 overflow-y-auto p-4 space-y-4">
               {modalTab === 'info' && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Item Name *</label>
+                    <label className="text-[11px] text-text-secondary block mb-1">Item Name *</label>
                     <input
                       type="text"
+                      maxLength={64}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. VIP Pass, Legendary Sword"
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
+                      className="glass-input font-sans"
+                      required
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">
-                      Price ({currencySymbol}) * (Supports scientific notation e.g. 1e6)
-                    </label>
-                    <input
-                      type="text"
-                      value={rawPrice}
-                      onChange={(e) => setRawPrice(e.target.value)}
-                      placeholder="1000 or 1e6"
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] text-text-secondary block mb-1">
+                        Price ({currencySymbol}) *
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={rawPrice}
+                        onChange={(e) => setRawPrice(e.target.value)}
+                        className="glass-input font-sans text-right"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-text-secondary block mb-1">Stock Quota</label>
+                      <input
+                        type="number"
+                        min={-1}
+                        value={stock}
+                        onChange={(e) => setStock(parseInt(e.target.value, 10) || -1)}
+                        className="glass-input font-sans text-right"
+                      />
+                      <span className="text-[10px] text-text-muted mt-0.5 block">-1 for unlimited</span>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Description</label>
+                    <label className="text-[11px] text-text-secondary block mb-1">Description</label>
                     <textarea
-                      rows={3}
+                      rows={2}
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Explain what this item grants or represents..."
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500 resize-none"
+                      placeholder="Brief details about what this item grants..."
+                      className="glass-input font-sans"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Icon Image URL</label>
+                    <label className="text-[11px] text-text-secondary block mb-1">Icon URL (optional)</label>
                     <input
                       type="url"
                       value={iconUrl}
                       onChange={(e) => setIconUrl(e.target.value)}
-                      placeholder="https://example.com/icon.png"
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
+                      placeholder="https://i.imgur.com/..."
+                      className="glass-input font-sans"
                     />
                   </div>
                 </div>
               )}
 
               {modalTab === 'inventory' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded bg-surface-1 border border-white/[0.04]">
                     <div>
-                      <div className="text-xs font-semibold text-[#101217] dark:text-[#f0f2f5]">Can Be Placed in Inventory</div>
-                      <p className="text-[11px] text-slate-500 dark:text-[#717882]">Users hold this item in their inventory upon purchase.</p>
+                      <div className="text-xs text-text-primary font-medium">Inventory Tracking</div>
+                      <div className="text-[10px] text-text-secondary">Keep item in user inventory post-purchase</div>
                     </div>
                     <input
                       type="checkbox"
                       checked={inventoryEnabled}
                       onChange={(e) => setInventoryEnabled(e.target.checked)}
-                      className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#16181d] border-black/[0.08] dark:border-[#262a33] text-indigo-600 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded bg-surface-1 border border-white/[0.08] text-success-text focus:ring-0 cursor-pointer"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
+                  <div className="flex items-center justify-between p-3 rounded bg-surface-1 border border-white/[0.04]">
                     <div>
-                      <div className="text-xs font-semibold text-[#101217] dark:text-[#f0f2f5]">Usable</div>
-                      <p className="text-[11px] text-slate-500 dark:text-[#717882]">Users can trigger !use-item to consume effects.</p>
+                      <div className="text-xs text-text-primary font-medium">Usable</div>
+                      <div className="text-[10px] text-text-secondary">Allow members to trigger item use command</div>
                     </div>
                     <input
                       type="checkbox"
                       checked={usable}
                       onChange={(e) => setUsable(e.target.checked)}
-                      className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#16181d] border-black/[0.08] dark:border-[#262a33] text-indigo-600 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded bg-surface-1 border border-white/[0.08] text-success-text focus:ring-0 cursor-pointer"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] rounded-lg">
+                  <div className="flex items-center justify-between p-3 rounded bg-surface-1 border border-white/[0.04]">
                     <div>
-                      <div className="text-xs font-semibold text-[#101217] dark:text-[#f0f2f5]">Sellable</div>
-                      <p className="text-[11px] text-slate-500 dark:text-[#717882]">Users can sell this back for 50% refund or trade to others.</p>
+                      <div className="text-xs text-text-primary font-medium">Sellable</div>
+                      <div className="text-[10px] text-text-secondary">Allow members to sell back item to server store</div>
                     </div>
                     <input
                       type="checkbox"
                       checked={sellable}
                       onChange={(e) => setSellable(e.target.checked)}
-                      className="w-4 h-4 rounded bg-[#f8f9fa] dark:bg-[#16181d] border-black/[0.08] dark:border-[#262a33] text-indigo-600 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded bg-surface-1 border border-white/[0.08] text-success-text focus:ring-0 cursor-pointer"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">
-                      Stock Available (-1 = Unlimited)
-                    </label>
-                    <input
-                      type="number"
-                      min={-1}
-                      value={stock}
-                      onChange={(e) => setStock(parseInt(e.target.value, 10))}
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
+                    <label className="text-[11px] text-text-secondary block mb-1">Use Reply Message</label>
+                    <textarea
+                      rows={2}
+                      value={replyMessage}
+                      onChange={(e) => setReplyMessage(e.target.value)}
+                      placeholder="Message sent in chat when item is consumed..."
+                      className="glass-input font-sans"
                     />
                   </div>
                 </div>
               )}
 
               {modalTab === 'roles' && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Role Required to Buy</label>
-                    <div className="mt-1">
-                      <RolePicker
-                        value={roleRequired}
-                        onChange={setRoleRequired}
-                        roles={roles}
-                        placeholder="None (anyone can buy)"
-                      />
-                    </div>
+                    <label className="text-[11px] text-text-secondary block mb-1">Role Required to Purchase</label>
+                    <RolePicker
+                      roles={roles}
+                      value={roleRequired}
+                      onChange={setRoleRequired}
+                      placeholder="No role required..."
+                    />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Role Given on Purchase / Use</label>
-                    <div className="mt-1">
-                      <RolePicker
-                        value={roleGiven}
-                        onChange={setRoleGiven}
-                        roles={roles}
-                        placeholder="None"
-                      />
-                    </div>
+                    <label className="text-[11px] text-text-secondary block mb-1">Role Given on Purchase</label>
+                    <RolePicker
+                      roles={roles}
+                      value={roleGiven}
+                      onChange={setRoleGiven}
+                      placeholder="No role given..."
+                    />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Role Removed on Purchase / Use</label>
-                    <div className="mt-1">
-                      <RolePicker
-                        value={roleRemoved}
-                        onChange={setRoleRemoved}
-                        roles={roles}
-                        placeholder="None"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-medium text-slate-700 dark:text-[#c1c7cd]">Custom Reply Message</label>
-                    <input
-                      type="text"
-                      value={replyMessage}
-                      onChange={(e) => setReplyMessage(e.target.value)}
-                      placeholder="Message sent in chat when item is consumed..."
-                      className="w-full mt-1 px-3 py-2 text-xs bg-[#f8f9fa] dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
+                    <label className="text-[11px] text-text-secondary block mb-1">Role Removed on Purchase</label>
+                    <RolePicker
+                      roles={roles}
+                      value={roleRemoved}
+                      onChange={setRoleRemoved}
+                      placeholder="No role removed..."
                     />
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-black/[0.08] dark:border-[#1a1d24] flex items-center justify-end gap-2.5 bg-slate-50 dark:bg-[#101216]">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-xs font-medium text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white bg-slate-100 dark:bg-[#16181d] hover:bg-slate-200 dark:hover:bg-[#20232b] border border-black/[0.08] dark:border-[#262a33] rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveItem}
-                disabled={modalLoading}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
-              >
-                {modalLoading ? 'Saving...' : modalMode === 'create' ? 'Create Item' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="btn-secondary"
+                >
+                  cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalLoading}
+                  className="btn-primary"
+                >
+                  {modalLoading ? 'saving...' : modalMode === 'create' ? 'create item' : 'save changes'}
+                </button>
+              </div>
+            </form>
+        </AnimatedModal>
       )}
 
-      {/* Confirm Delete Modal */}
+      {/* Delete Item Confirmation Modal */}
       <ConfirmModal
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDeleteItem}
-        title="Delete Store Item"
-        description={`Are you sure you want to delete "${deleteTarget?.name}"? This removes the item from the store catalog.`}
-        confirmLabel="Delete Item"
+        onConfirm={handleConfirmDelete}
+        title="// delete store item"
+        description={`Are you sure you want to delete "${deleteTarget?.name}" (#${deleteTarget?.itemId})? This will permanently remove it from the catalog.`}
+        confirmLabel="delete item"
         variant="danger"
         isLoading={deleting}
       />

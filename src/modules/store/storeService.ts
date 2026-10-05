@@ -206,8 +206,8 @@ export async function buyItem(
     if (rows.length === 0) throw new Error('Item not found.');
     const item = mapItemRow(rows[0]);
 
-    if (item.roleRequired && member) {
-      const hasReqRole = member.roles.cache.has(item.roleRequired);
+    if (item.roleRequired) {
+      const hasReqRole = member?.roles.cache.has(item.roleRequired);
       if (!hasReqRole) {
         throw new Error(`You need the <@&${item.roleRequired}> role to purchase this item.`);
       }

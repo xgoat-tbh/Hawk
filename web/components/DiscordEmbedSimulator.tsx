@@ -25,8 +25,8 @@ export function DiscordEmbedSimulator({
   thumbnailUrl,
   footerText = 'Member #{server.count}',
   serverName = 'Discord Server',
-  memberCount = 1250,
-  botName = 'Amo Bot',
+  memberCount,
+  botName = 'Hawk',
   botAvatarUrl,
 }: DiscordEmbedSimulatorProps) {
   const currentServer = serverName || 'Discord Server';
@@ -42,9 +42,9 @@ export function DiscordEmbedSimulator({
       .replace(/\{servername\}/gi, currentServer)
       .replace(/\{server\}/gi, currentServer)
       .replace(/\{server\.name\}/gi, currentServer)
-      .replace(/\{server\.count\}/gi, memberCount.toLocaleString())
-      .replace(/\{servermember\}/gi, memberCount.toLocaleString())
-      .replace(/\{servercount\}/gi, memberCount.toLocaleString())
+      .replace(/\{server\.count\}/gi, memberCount?.toLocaleString() ?? '{server.count}')
+      .replace(/\{servermember\}/gi, memberCount?.toLocaleString() ?? '{server.count}')
+      .replace(/\{servercount\}/gi, memberCount?.toLocaleString() ?? '{server.count}')
       .replace(/\{randomuser\}/gi, '@ActiveMember');
   };
 
@@ -92,7 +92,7 @@ export function DiscordEmbedSimulator({
       // 4. Inline Code: `text`
       if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
         return (
-          <code key={index} className="bg-[#1e1f22] px-1.5 py-0.5 rounded text-xs font-mono text-[#e0e1e5]">
+          <code key={index} className="bg-[#1e1f22] px-1.5 py-0.5 rounded text-xs font-sans text-[#e0e1e5]">
             {part.slice(1, -1)}
           </code>
         );

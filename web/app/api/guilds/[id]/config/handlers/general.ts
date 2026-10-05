@@ -2,7 +2,9 @@ import { db } from '@/lib/db';
 import { cleanSnowflake, cleanString, HandlerResult } from '../helpers';
 
 export async function handleGeneral(guildId: string, data: any): Promise<HandlerResult> {
-  const prefix = cleanString(data.prefix, 5) || '!';
+  const prefix = typeof data.prefix === 'string' ? data.prefix : '';
+  if (!/^\S{1,5}$/u.test(prefix)) return { success: false, error: 'Prefix must contain 1–5 characters without spaces', status: 400 };
+
   const log_channel_id = cleanSnowflake(data.log_channel_id);
   const audit_channel_id = cleanSnowflake(data.audit_channel_id);
   const bot_commander_role_id = cleanSnowflake(data.bot_commander_role_id);

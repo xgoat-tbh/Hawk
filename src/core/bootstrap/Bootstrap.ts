@@ -1,3 +1,4 @@
+import { initializeCustomCommands, stopCustomCommands } from '../commands/CustomCommandExecutor.js';
 import { Events, Client, MessageFlags } from 'discord.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -103,6 +104,7 @@ export class Bootstrap {
       await this.handleRestartResume(client);
 
       // Start unified private web dashboard
+      await initializeCustomCommands();
       startWebDashboard().catch((err) => {
         consoleLog('warning', 'dashboard', `Failed to start web dashboard: ${err instanceof Error ? err.message : String(err)}`);
       });
@@ -324,6 +326,7 @@ export class Bootstrap {
       stopCooldownCleanup();
       stopHealthServer();
       stopWebDashboard();
+    await stopCustomCommands();
       presenceManager.stopTicker();
       await stopWebhookLogger();
 

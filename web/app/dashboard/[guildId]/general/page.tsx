@@ -1,15 +1,15 @@
-'use client';
+﻿'use client';
+import { apiFetch } from '@/lib/api';
 
 import React, { useState, useMemo } from 'react';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { useParams } from 'next/navigation';
 import { ChannelPicker } from '@/components/ui/ChannelPicker';
 import { RolePicker } from '@/components/ui/RolePicker';
 import { SaveBar } from '@/components/SaveBar';
-import { SettingRow } from '@/components/ui/SettingRow';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { StatCard } from '@/components/ui/StatCard';
 import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import { useToast } from '@/components/ui/Toast';
 import {
   Sliders,
   Terminal,
@@ -18,6 +18,10 @@ import {
   Shield,
   Clock,
   RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  Hash,
+  ChevronRight,
 } from 'lucide-react';
 
 interface GeneralFormData {
@@ -30,8 +34,9 @@ interface GeneralFormData {
 export default function GeneralSettingsPage() {
   const { guildId } = useParams() as { guildId: string };
   const { channels, roles, config, updateConfigLocally, refreshData } = useGuildData();
+  const { success, error } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'core' | 'logging' | 'standards'>('core');
+
 
   const initialFormData = useMemo<GeneralFormData>(() => {
     const gen = config?.general || {};
@@ -52,16 +57,17 @@ export default function GeneralSettingsPage() {
     reset,
     save,
   } = useFormDraft<GeneralFormData>({
-    initialData: initialFormData,
+    autoSaveMs: 1500, initialData: initialFormData,
     onSave: async (formValues) => {
+      if (!/^\S{1,5}$/.test(formValues.prefix)) throw new Error('Prefix must contain 1–5 characters without spaces.');
       const payload = {
-        prefix: formValues.prefix.trim() || '!',
+        prefix: formValues.prefix,
         log_channel_id: formValues.logChannelId,
         audit_channel_id: formValues.auditChannelId,
         bot_commander_role_id: formValues.botCommanderRoleId,
       };
 
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,210 +78,40 @@ export default function GeneralSettingsPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Failed to save general configuration.');
+        const msg = errData.error || 'Failed to save general configuration.';
+        error(msg);
+        throw new Error(msg);
       }
 
       updateConfigLocally('general', payload);
-      return formValues;
+      success('General server settings saved');
+      await refreshData();
+      return { ...formValues, prefix: payload.prefix };
     },
   });
 
   const current = draft || initialFormData;
 
-  return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
-            <Sliders className="w-5 h-5 text-indigo-400" />
-            General Server Settings
-          </h1>
-          <p className="mt-1 text-xs text-[#6b7280] dark:text-[#8c949e]">
-            Configure bot command prefix, administrator authority role, and server audit logging channels.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => refreshData()}
-          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-gray-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#4b5563] dark:text-[#c1c7cd] hover:text-[#101217] dark:hover:text-white shadow-xs flex items-center gap-1.5 transition-colors self-start sm:self-auto"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh State
-        </button>
+  return <div className="max-w-5xl mx-auto space-y-4">
+    <PageHeader guildId={guildId} title="General settings" description="Set how members interact with Hawk and where server events are recorded."
+      actions={<button className="btn-secondary" onClick={() => refreshData()} disabled={isDirty}><RefreshCw size={14} className="mr-2"/>Refresh</button>}/>
+    <section className="hawk-settings-section" aria-labelledby="commands-heading">
+      <h2 id="commands-heading">Commands & authority</h2>
+      <div className="setting-row">
+        <div><label htmlFor="command-prefix">Command prefix</label><p>The symbol before a text command. Up to five characters.</p></div>
+        <div><input id="command-prefix" className="glass-input font-mono max-w-32" value={current.prefix} maxLength={5} onChange={e => setField('prefix', e.target.value)} aria-describedby="prefix-hint"/><p id="prefix-hint" className="mt-2 text-xs text-text-muted">Example: <code>{current.prefix || '!'}help</code></p></div>
       </div>
-
-      {/* StatCards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Command Prefix"
-          value={current.prefix || '!'}
-          subtitle="Trigger prefix for text commands"
-          icon={Terminal}
-        />
-        <StatCard
-          title="Bot Commander Role"
-          value={current.botCommanderRoleId ? '@Configured' : 'None'}
-          subtitle="Elevated authority override"
-          icon={Shield}
-        />
-        <StatCard
-          title="Audit Log Channel"
-          value={current.logChannelId ? '#Active' : 'Unset'}
-          subtitle="System & member activity logs"
-          icon={FileText}
-        />
-        <StatCard
-          title="Economy Log Channel"
-          value={current.auditChannelId ? '#Active' : 'Unset'}
-          subtitle="Financial & moderation stream"
-          icon={Globe}
-        />
+      <div className="setting-row">
+        <div><label htmlFor="commander-role">Bot commander role</label><p>Members of this role receive elevated bot authority. Review membership before assigning it.</p></div>
+        <RolePicker id="commander-role" label="Bot commander role" roles={roles} value={current.botCommanderRoleId} onChange={v => setField('botCommanderRoleId', v)}/>
       </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
-        <button
-          onClick={() => setActiveTab('core')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'core'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white'
-              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Terminal className="w-4 h-4" />
-          Core Configuration
-        </button>
-
-        <button
-          onClick={() => setActiveTab('logging')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'logging'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white'
-              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          Logging & Audits
-        </button>
-
-        <button
-          onClick={() => setActiveTab('standards')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'standards'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white'
-              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Globe className="w-4 h-4" />
-          System Standards
-        </button>
-      </div>
-
-      {/* TAB 1: Core Configuration */}
-      {activeTab === 'core' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Core Bot Configuration"
-            description="Fundamental prefix and elevated role settings."
-          />
-
-          <SettingRow
-            label="Command Prefix"
-            description="The prefix symbol required before executing text commands in channels."
-          >
-            <input
-              type="text"
-              value={current.prefix}
-              maxLength={5}
-              onChange={(e) => setField('prefix', e.target.value)}
-              className="bg-white dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg px-3 py-1.5 font-mono text-xs w-28 text-center text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
-              placeholder="!"
-            />
-          </SettingRow>
-
-          <SettingRow
-            label="Bot Commander Role"
-            description="Members holding this role receive elevated moderation authority and bypass standard command checks."
-          >
-            <div className="w-64">
-              <RolePicker
-                roles={roles}
-                value={current.botCommanderRoleId}
-                onChange={(val) => setField('botCommanderRoleId', val)}
-                placeholder="Select commander role..."
-              />
-            </div>
-          </SettingRow>
-        </div>
-      )}
-
-      {/* TAB 2: Logging & Audits */}
-      {activeTab === 'logging' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Logging & Audit Channels"
-            description="Dedicated channels where Amo Bot dispatches moderation, system, and economy logs."
-          />
-
-          <SettingRow
-            label="Audit Log Channel"
-            description="Dispatches member joins, leaves, role updates, and administrative command invocations."
-          >
-            <div className="w-64">
-              <ChannelPicker
-                channels={channels}
-                value={current.logChannelId}
-                onChange={(val) => setField('logChannelId', val)}
-                placeholder="Select audit channel..."
-              />
-            </div>
-          </SettingRow>
-
-          <SettingRow
-            label="Economy & Mod Log Channel"
-            description="Dispatches store purchases, balance transfers, role salaries, and economy audit actions."
-          >
-            <div className="w-64">
-              <ChannelPicker
-                channels={channels}
-                value={current.auditChannelId}
-                onChange={(val) => setField('auditChannelId', val)}
-                placeholder="Select economy log channel..."
-              />
-            </div>
-          </SettingRow>
-        </div>
-      )}
-
-      {/* TAB 3: System Standards */}
-      {activeTab === 'standards' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="System Standards"
-            description="Timestamps, audit standards, and regional format."
-          />
-
-          <SettingRow
-            label="Audit Timezone Standard"
-            description="All server events, voice logs, and database records use standard UTC ISO 8601 formatting."
-          >
-            <span className="text-xs font-mono text-gray-700 dark:text-[#949aa2] bg-gray-50 dark:bg-[#14161b] px-3 py-1.5 rounded-lg border border-black/[0.08] dark:border-[#20242c] flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-indigo-400" />
-              UTC (Universal Coordinated Time)
-            </span>
-          </SettingRow>
-        </div>
-      )}
-
-      <SaveBar
-        isDirty={isDirty}
-        saveState={saveState}
-        onSave={save}
-        onReset={reset}
-        error={saveError}
-      />
-    </div>
-  );
+    </section>
+    <section className="hawk-settings-section" aria-labelledby="logging-heading">
+      <h2 id="logging-heading">Event routing</h2>
+      <div className="setting-row"><div><label htmlFor="audit-channel">Server activity channel</label><p>Member updates, role changes, and moderation events.</p></div><ChannelPicker id="audit-channel" label="Server activity channel" channels={channels} value={current.logChannelId} onChange={v => setField('logChannelId', v)}/></div>
+      <div className="setting-row"><div><label htmlFor="economy-channel">Economy log channel</label><p>Store purchases, transfers, and salary payouts.</p></div><ChannelPicker id="economy-channel" label="Economy log channel" channels={channels} value={current.auditChannelId} onChange={v => setField('auditChannelId', v)}/></div>
+    </section>
+    <div className="flex items-start gap-3 text-text-muted text-xs py-3"><Clock size={16} className="shrink-0"/><p>Event timestamps are stored in UTC. Your changes apply to this server only.</p></div>
+    <SaveBar isDirty={isDirty} saveState={saveState} onSave={save} onReset={reset} error={saveError}/>
+  </div>;
 }

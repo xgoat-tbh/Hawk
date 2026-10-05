@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, canManageGuild } from '@/lib/auth';
+import { getSession, canViewGuild } from '@/lib/auth';
 import { db } from '@/lib/db';
 
 export async function GET(
@@ -10,7 +10,7 @@ export async function GET(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
-  const allowed = await canManageGuild(session.id, guildId);
+  const allowed = await canViewGuild(session.id, guildId);
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   try {

@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeValue, isConfigEqual } from '../web/hooks/useFormDraft.js';
 
-test('normalizeValue normalizes undefined, null, and empty trimmed strings', () => {
+test('normalizeValue normalizes missing values while preserving user text whitespace', () => {
   assert.equal(normalizeValue(null), null);
   assert.equal(normalizeValue(undefined), null);
-  assert.equal(normalizeValue('  hello  '), 'hello');
-  assert.deepEqual(normalizeValue({ a: undefined, b: ' test ' }), { a: null, b: 'test' });
+  assert.equal(normalizeValue('  hello  '), '  hello  ');
+  assert.deepEqual(normalizeValue({ a: undefined, b: ' test ' }), { a: null, b: ' test ' });
 });
 
 test('isConfigEqual accurately identifies identical objects regardless of key order', () => {

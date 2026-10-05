@@ -1,8 +1,10 @@
+import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
 import { PermissionsBitField } from 'discord.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { deductCash } from '../economy/economyService.js';
-import { getGameCooldown } from '../../core/database/repositories/gameCooldownRepo.js';
+import { getGameSettings } from '../../core/database/repositories/gameCooldownRepo.js';
+import { validGameBet } from '../../core/utils/gameBet.js';
 import {
   type MinesSession,
   registerMinesSession,
@@ -24,7 +26,10 @@ export default defineCommand({
   cooldown: 0,
 
   async execute(ctx: CommandContext): Promise<void> {
+    const config = await getEconomyConfig(ctx.guild.id); const symbol = config.currencySymbol;
     const { guild, member, parsed, respond, channel } = ctx;
+    const settings = await getGameSettings(guild.id, 'mines');
+    if (!settings.enabled) { await respond.denied('Mines is disabled in this server.'); return; }
 
     if (parsed.args.length === 0) {
       await respond.error(`Usage: \`${parsed.prefix}mines <amount> [mine amount]\``);
@@ -32,8 +37,8 @@ export default defineCommand({
     }
 
     const betAmount = parseInt(parsed.args[0], 10);
-    if (isNaN(betAmount) || betAmount <= 0) {
-      await respond.error('Please enter a valid bet amount greater than 0.');
+    if (!validGameBet(betAmount, config.minBet, config.maxBet)) {
+      await respond.error(`Enter a whole bet between ${config.minBet} and ${config.maxBet}.`);
       return;
     }
 
@@ -48,7 +53,7 @@ export default defineCommand({
     }
 
     // Cooldown check (default 15s)
-    const cooldownSecs = await getGameCooldown(guild.id, 'mines');
+    const cooldownSecs = settings.cooldown;
     const cooldownKey = `${guild.id}:${member.id}:mines`;
     const lastPlayed = userGameCooldowns.get(cooldownKey) || 0;
     const now = Date.now();
@@ -104,7 +109,7 @@ export default defineCommand({
 
     const rows = renderMinesGrid(session, false);
     await channel.send({
-      content: `💣 **Mines** | <@${member.id}> bet **$${betAmount.toLocaleString()}** with **${mineCount}** mine(s).\nPick a tile to find gems (💎)! Next multiplier: **${startMultiplier.toFixed(2)}x**`,
+      content: `💣 **Mines** | <@${member.id}> bet **${symbol}${betAmount.toLocaleString()}** with **${mineCount}** mine(s).\nPick a tile to find gems (💎)! Next multiplier: **${startMultiplier.toFixed(2)}x**`,
       components: rows,
     });
   },

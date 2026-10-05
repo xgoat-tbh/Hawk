@@ -268,20 +268,20 @@ export function UserOverridesList({
 
       {/* Add User Bar (Owner Only) */}
       {isOwner && (
-        <div className="p-4 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] shadow-xs space-y-3">
+        <div className="p-4 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#101217] dark:text-[#f1f2f3] flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5 text-gray-400 dark:text-[#7e8389]" />
+            <span className="text-xs font-semibold text-text-primary dark:text-text-primary flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-text-muted dark:text-text-muted" />
               Grant User Dashboard Access
             </span>
-            <span className="text-[10px] font-mono text-gray-500 dark:text-[#7e8389]">
+            <span className="text-[10px] font-sans text-text-muted dark:text-text-muted">
               Owner Access Control
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
             <div className="sm:col-span-6 space-y-1">
-              <label className="text-[10px] font-mono uppercase text-gray-500 dark:text-[#7e8389]">Discord User</label>
+              <label className="text-[10px] font-sans uppercase text-text-muted dark:text-text-muted">Discord User</label>
               <UserPicker
                 value={newUserId}
                 onChange={(id, name) => {
@@ -293,13 +293,13 @@ export function UserOverridesList({
             </div>
 
             <div className="sm:col-span-4 space-y-1">
-              <label className="text-[10px] font-mono uppercase text-gray-500 dark:text-[#7e8389]">Initial Access Level</label>
-              <div className="flex bg-gray-100 dark:bg-[#0a0b0d] p-0.5 rounded-md border border-black/[0.08] dark:border-[#24272b]">
+              <label className="text-[10px] font-sans uppercase text-text-muted dark:text-text-muted">Initial Access Level</label>
+              <div className="flex bg-gray-100 dark:bg-surface-1 p-0.5 rounded-md border border-black/[0.08] dark:border-border-strong">
                 <button
                   type="button"
                   onClick={() => setSelectedPreset('MOD')}
-                  className={`flex-1 py-1.5 rounded text-[10px] font-mono font-medium transition-colors ${
-                    selectedPreset === 'MOD' ? 'bg-white dark:bg-[#25282c] text-[#101217] dark:text-[#f1f2f3] shadow-xs' : 'text-gray-500 dark:text-[#7e8389]'
+                  className={`flex-1 py-1.5 rounded text-[10px] font-sans font-medium transition-colors ${
+                    selectedPreset === 'MOD' ? 'bg-white dark:bg-[#25282c] text-text-primary dark:text-text-primary shadow-xs' : 'text-text-muted dark:text-text-muted'
                   }`}
                 >
                   Moderator
@@ -307,8 +307,8 @@ export function UserOverridesList({
                 <button
                   type="button"
                   onClick={() => setSelectedPreset('ADMIN')}
-                  className={`flex-1 py-1.5 rounded text-[10px] font-mono font-medium transition-colors ${
-                    selectedPreset === 'ADMIN' ? 'bg-white dark:bg-[#25282c] text-[#101217] dark:text-[#f1f2f3] shadow-xs' : 'text-gray-500 dark:text-[#7e8389]'
+                  className={`flex-1 py-1.5 rounded text-[10px] font-sans font-medium transition-colors ${
+                    selectedPreset === 'ADMIN' ? 'bg-white dark:bg-[#25282c] text-text-primary dark:text-text-primary shadow-xs' : 'text-text-muted dark:text-text-muted'
                   }`}
                 >
                   Full Admin
@@ -316,8 +316,8 @@ export function UserOverridesList({
                 <button
                   type="button"
                   onClick={() => setSelectedPreset('VIEWER')}
-                  className={`flex-1 py-1.5 rounded text-[10px] font-mono font-medium transition-colors ${
-                    selectedPreset === 'VIEWER' ? 'bg-white dark:bg-[#25282c] text-[#101217] dark:text-[#f1f2f3] shadow-xs' : 'text-gray-500 dark:text-[#7e8389]'
+                  className={`flex-1 py-1.5 rounded text-[10px] font-sans font-medium transition-colors ${
+                    selectedPreset === 'VIEWER' ? 'bg-white dark:bg-[#25282c] text-text-primary dark:text-text-primary shadow-xs' : 'text-text-muted dark:text-text-muted'
                   }`}
                 >
                   View Only
@@ -344,10 +344,10 @@ export function UserOverridesList({
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#101217] dark:text-[#f1f2f3]">
+            <span className="text-xs font-semibold text-text-primary dark:text-text-primary">
               Authorized Users ({userAccessList.length})
             </span>
-            <span className="text-[10px] font-mono text-gray-500 dark:text-[#7e8389]">
+            <span className="text-[10px] font-sans text-text-muted dark:text-text-muted">
               Direct dashboard grants
             </span>
           </div>
@@ -358,16 +358,16 @@ export function UserOverridesList({
               placeholder="Filter users..."
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              className="bg-white dark:bg-[#0a0b0d] border border-black/[0.08] dark:border-[#24272b] rounded px-2.5 py-1 text-xs text-[#101217] dark:text-[#f1f2f3] placeholder:text-gray-400 dark:placeholder:text-[#7e8389] max-w-xs focus:outline-none font-mono"
+              className="bg-white dark:bg-surface-1 border border-black/[0.08] dark:border-border-strong rounded px-2.5 py-1 text-xs text-text-primary dark:text-text-primary placeholder:text-text-muted dark:placeholder:text-text-muted max-w-xs focus:outline-none font-sans"
             />
           )}
         </div>
 
         {userAccessList.length === 0 ? (
-          <div className="p-8 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] text-center space-y-2 shadow-xs">
-            <ShieldAlert className="w-8 h-8 text-gray-400 dark:text-[#7e8389] mx-auto opacity-50" />
-            <h4 className="text-xs font-medium text-[#101217] dark:text-[#f1f2f3]">No User Overrides Configured</h4>
-            <p className="text-[11px] text-gray-500 dark:text-[#7e8389] max-w-sm mx-auto">
+          <div className="p-8 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong text-center space-y-2 shadow-xs">
+            <ShieldAlert className="w-8 h-8 text-text-muted dark:text-text-muted mx-auto opacity-50" />
+            <h4 className="text-xs font-medium text-text-primary dark:text-text-primary">No User Overrides Configured</h4>
+            <p className="text-[11px] text-text-muted dark:text-text-muted max-w-sm mx-auto">
               Dashboard access currently follows server role policies. Add individual users above to grant or restrict their module access.
             </p>
           </div>
@@ -380,7 +380,7 @@ export function UserOverridesList({
               return (
                 <div
                   key={user.userId}
-                  className="p-4 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] shadow-xs space-y-4 hover:border-gray-300 dark:hover:border-[#2f333a] transition-colors"
+                  className="p-4 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong shadow-xs space-y-4 hover:border-gray-300 dark:hover:border-[#2f333a] transition-colors"
                 >
                   {/* User Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.08] dark:border-[#1c1f23] pb-3">
@@ -389,41 +389,41 @@ export function UserOverridesList({
                         <img
                           src={user.avatarUrl}
                           alt=""
-                          className="w-8 h-8 rounded-full object-cover border border-black/10 dark:border-[#2b2f34] shrink-0"
+                          className="w-8 h-8 rounded-full object-cover border border-black/10 dark:border-border-strong shrink-0"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-[#17191c] border border-black/10 dark:border-[#2b2f34] flex items-center justify-center shrink-0">
-                          <User className="w-4 h-4 text-gray-400 dark:text-[#a9adb2]" />
+                        <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-surface-3 border border-black/10 dark:border-border-strong flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4 text-text-muted dark:text-text-secondary" />
                         </div>
                       )}
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-[#101217] dark:text-[#f1f2f3]">{user.userName}</span>
+                          <span className="text-xs font-semibold text-text-primary dark:text-text-primary">{user.userName}</span>
                           <span
-                            className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                            className={`text-[9px] font-sans px-1.5 py-0.5 rounded border ${
                               isFullAdmin
                                 ? 'bg-success-soft text-success-text border-success-border'
                                 : activeCount > 0
                                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/20'
-                                : 'bg-gray-100 dark:bg-[#17191c] text-gray-500 dark:text-[#7e8389] border-black/[0.08] dark:border-[#24272b]'
+                                : 'bg-gray-100 dark:bg-surface-3 text-text-muted dark:text-text-muted border-black/[0.08] dark:border-border-strong'
                             }`}
                           >
                             {isFullAdmin ? 'FULL ADMIN' : `${activeCount} MODULES`}
                           </span>
                         </div>
-                        <div className="text-[10px] font-mono text-gray-500 dark:text-[#7e8389]">{user.userId}</div>
+                        <div className="text-[10px] font-sans text-text-muted dark:text-text-muted">{user.userId}</div>
                       </div>
                     </div>
 
                     {/* Quick Presets & Revoke Action */}
                     {isOwner && (
                       <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                        <span className="text-[10px] font-mono text-gray-500 dark:text-[#7e8389] mr-1 hidden md:inline">Preset:</span>
+                        <span className="text-[10px] font-sans text-text-muted dark:text-text-muted mr-1 hidden md:inline">Preset:</span>
                         <button
                           type="button"
                           onClick={() => handleApplyPreset(user.userId, 'ADMIN')}
                           disabled={isSaving}
-                          className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-[#17191c] dark:hover:bg-[#25282c] border border-black/[0.08] dark:border-[#24272b] text-[10px] font-mono text-[#101217] dark:text-[#f1f2f3] transition-colors"
+                          className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-surface-3 dark:hover:bg-[#25282c] border border-black/[0.08] dark:border-border-strong text-[10px] font-sans text-text-primary dark:text-text-primary transition-colors"
                         >
                           All
                         </button>
@@ -431,7 +431,7 @@ export function UserOverridesList({
                           type="button"
                           onClick={() => handleApplyPreset(user.userId, 'MOD')}
                           disabled={isSaving}
-                          className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-[#17191c] dark:hover:bg-[#25282c] border border-black/[0.08] dark:border-[#24272b] text-[10px] font-mono text-[#101217] dark:text-[#f1f2f3] transition-colors"
+                          className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-surface-3 dark:hover:bg-[#25282c] border border-black/[0.08] dark:border-border-strong text-[10px] font-sans text-text-primary dark:text-text-primary transition-colors"
                         >
                           Mod
                         </button>
@@ -439,7 +439,7 @@ export function UserOverridesList({
                           type="button"
                           onClick={() => handleApplyPreset(user.userId, 'VIEWER')}
                           disabled={isSaving}
-                          className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-[#17191c] dark:hover:bg-[#25282c] border border-black/[0.08] dark:border-[#24272b] text-[10px] font-mono text-[#101217] dark:text-[#f1f2f3] transition-colors"
+                          className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-surface-3 dark:hover:bg-[#25282c] border border-black/[0.08] dark:border-border-strong text-[10px] font-sans text-text-primary dark:text-text-primary transition-colors"
                         >
                           View
                         </button>
@@ -447,7 +447,7 @@ export function UserOverridesList({
                           type="button"
                           onClick={() => handleRevokeUser(user.userId)}
                           disabled={isSaving}
-                          className="p-1.5 rounded text-gray-400 dark:text-[#7e8389] hover:text-critical-text hover:bg-critical-soft transition-colors ml-1"
+                          className="p-1.5 rounded text-text-muted dark:text-text-muted hover:text-critical-text hover:bg-critical-soft transition-colors ml-1"
                           title="Revoke all dashboard access"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -469,13 +469,13 @@ export function UserOverridesList({
                             perm.manage
                               ? 'bg-indigo-50/50 dark:bg-[#12161b] border-indigo-500/30'
                               : perm.view
-                              ? 'bg-gray-50 dark:bg-[#0f1214] border-black/[0.08] dark:border-[#2b2f34]'
-                              : 'bg-gray-50/40 dark:bg-[#08090a] border-black/[0.05] dark:border-[#1c1f23] opacity-60'
+                              ? 'bg-gray-50 dark:bg-[#0f1214] border-black/[0.08] dark:border-border-strong'
+                              : 'bg-gray-50/40 dark:bg-surface-0 border-black/[0.05] dark:border-[#1c1f23] opacity-60'
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <Icon className="w-3.5 h-3.5 text-gray-400 dark:text-[#7e8389] shrink-0" />
-                            <span className="text-xs font-medium text-[#101217] dark:text-[#f1f2f3] truncate">
+                            <Icon className="w-3.5 h-3.5 text-text-muted dark:text-text-muted shrink-0" />
+                            <span className="text-xs font-medium text-text-primary dark:text-text-primary truncate">
                               {mod.label}
                             </span>
                           </div>
@@ -487,15 +487,15 @@ export function UserOverridesList({
                               type="button"
                               disabled={!isOwner || isSaving}
                               onClick={() => handleTogglePermission(user.userId, mod.id, 'view')}
-                              className={`flex-1 py-1 px-1.5 rounded text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-all ${
+                              className={`flex-1 py-1 px-1.5 rounded text-[10px] font-sans font-medium flex items-center justify-center gap-1 transition-all ${
                                 perm.view
-                                  ? 'bg-gray-200 dark:bg-[#1e2329] text-[#101217] dark:text-[#f1f2f3] border border-gray-300 dark:border-[#3e434a]'
-                                  : 'bg-white dark:bg-[#0a0b0d] text-gray-400 dark:text-[#7e8389] border border-black/[0.08] dark:border-[#1c1f23] hover:text-[#101217] dark:hover:text-[#d5d7da]'
+                                  ? 'bg-gray-200 dark:bg-[#1e2329] text-text-primary dark:text-text-primary border border-gray-300 dark:border-[#3e434a]'
+                                  : 'bg-white dark:bg-surface-1 text-text-muted dark:text-text-muted border border-black/[0.08] dark:border-[#1c1f23] hover:text-text-primary dark:hover:text-text-secondary'
                               } disabled:pointer-events-none disabled:opacity-75`}
                             >
                               <Eye className="w-2.5 h-2.5 shrink-0" />
                               <span>VIEW</span>
-                              {perm.view && <Check className="w-2.5 h-2.5 text-success shrink-0" />}
+                              {perm.view && <Check className="w-2.5 h-2.5 text-success-text shrink-0" />}
                             </button>
 
                             {/* MANAGE TOGGLE */}
@@ -503,10 +503,10 @@ export function UserOverridesList({
                               type="button"
                               disabled={!isOwner || isSaving}
                               onClick={() => handleTogglePermission(user.userId, mod.id, 'manage')}
-                              className={`flex-1 py-1 px-1.5 rounded text-[10px] font-mono font-medium flex items-center justify-center gap-1 transition-all ${
+                              className={`flex-1 py-1 px-1.5 rounded text-[10px] font-sans font-medium flex items-center justify-center gap-1 transition-all ${
                                 perm.manage
                                   ? 'bg-success text-black font-semibold'
-                                  : 'bg-white dark:bg-[#0a0b0d] text-gray-400 dark:text-[#7e8389] border border-black/[0.08] dark:border-[#1c1f23] hover:text-[#101217] dark:hover:text-[#d5d7da]'
+                                  : 'bg-white dark:bg-surface-1 text-text-muted dark:text-text-muted border border-black/[0.08] dark:border-[#1c1f23] hover:text-text-primary dark:hover:text-text-secondary'
                               } disabled:pointer-events-none disabled:opacity-75`}
                             >
                               <ShieldCheck className="w-2.5 h-2.5 shrink-0" />

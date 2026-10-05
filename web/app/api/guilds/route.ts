@@ -1,5 +1,6 @@
+import { supportedGuildIds } from '@/lib/guilds';
 import { NextResponse } from 'next/server';
-import { getSession, isAuthorizedUser, canManageGuild } from '@/lib/auth';
+import { getSession, isAuthorizedUser, canViewGuild } from '@/lib/auth';
 import { fetchBotGuilds } from '@/lib/discord';
 
 export async function GET() {
@@ -9,14 +10,14 @@ export async function GET() {
   }
 
   try {
-    const allGuilds = await fetchBotGuilds();
+    const allGuilds = (await fetchBotGuilds()).filter(g => supportedGuildIds.includes(g.id));
     const isSuperAdmin = await isAuthorizedUser(session.id);
 
     let accessibleGuilds = allGuilds;
     if (!isSuperAdmin) {
       const checks = await Promise.all(
         allGuilds.map(async (g) => {
-          const allowed = await canManageGuild(session.id, g.id);
+          const allowed = await canViewGuild(session.id, g.id);
           return allowed ? g : null;
         })
       );

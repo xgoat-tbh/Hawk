@@ -26,6 +26,7 @@ export interface PermitRecord {
   commandName: string | null;
   /** Module name */
   moduleName: string | null;
+  effect?: 'ALLOW' | 'DENY';
   createdAt: Date;
 }
 

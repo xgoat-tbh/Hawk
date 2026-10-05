@@ -4,11 +4,12 @@ import '@/lib/env';
 import { db } from '@/lib/db';
 import {
   createSession,
-  isAuthorizedUser,
+  canLogin,
   isBotOwner,
   isBotAdmin,
   ensureAuthTables,
   COOKIE_NAME,
+  sessionDurationHours,
 } from '@/lib/auth';
 import { fetchDiscordUser } from '@/lib/discord';
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify user authorization
-    const authorized = await isAuthorizedUser(cleanId);
+    const authorized = await canLogin(cleanId);
     if (!authorized) {
       return NextResponse.json(
         { error: 'Access Denied: Your account is not authorized to access the Hawk Dashboard.' },
@@ -43,18 +44,17 @@ export async function POST(req: NextRequest) {
 
     await ensureAuthTables();
 
-    // Fetch active OTP record
-    const rows = await db`
+    // Lock the OTP row so concurrent requests cannot reuse a code or lose attempts.
+    const verification = await db.begin(async tx => {
+    const rows = await tx`
       SELECT otp_code, attempts, expires_at, locked_until FROM dashboard_otps
       WHERE user_id = ${cleanId}
       LIMIT 1
+      FOR UPDATE
     `;
 
     if (rows.length === 0) {
-      return NextResponse.json(
-        { error: 'No active verification code found for this account. Please request a new code.' },
-        { status: 400 }
-      );
+      return { error: 'No active verification code found. Please request a new code.', status: 400 };
     }
 
     const record = rows[0];
@@ -64,18 +64,12 @@ export async function POST(req: NextRequest) {
     if (record.locked_until && new Date(record.locked_until) > now) {
       const remainingSec = Math.ceil((new Date(record.locked_until).getTime() - now.getTime()) / 1000);
       const remainingMin = Math.ceil(remainingSec / 60);
-      return NextResponse.json(
-        { error: `Account locked due to multiple failed attempts. Please wait ${remainingMin} minute(s).` },
-        { status: 429 }
-      );
+      return { error: `Account locked. Please wait ${remainingMin} minute(s).`, status: 429 };
     }
 
     // Check expiration (2 minutes)
     if (new Date(record.expires_at) < now) {
-      return NextResponse.json(
-        { error: 'Verification code has expired. Please request a new one.' },
-        { status: 400 }
-      );
+      return { error: 'Verification code has expired. Please request a new one.', status: 400 };
     }
 
     // Timing-safe comparison to prevent timing attacks
@@ -90,32 +84,29 @@ export async function POST(req: NextRequest) {
 
       if (currentAttempts >= 3) {
         const lockoutTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes lockout
-        await db`
+        await tx`
           UPDATE dashboard_otps
           SET attempts = ${currentAttempts}, locked_until = ${lockoutTime}
           WHERE user_id = ${cleanId}
         `;
-        return NextResponse.json(
-          { error: 'Maximum failed attempts exceeded (3/3). Account temporarily locked for 5 minutes.' },
-          { status: 429 }
-        );
+        return { error: 'Maximum failed attempts exceeded (3/3). Account locked for 5 minutes.', status: 429 };
       }
 
-      await db`
+      await tx`
         UPDATE dashboard_otps
         SET attempts = ${currentAttempts}
         WHERE user_id = ${cleanId}
       `;
 
       const attemptsRemaining = 3 - currentAttempts;
-      return NextResponse.json(
-        { error: `Invalid verification code. ${attemptsRemaining} attempt(s) remaining.` },
-        { status: 401 }
-      );
+      return { error: `Invalid verification code. ${attemptsRemaining} attempt(s) remaining.`, status: 401 };
     }
 
     // Correct OTP: Clear OTP record immediately
-    await db`DELETE FROM dashboard_otps WHERE user_id = ${cleanId}`;
+    await tx`DELETE FROM dashboard_otps WHERE user_id = ${cleanId}`;
+    return { status: 200 };
+    });
+    if (verification.status !== 200) return NextResponse.json({ error: verification.error }, { status: verification.status });
 
     // Fetch live user identity from Discord
     const discordUser = await fetchDiscordUser(cleanId);
@@ -132,7 +123,7 @@ export async function POST(req: NextRequest) {
         isBotOwner: isBotOwner(cleanId),
         isBotAdmin: isBotAdmin(cleanId),
       },
-      24
+      sessionDurationHours()
     );
 
     const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
@@ -150,7 +141,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: isHttps,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * sessionDurationHours(), // 24 hours
       path: '/',
     });
 

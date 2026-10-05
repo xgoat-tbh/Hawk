@@ -1,3 +1,4 @@
+import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { forceUpdateIncome } from './incomeService.js';
@@ -13,6 +14,7 @@ export default defineCommand({
   botPermissions: [],
   cooldown: 10, // Longer cooldown for mass actions
   async execute(ctx: CommandContext): Promise<void> {
+    const symbol = (await getEconomyConfig(ctx.guild.id))?.currencySymbol || '$';
     if (ctx.parsed.args.length < 1) {
       await ctx.respond.error('Invalid arguments. Usage: `update-income <@role>`');
       return;
@@ -52,6 +54,6 @@ export default defineCommand({
       return;
     }
 
-    await ctx.respond.success(`Successfully paid out **$${result.amount}** to ${result.membersPaid} members with the <@&${roleId}> role.`);
+    await ctx.respond.success(`Successfully paid out **${symbol}${result.amount}** to ${result.membersPaid} members with the <@&${roleId}> role.`);
   },
 });

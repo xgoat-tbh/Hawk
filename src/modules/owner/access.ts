@@ -45,7 +45,7 @@ async function handleFixSubcommand(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  const availableModules = getModules();
+  const availableModules = getModules(false, true);
   const ghostIds: number[] = [];
   let invalidCmdCount = 0;
   let deletedRoleCount = 0;
@@ -172,6 +172,7 @@ async function resolveTarget(targetArg: string, guild: CommandContext['guild']):
  * Parses scope argument into command, module, or all.
  */
 function parseScope(scopeArg: string, isRemoveMode: boolean): { scope?: ParsedScope; error?: string } {
+  scopeArg = scopeArg.trim().toLowerCase();
   if (scopeArg === 'all' || scopeArg === '*') {
     return {
       scope: {
@@ -187,7 +188,7 @@ function parseScope(scopeArg: string, isRemoveMode: boolean): { scope?: ParsedSc
     if (modName === 'owner' && !isRemoveMode) {
       return { error: 'The **owner** module cannot be permitted or distributed to any user or role.' };
     }
-    const allModules = getModules();
+    const allModules = getModules(false, true);
     if (!allModules.includes(modName)) {
       return { error: `Unknown module \`${modName}\`. Available modules: ${allModules.join(', ')}` };
     }
@@ -214,7 +215,7 @@ function parseScope(scopeArg: string, isRemoveMode: boolean): { scope?: ParsedSc
     };
   }
 
-  const allModules = getModules();
+  const allModules = getModules(false, true);
   if (allModules.includes(scopeArg)) {
     if (scopeArg === 'owner' && !isRemoveMode) {
       return { error: 'The **owner** module cannot be permitted or distributed to any user or role.' };

@@ -41,7 +41,7 @@ export default defineCommand({
     await ensureBalance(ctx.guild.id, ctx.message.author.id);
     
     try {
-      await buyItem(ctx.guild.id, ctx.message.author.id, item.itemId, quantity);
+      await buyItem(ctx.guild.id, ctx.message.author.id, item.itemId, quantity, ctx.member);
       
       let roleAssigned = false;
       if (item.inventoryRoleId && ctx.member) {

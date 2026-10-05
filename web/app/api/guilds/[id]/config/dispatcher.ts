@@ -8,7 +8,6 @@ import { handleStore } from './handlers/store';
 import { handleGaming } from './handlers/gaming';
 import { handleIncome } from './handlers/income';
 import { handleSticky } from './handlers/sticky';
-import { handleMedia } from './handlers/media';
 import { handlePermissions } from './handlers/permissions';
 
 export async function handleConfigModule(
@@ -50,11 +49,6 @@ export async function handleConfigModule(
     case 'sticky_update':
     case 'sticky_delete':
       return handleSticky(guildId, module, data);
-
-    case 'media_add':
-    case 'media_delete':
-    case 'media_set_autothread':
-      return handleMedia(guildId, module, data);
 
     case 'permit_add':
     case 'permit_delete':

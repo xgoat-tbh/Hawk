@@ -79,6 +79,28 @@ function setToCache<T>(key: string, data: T) {
   memoryCache.set(key, { data, timestamp: Date.now() });
 }
 
+export async function searchGuildMembers(guildId: string, query: string) {
+  const key = `member_search_${guildId}_${query.toLowerCase()}`;
+  const cached = getFromCache<any[]>(key, 30_000);
+  if (cached) return cached;
+  const token = getBotToken();
+  if (!token) throw new Error('Discord connection is not configured.');
+  const isId = /^\d{17,20}$/.test(query);
+  const path = isId ? `members/${query}` : `members/search?${new URLSearchParams({ query, limit: '50' })}`;
+  const response = await fetch(`https://discord.com/api/v10/guilds/${guildId}/${path}`, { headers: { Authorization: `Bot ${token}` } });
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error('Discord member search is unavailable. Try again or enter a user ID.');
+  const result = await response.json();
+  const users = (isId ? [result] : result).map((member: any) => ({
+    id: member.user.id, username: member.user.username,
+    displayName: member.nick || member.user.global_name || member.user.username,
+    avatar: member.user.avatar ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png?size=64` : null,
+    roleName: `${member.roles?.length || 0} roles`,
+  }));
+  setToCache(key, users);
+  return users;
+}
+
 export async function fetchBotGuilds(): Promise<DiscordGuild[]> {
   const cached = getFromCache<DiscordGuild[]>('bot_guilds', 60_000); // 60s cache
   if (cached) return cached;

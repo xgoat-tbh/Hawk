@@ -1,0 +1,987 @@
+[
+  {
+    "name": "access",
+    "aliases": [
+      "permit"
+    ],
+    "module": "owner",
+    "description": "Manage custom permits and private dashboard access for users or roles.",
+    "usage": "access list [dashboard] | access fix | access add <target> <command|module|dashboard|all> | access remove <target> <command|module|dashboard|all>",
+    "ownerOnly": true,
+    "hidden": false
+  },
+  {
+    "name": "add-income-role",
+    "aliases": [
+      "addincrole"
+    ],
+    "module": "income",
+    "description": "Add a new income-providing role",
+    "usage": "add-income-role <@role> <amount>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "add-money",
+    "aliases": [
+      "addbal"
+    ],
+    "module": "economy",
+    "description": "Add money to a user",
+    "usage": "add-money <@user> <amount> [cash|bank]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "add-money-role",
+    "aliases": [
+      "addbalrole"
+    ],
+    "module": "economy",
+    "description": "Add money to all users with a role",
+    "usage": "add-money-role <@role> <amount> [cash|bank]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "afk",
+    "aliases": [
+      "afklist",
+      "afkreset",
+      "afkadmin"
+    ],
+    "module": "general",
+    "description": "Set your AFK status, view active server AFK members, or reset AFK records (Admin/Owner).",
+    "usage": "afk [reason] | afk list | afk reset",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "au",
+    "aliases": [
+      "allow-user",
+      "allowuser",
+      "pvc-permit"
+    ],
+    "module": "pvc",
+    "description": "Allow users into your PVC",
+    "usage": "au <@user1> [@user2]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "balance",
+    "aliases": [
+      "bal",
+      "money"
+    ],
+    "module": "economy",
+    "description": "Shows your balance or a specified user's balance",
+    "usage": "balance [@user]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "buy-item",
+    "aliases": [
+      "buy"
+    ],
+    "module": "store",
+    "description": "Buy an item from the store",
+    "usage": "buy-item <item name or ID> [quantity]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "clean-leaderboard",
+    "aliases": [
+      "cleanlb"
+    ],
+    "module": "economy",
+    "description": "Remove members who left from the leaderboard",
+    "usage": "clean-leaderboard",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "coinflip",
+    "aliases": [
+      "cf"
+    ],
+    "module": "games",
+    "description": "Flip a coin with a 2x multiplier payout.",
+    "usage": "coinflip <amount> [h | t]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "collect",
+    "aliases": [
+      "salary",
+      "claimincome",
+      "collectincome"
+    ],
+    "module": "income",
+    "description": "Collect your role-based passive income",
+    "usage": "collect",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "confession",
+    "aliases": [],
+    "module": "confession",
+    "description": "Manage Confession module channel, log channel, submission panel, repair/repost clean confessions, or perform a reset.",
+    "usage": "confession <channel|log|panel|fix|reset> [args...]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "create",
+    "aliases": [
+      "pvc-buy"
+    ],
+    "module": "pvc",
+    "description": "Buy or extend PVC time",
+    "usage": "create <hours>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "create-item",
+    "aliases": [
+      "createitem"
+    ],
+    "module": "store",
+    "description": "Create a new item in the store",
+    "usage": "create-item <price> <name> | <description> [@role]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "daily",
+    "aliases": [
+      "claim",
+      "streak",
+      "dailyreward"
+    ],
+    "module": "income",
+    "description": "Claim your daily currency reward and grow your streak multiplier",
+    "usage": "daily",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "delete-item",
+    "aliases": [
+      "deleteitem",
+      "delitem"
+    ],
+    "module": "store",
+    "description": "Delete an item from the store",
+    "usage": "delete-item <item name or ID>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "deposit",
+    "aliases": [
+      "dep"
+    ],
+    "module": "economy",
+    "description": "Deposit cash into your bank",
+    "usage": "deposit <amount|all>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "dragme",
+    "aliases": [],
+    "module": "voice",
+    "description": "Request a user to drag you into their voice channel.",
+    "usage": "dragme <user>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "edit-item",
+    "aliases": [
+      "edititem"
+    ],
+    "module": "store",
+    "description": "Edit a store item's properties (price, name, stock, usable, sellable, description)",
+    "usage": "edit-item <item_id> <price|name|stock|usable|sellable|description> <new_value>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "fmv",
+    "aliases": [],
+    "module": "voice",
+    "description": "Force Move a target user to your voice channel when they are in or join voice.",
+    "usage": "fmv <@user> | fmv cancel [@user]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "game",
+    "aliases": [
+      "gamelist",
+      "games",
+      "gameconfig",
+      "listgames"
+    ],
+    "module": "gaming",
+    "description": "Manage single-destination game ping configurations and test channel.",
+    "usage": "game <create|edit|delete|list|testchannel> [args...]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "give-item",
+    "aliases": [
+      "giveitem"
+    ],
+    "module": "store",
+    "description": "Give an item to another user",
+    "usage": "give-item <@user> <item name or ID> [quantity]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "give-money",
+    "aliases": [
+      "give"
+    ],
+    "module": "economy",
+    "description": "Give cash to another user",
+    "usage": "give-money <@user> <amount>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "help",
+    "aliases": [],
+    "module": "general",
+    "description": "Display interactive bot help menu, category details, or specific command information.",
+    "usage": "help [module|command]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "hide",
+    "aliases": [
+      "h",
+      "unhide"
+    ],
+    "module": "moderation",
+    "description": "Hide or unhide a channel by managing ViewChannel permissions for @everyone, all roles, or a specific role.",
+    "usage": "hide [@Role|all|off] | unhide [@Role|all]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "i",
+    "aliases": [
+      "pvc-info",
+      "pvcinfo"
+    ],
+    "module": "pvc",
+    "description": "Show info and control panel for your PVC",
+    "usage": "i",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "ignore",
+    "aliases": [],
+    "module": "general",
+    "description": "Configure command or module whitelist/blacklist execution rules per role, channel, or user.",
+    "usage": "ignore <command|module|all> <wl|bl> <@role|#channel|@user|all> | ignore list | ignore remove <command|module|all> <wl|bl> <target>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "info",
+    "aliases": [
+      "botinfo",
+      "about"
+    ],
+    "module": "general",
+    "description": "Display comprehensive bot specs, system stats, and community telemetry.",
+    "usage": "info",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "invc",
+    "aliases": [],
+    "module": "voice",
+    "description": "List all members in a voice channel.",
+    "usage": "invc [voice-channel]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "inventory",
+    "aliases": [
+      "inv",
+      "bag"
+    ],
+    "module": "store",
+    "description": "Shows your inventory or a specified user's inventory",
+    "usage": "inventory [@user]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "item-info",
+    "aliases": [
+      "iteminfo"
+    ],
+    "module": "store",
+    "description": "Shows detailed information about a store item",
+    "usage": "item-info <item name or ID>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "item-options",
+    "aliases": [
+      "itemoptions"
+    ],
+    "module": "store",
+    "description": "Shows all configurable item options, behaviors, and triggers",
+    "usage": "item-options",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "leaderboard",
+    "aliases": [
+      "lb",
+      "top",
+      "rich"
+    ],
+    "module": "economy",
+    "description": "View the server economy leaderboard",
+    "usage": "leaderboard [cash|bank|net] [page]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "list",
+    "aliases": [
+      "inrole",
+      "admin",
+      "admins",
+      "bot",
+      "bots",
+      "listrole",
+      "membersinrole"
+    ],
+    "module": "moderation",
+    "description": "List members in a role, human server administrators, or bot accounts.",
+    "usage": "list <inrole <@role>|admin|bots>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "list-roles",
+    "aliases": [
+      "incroles",
+      "incomeroles"
+    ],
+    "module": "income",
+    "description": "List all roles that provide passive income",
+    "usage": "list-roles",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "lock",
+    "aliases": [
+      "l",
+      "unlock"
+    ],
+    "module": "moderation",
+    "description": "Lock or unlock a channel by managing SendMessages permissions for @everyone, all roles, or a specific role.",
+    "usage": "lock [@Role|all|off] | unlock [@Role|all]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "maintenance",
+    "aliases": [
+      "mm",
+      "maint"
+    ],
+    "module": "owner",
+    "description": "View or toggle global maintenance mode (Bot Owner only).",
+    "usage": "maintenance [on <reason>|off|status]",
+    "ownerOnly": true,
+    "hidden": false
+  },
+  {
+    "name": "media",
+    "aliases": [],
+    "module": "media",
+    "description": "Manage media channel filtering and auto-threading configuration.",
+    "usage": "media <channel|thread> <add|remove|list|on|off> [target]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "mines",
+    "aliases": [],
+    "module": "games",
+    "description": "Play Mines on a 3x3 grid with customizable mine count and dynamic multipliers.",
+    "usage": "mines <amount> [mine amount]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "money-audit-log",
+    "aliases": [
+      "moneyaudit",
+      "ecolog",
+      "moneylog"
+    ],
+    "module": "economy",
+    "description": "View recent money audit logs",
+    "usage": "money-audit-log",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "move",
+    "aliases": [
+      "multimove",
+      "mmv"
+    ],
+    "module": "voice",
+    "description": "Move a user or multiple users to a voice channel or to another user's voice channel.",
+    "usage": "move <users...> <destination> OR reply with move [users...] <destination>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "mv",
+    "aliases": [
+      "pull"
+    ],
+    "module": "voice",
+    "description": "Move multiple users to your current voice channel.",
+    "usage": "mv <users...>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "noprefix",
+    "aliases": [
+      "np"
+    ],
+    "module": "owner",
+    "description": "Toggle or set no-prefix command execution mode for a user, or list users with no-prefix mode enabled.",
+    "usage": "noprefix <user> [on|off] | noprefix list",
+    "ownerOnly": true,
+    "hidden": false
+  },
+  {
+    "name": "nuke",
+    "aliases": [
+      "clearall",
+      "recreatechannel",
+      "nukechannel"
+    ],
+    "module": "moderation",
+    "description": "Nuke current channel by cloning it (retaining permissions and position) and deleting the original.",
+    "usage": "nuke",
+    "ownerOnly": true,
+    "hidden": false
+  },
+  {
+    "name": "ping",
+    "aliases": [
+      "latency",
+      "pong"
+    ],
+    "module": "general",
+    "description": "Display real-time WebSocket, database, and roundtrip ping telemetry.",
+    "usage": "ping",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "purge",
+    "aliases": [
+      "c",
+      "purgerole"
+    ],
+    "module": "moderation",
+    "description": "Purge recent messages matching an optional user/filter, or purge a role from all members.",
+    "usage": "purge [@user] <amount> | purge <amount> [filter] | purge role <@role>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "pvc",
+    "aliases": [],
+    "module": "pvc",
+    "description": "Manage the PVC system",
+    "usage": "pvc <subcommand>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "remove-income-role",
+    "aliases": [
+      "remincrole"
+    ],
+    "module": "income",
+    "description": "Remove an income-providing role",
+    "usage": "remove-income-role <@role>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "remove-money",
+    "aliases": [
+      "removebal"
+    ],
+    "module": "economy",
+    "description": "Remove money from a user",
+    "usage": "remove-money <@user> <amount> [cash|bank]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "remove-money-role",
+    "aliases": [
+      "removebalrole"
+    ],
+    "module": "economy",
+    "description": "Remove money from all users with a role",
+    "usage": "remove-money-role <@role> <amount> [cash|bank]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "reset-economy",
+    "aliases": [
+      "reseteco"
+    ],
+    "module": "economy",
+    "description": "Reset the entire server economy",
+    "usage": "reset-economy <Server Name>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "reset-money",
+    "aliases": [
+      "resetbal"
+    ],
+    "module": "economy",
+    "description": "Reset your own balance, or a mentioned user's balance (requires Admin)",
+    "usage": "reset-money [@user]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "restart",
+    "aliases": [
+      "reboot",
+      "shutdown"
+    ],
+    "module": "owner",
+    "description": "Gracefully restart the bot instance (Bot Owner only).",
+    "usage": "restart",
+    "ownerOnly": true,
+    "hidden": false
+  },
+  {
+    "name": "restrict",
+    "aliases": [],
+    "module": "owner",
+    "description": "Revoke custom command/module permit from a user or role.",
+    "usage": "restrict <target> <command|module:name>",
+    "ownerOnly": true,
+    "hidden": false
+  },
+  {
+    "name": "rmv",
+    "aliases": [
+      "request-move",
+      "reqmove",
+      "requestmove"
+    ],
+    "module": "voice",
+    "description": "Request a user to be moved into your voice channel (requires their consent).",
+    "usage": "rmv <user>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "role",
+    "aliases": [
+      "r",
+      "urole",
+      "roleicon"
+    ],
+    "module": "moderation",
+    "description": "Manage roles: add, remove, or toggle role(s) on a user, batch-manage a role across users/role members, or set role icons.",
+    "usage": "role <user|role> <role(s)...> [?add|?rem] | role icon <role> [emoji|url|none]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "rp",
+    "aliases": [],
+    "module": "gaming",
+    "description": "Announce a game session by pinging its configured role and linking its destination VC.",
+    "usage": "rp <identifier> <message...>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "rpc",
+    "aliases": [
+      "presence",
+      "setpresence",
+      "setstatus"
+    ],
+    "module": "owner",
+    "description": "Manage bot dynamic presence (RPC), status, activity, and rotation modes.",
+    "usage": "rpc [mode|status|activity|reset] [args...]",
+    "ownerOnly": true,
+    "hidden": false
+  },
+  {
+    "name": "sell-item",
+    "aliases": [
+      "sell"
+    ],
+    "module": "store",
+    "description": "Sell an item from your inventory back for cash with confirmation.",
+    "usage": "sell-item <item name or ID> [quantity]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "set-bank-capacity",
+    "aliases": [
+      "setbankcapacity",
+      "setbanklimit",
+      "setbankcap"
+    ],
+    "module": "economy",
+    "description": "Set or remove bank capacity for a user or default server capacity",
+    "usage": "set-bank-capacity <@user|default> <amount|unlimited|0>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "set-currency",
+    "aliases": [
+      "setcur"
+    ],
+    "module": "economy",
+    "description": "Set the currency symbol",
+    "usage": "set-currency <symbol>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "set-game-cooldown",
+    "aliases": [
+      "game-cooldown",
+      "setcooldown"
+    ],
+    "module": "economy",
+    "description": "Set the cooldown in seconds for minigames (coinflip, mines) or economy jobs (work, slut, crime, rob)",
+    "usage": "set-game-cooldown <coinflip|mines|all|work|slut|crime|rob> <seconds>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "set-income-reset",
+    "aliases": [],
+    "module": "economy",
+    "description": "Set passive income reset duration",
+    "usage": "set-income-reset <seconds>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "set-passive-chat-income",
+    "aliases": [
+      "setpassive"
+    ],
+    "module": "economy",
+    "description": "Toggle passive chat income and set amount",
+    "usage": "set-passive-chat-income <on|off> [amount]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "set-start-balance",
+    "aliases": [],
+    "module": "economy",
+    "description": "Set the starting balance for new users",
+    "usage": "set-start-balance <amount>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "setlogs",
+    "aliases": [
+      "logchannel",
+      "auditlog",
+      "setauditlog",
+      "setlog"
+    ],
+    "module": "moderation",
+    "description": "Set or disable the server audit log channel for moderation and bot actions.",
+    "usage": "setlogs <#channel|off|status>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "shiftvc",
+    "aliases": [
+      "moveall",
+      "svc"
+    ],
+    "module": "voice",
+    "description": "Move all members from one voice channel to another with live tracking.",
+    "usage": "shiftvc <destination> OR shiftvc <source>, <destination>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "slowmode",
+    "aliases": [
+      "sm",
+      "slow",
+      "cooldown"
+    ],
+    "module": "moderation",
+    "description": "Set Discord native slowmode on current text channel.",
+    "usage": "slowmode <duration|off>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "snipe",
+    "aliases": [
+      "s",
+      "esnipe",
+      "clearsnipe"
+    ],
+    "module": "moderation",
+    "description": "Retrieve recently deleted or edited messages in this channel, or clear snipe history.",
+    "usage": "snipe [index|list] | snipe edit [index|list] | snipe clear",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "stats",
+    "aliases": [
+      "economy-stats"
+    ],
+    "module": "economy",
+    "description": "View server economy statistics",
+    "usage": "stats",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "steal",
+    "aliases": [
+      "stealemoji",
+      "stealsticker",
+      "addemoji"
+    ],
+    "module": "general",
+    "description": "Steal custom emojis, stickers, images, or links and add them to server emojis.",
+    "usage": "steal [emoji(s)|url] [name] OR reply with steal [name]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "sticky",
+    "aliases": [
+      "stick",
+      "unstick",
+      "stickyedit",
+      "stickyrefresh"
+    ],
+    "module": "sticky",
+    "description": "Create, edit, remove, refresh, or list sticky messages in channels.",
+    "usage": "sticky <message...> | sticky edit <new_message...> | sticky remove | sticky refresh | sticky list",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "store",
+    "aliases": [
+      "catalog",
+      "shop"
+    ],
+    "module": "store",
+    "description": "Shows all items and roles available in the server store",
+    "usage": "store [page]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "suggestion",
+    "aliases": [
+      "suggest",
+      "accept",
+      "deny",
+      "consider"
+    ],
+    "module": "suggestion",
+    "description": "Manage Suggestion channel, panel, blacklist, status (accept/deny/consider), or reset.",
+    "usage": "suggestion <channel|panel|blacklist|accept|consider|deny|reset> [args...] OR accept/deny/consider <number> [reason]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "take-item",
+    "aliases": [
+      "takeitem"
+    ],
+    "module": "store",
+    "description": "Take an item from a user's inventory (Staff only)",
+    "usage": "take-item <@user> <item name or ID> [quantity]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "update-income",
+    "aliases": [
+      "forcepay"
+    ],
+    "module": "income",
+    "description": "Force a mass payout for all members with a specific role",
+    "usage": "update-income <@role>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "update-income-role",
+    "aliases": [
+      "updateincrole"
+    ],
+    "module": "income",
+    "description": "Update an existing income-providing role",
+    "usage": "update-income-role <@role> <amount>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "use-item",
+    "aliases": [
+      "use"
+    ],
+    "module": "store",
+    "description": "Use an item from your inventory to trigger its effects or roles.",
+    "usage": "use-item <item name or ID>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "vc",
+    "aliases": [
+      "vcmute",
+      "vcunmute",
+      "vcmuteall",
+      "vcunmuteall",
+      "vcdeafen",
+      "vcundeafen",
+      "vcdeafenall",
+      "vcundeafenall",
+      "vckick",
+      "vcslam",
+      "vcunslam"
+    ],
+    "module": "voice",
+    "description": "Complete voice channel management: mute, unmute, deafen, undeafen, kick, or slam VC members.",
+    "usage": "vc <mute|unmute|muteall|unmuteall|deafen|undeafen|deafenall|undeafenall|kick|slam|unslam> [args...]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "vclimit",
+    "aliases": [
+      "userlimit",
+      "limitvc"
+    ],
+    "module": "voice",
+    "description": "View or set the user limit for a voice channel (0 = unlimited).",
+    "usage": "vclimit [limit] [channel] OR vclimit [channel] [limit]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "vclock",
+    "aliases": [
+      "vcblind",
+      "vcunlock"
+    ],
+    "module": "voice",
+    "description": "Lock or blind a voice channel by toggling Connect or ViewChannel permissions for everyone.",
+    "usage": "vclock [voice_channel] | vcblind [voice_channel]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "vconfig",
+    "aliases": [],
+    "module": "voice",
+    "description": "Configure voice command channel access (whitelist/blacklist) per role.",
+    "usage": "vconfig <voice-command|all> <wl|bl> <@role|?all> [all|?all] | vconfig list | vconfig remove <command|all> <wl|bl> <@role|?all>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "welcome",
+    "aliases": [
+      "greet",
+      "greeting",
+      "greetings",
+      "leave",
+      "farewell"
+    ],
+    "module": "welcome",
+    "description": "Manage welcome greetings and leave messages configuration.",
+    "usage": "welcome <greet|leave> <channel|message|remove|showvars|test> [args...]",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "withdraw",
+    "aliases": [
+      "with"
+    ],
+    "module": "economy",
+    "description": "Withdraw money from your bank to cash",
+    "usage": "withdraw <amount|all>",
+    "ownerOnly": false,
+    "hidden": false
+  },
+  {
+    "name": "wv",
+    "aliases": [
+      "whichvc"
+    ],
+    "module": "voice",
+    "description": "Check which voice channel a user is in.",
+    "usage": "wv [user]",
+    "ownerOnly": false,
+    "hidden": false
+  }
+]

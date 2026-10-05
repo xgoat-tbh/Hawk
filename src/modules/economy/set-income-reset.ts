@@ -18,7 +18,7 @@ export default defineCommand({
       return;
     }
 
-    await setEconomyConfigField(ctx.guild.id, 'passiveCooldown' as any, duration).catch(() => {});
+    await setEconomyConfigField(ctx.guild.id, 'incomeReset', duration);
     await ctx.respond.success(`Income reset duration set to **${duration}s**`);
   }
 });

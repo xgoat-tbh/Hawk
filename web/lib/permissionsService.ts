@@ -162,11 +162,11 @@ export async function fetchGuildPermissions(guildId: string): Promise<{
 
         if (p.target_type === 'role') {
           if (!cmd.roleOverrides.some((ro) => ro.roleId === p.target_id)) {
-            cmd.roleOverrides.push({ roleId: p.target_id, effect: 'ALLOW' });
+            cmd.roleOverrides.push({ roleId: p.target_id, effect: p.effect === 'DENY' ? 'DENY' : 'ALLOW' });
           }
         } else if (p.target_type === 'user') {
           if (!cmd.userOverrides.some((uo) => uo.userId === p.target_id)) {
-            cmd.userOverrides.push({ userId: p.target_id, effect: 'ALLOW' });
+            cmd.userOverrides.push({ userId: p.target_id, effect: p.effect === 'DENY' ? 'DENY' : 'ALLOW' });
           }
         }
       }

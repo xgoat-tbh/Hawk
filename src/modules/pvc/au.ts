@@ -15,13 +15,13 @@ export default defineCommand({
   async execute(ctx: CommandContext): Promise<void> {
     const session = await getSessionByOwner(ctx.guild.id, ctx.message.author.id);
     if (!session) {
-      ctx.respond.error("You don't have an active PVC.");
+      await ctx.respond.error("You don't have an active PVC.");
       return;
     }
 
     const mentions = Array.from(ctx.message.mentions.users.values());
     if (mentions.length === 0) {
-      ctx.respond.error('Please mention at least one user to allow.');
+      await ctx.respond.error('Please mention at least one user to allow.');
       return;
     }
 

@@ -1,14 +1,17 @@
 'use client';
+import { apiFetch } from '@/lib/api';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useGuildData } from '@/context/GuildContext';
 import { useFormDraft } from '@/hooks/useFormDraft';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { Toggle } from '@/components/ui/Toggle';
+
+
 import { SaveBar } from '@/components/SaveBar';
-import { StatCard } from '@/components/ui/StatCard';
-import { SystemRoutingSection } from '@/components/Welcome/SystemRoutingSection';
-import { MessageFormatSection } from '@/components/Welcome/MessageFormatSection';
-import { WelcomePreview } from '@/components/Welcome/WelcomePreview';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
+import { DiscordEmbedSimulator } from '@/components/DiscordEmbedSimulator';
 import { WelcomeFormState } from '@/components/Welcome/types';
 import {
   HeartHandshake,
@@ -29,12 +32,14 @@ export default function WelcomeGreetingsPage() {
   const { guildId } = useParams() as { guildId: string };
   const { guild, bot, channels, config, updateConfigLocally } = useGuildData();
 
-  const [activeTab, setActiveTab] = useState<'routing' | 'designer' | 'json'>('designer');
+  const [showJson, setShowJson] = useState(false);
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
   const [copiedJson, setCopiedJson] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const activeEditor = useRef<{ element: HTMLInputElement | HTMLTextAreaElement; field: 'title' | 'description' | 'footerText' | 'imageUrl' | 'thumbnailUrl' } | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const initialData = useMemo<WelcomeFormState>(() => {
     const wConf = config?.welcome?.config || {};
@@ -65,8 +70,12 @@ export default function WelcomeGreetingsPage() {
     reset,
     save,
   } = useFormDraft<WelcomeFormState>({
-    initialData,
+    autoSaveMs: 1500, initialData,
     onSave: async (formValues) => {
+      if (formValues.enabled && !formValues.channelId) throw new Error('Choose a destination channel before enabling greetings.');
+      if (formValues.description.length > (formValues.isEmbed ? 4096 : 2000)) throw new Error('Message exceeds the Discord character limit.');
+      if (formValues.title.length > 256 || (formValues.footerText || '').length > 2048) throw new Error('Title or footer exceeds the Discord character limit.');
+      if (!/^#[0-9a-f]{6}$/i.test(formValues.color)) throw new Error('Enter a six-digit hex color, for example #8899aa.');
       const payload = {
         config: {
           enabled: formValues.enabled,
@@ -83,7 +92,7 @@ export default function WelcomeGreetingsPage() {
         },
       };
 
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,8 +106,13 @@ export default function WelcomeGreetingsPage() {
         throw new Error(err.error || 'Failed to save welcome configuration.');
       }
 
-      updateConfigLocally('welcome', payload);
-      return formValues;
+      const result = await res.json();
+      const saved = result.data;
+      updateConfigLocally('welcome', { ...saved, config: { ...saved.config, is_embed: saved.is_embed } });
+      return { ...formValues, enabled: saved.config.enabled, channelId: saved.config.channel_id, isEmbed: saved.is_embed,
+        title: saved.embed.title, description: saved.embed.description, color: saved.embed.color,
+        thumbnailUrl: saved.embed.thumbnail_url || '', imageUrl: saved.embed.image_url || '', footerText: saved.embed.footer_text || '' };
+
     },
   });
 
@@ -106,23 +120,14 @@ export default function WelcomeGreetingsPage() {
   const targetChannel = channels.find((c) => c.id === current.channelId);
 
   const insertToken = (token: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setField('description', current.description + ' ' + token);
-      return;
-    }
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = current.description;
-    const newText = text.substring(0, start) + token + text.substring(end);
-
-    setField('description', newText);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + token.length, start + token.length);
-    }, 0);
+    const editor = activeEditor.current;
+    const element = editor?.element || textareaRef.current;
+    const field = editor?.field || 'description';
+    const text = String(current[field] || '');
+    const start = element?.selectionStart ?? text.length;
+    const end = element?.selectionEnd ?? text.length;
+    setField(field, text.slice(0, start) + token + text.slice(end));
+    requestAnimationFrame(() => { element?.focus(); element?.setSelectionRange(start + token.length, start + token.length); });
   };
 
   const handleSendTestMessage = async () => {
@@ -136,7 +141,7 @@ export default function WelcomeGreetingsPage() {
     setTestResult(null);
 
     try {
-      const res = await fetch(`/api/guilds/${guildId}/test-welcome`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/test-welcome`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,6 +172,7 @@ export default function WelcomeGreetingsPage() {
   };
 
   const jsonPayload = useMemo(() => {
+    if (!current.isEmbed) return { content: current.description };
     return {
       embeds: [
         {
@@ -181,212 +187,48 @@ export default function WelcomeGreetingsPage() {
     };
   }, [current]);
 
-  const handleCopyJson = () => {
-    navigator.clipboard.writeText(JSON.stringify(jsonPayload, null, 2));
-    setCopiedJson(true);
-    setTimeout(() => setCopiedJson(false), 2500);
+  const handleCopyJson = async () => {
+    try { await navigator.clipboard.writeText(JSON.stringify(jsonPayload, null, 2)); setCopiedJson(true); setTimeout(() => setCopiedJson(false), 2500); }
+    catch { setTestResult({ success: false, message: 'Clipboard unavailable. Select the JSON text to copy it.' }); }
   };
 
-  return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
-            <HeartHandshake className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
-            Welcome Greetings & Embed Designer
-          </h1>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#8c949e]">
-            Craft automated welcome messages dispatched when members join your server.
-          </p>
-        </div>
+  const tokenVariables = [
+    { label: '{user}', desc: 'Mention member' },
+    { label: '{username}', desc: 'Plain username' },
+    { label: '{server}', desc: 'Server name' },
+    { label: '{server.count}', desc: 'Member count' },
+    { label: '{user.avatar}', desc: 'Avatar URL' },
+  ];
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleSendTestMessage}
-            disabled={testSending || !current.channelId}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors disabled:opacity-40 shadow-xs"
-            title="Dispatch a test greeting to your configured Discord channel"
-          >
-            {testSending ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Send className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
-            )}
-            <span>{testSending ? 'Sending...' : 'Test in Discord'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Test Result Banner */}
-      {testResult && (
-        <div
-          className={`p-3 rounded-xl text-xs border flex items-center justify-between transition-all ${
-            testResult.success
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-          }`}
-        >
-          <span>{testResult.message}</span>
-        </div>
-      )}
-
-      {/* Overview StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Delivery State"
-          value={current.enabled ? 'Enabled' : 'Disabled'}
-          subtitle="Automated welcome trigger"
-          icon={Sparkles}
-        />
-        <StatCard
-          title="Target Channel"
-          value={targetChannel ? `#${targetChannel.name}` : 'Not Assigned'}
-          subtitle="Public greeting channel"
-          icon={Hash}
-        />
-        <StatCard
-          title="Message Format"
-          value={current.isEmbed ? 'Rich Embed' : 'Plain Text'}
-          subtitle="Card rendering engine"
-          icon={MessageSquare}
-        />
-        <StatCard
-          title="Server Scope"
-          value={guild?.approximateMemberCount ? `${guild.approximateMemberCount.toLocaleString()}` : `${channels.length} Channels`}
-          subtitle="Target audience reach"
-          icon={Users}
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
-        <button
-          onClick={() => setActiveTab('designer')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'designer'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          Message & Embed Designer
-        </button>
-
-        <button
-          onClick={() => setActiveTab('routing')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'routing'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Sliders className="w-4 h-4" />
-          Routing & Setup
-        </button>
-
-        <button
-          onClick={() => setActiveTab('json')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
-            activeTab === 'json'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white font-semibold'
-              : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-[#717882] dark:hover:text-[#c1c7cd]'
-          }`}
-        >
-          <Code className="w-4 h-4" />
-          Raw JSON Payload
-        </button>
-      </div>
-
-      {/* TAB 1: Designer */}
-      {activeTab === 'designer' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-7 bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-            <MessageFormatSection
-              current={current}
-              setField={setField}
-              textareaRef={textareaRef}
-              insertToken={insertToken}
-            />
-
-            <div className="pt-3 flex items-center justify-between border-t border-black/[0.08] dark:border-[#1a1d24]">
-              <button
-                type="button"
-                onClick={handleCopyJson}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
-              >
-                {copiedJson ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5 text-slate-400 dark:text-[#717882]" />
-                )}
-                <span>{copiedJson ? 'Copied JSON!' : 'Copy Discord JSON'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => reset()}
-                disabled={!isDirty}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-slate-500 dark:text-[#717882] hover:text-slate-900 dark:hover:text-[#c1c7cd] flex items-center gap-1.5 transition-colors disabled:opacity-40 shadow-xs"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Draft</span>
-              </button>
-            </div>
+  const limit = current.isEmbed ? 4096 : 2000;
+  const fields = [ ['title', 'Embed title', 256], ['footerText', 'Footer text', 2048], ['thumbnailUrl', 'Thumbnail URL', 2048], ['imageUrl', 'Image URL', 2048] ] as const;
+  return <div className="space-y-5">
+    <PageHeader guildId={guildId} title="Welcome greetings" description="Create a thoughtful first message for new members. Preview changes as you edit."
+      actions={<button className="btn-secondary" onClick={handleSendTestMessage} disabled={testSending || !current.channelId || current.description.length > limit}><Send size={14} className="mr-2"/>{testSending ? 'Sending…' : 'Test in Discord'}</button>}/>
+    {testResult && <p role="status" className={`text-sm ${testResult.success ? 'text-success-text' : 'text-critical-text'}`}>{testResult.message}</p>}
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,.8fr)] gap-8 items-start">
+      <div className="min-w-0">
+        <section className="hawk-settings-section"><h2>System routing</h2>
+          <div className="flex items-center justify-between gap-4 py-4"><div><label className="font-medium">Welcome messages</label><p className="text-xs text-text-secondary mt-1">Greet members when they join this server.</p></div><Toggle label="Enable welcome messages" checked={current.enabled} onChange={v => setField('enabled', v)}/></div>
+          <label htmlFor="welcome-channel" className="text-sm block mb-2">Destination channel</label><ChannelPicker id="welcome-channel" label="Destination channel" channels={channels} value={current.channelId} onChange={v => setField('channelId', v)}/>
+          {current.enabled && !current.channelId && <p className="text-warning-text text-xs mt-2">Choose a channel to deliver welcome messages.</p>}
+        </section>
+        <section className="hawk-settings-section"><h2>Message format</h2><div className="flex justify-between gap-4 items-center"><div><span className="text-sm">Rich embed</span><p className="text-xs text-text-secondary mt-1">Add a title, color, images, and footer.</p></div><Toggle label="Use rich embed" checked={current.isEmbed} onChange={v => setField('isEmbed', v)}/></div></section>
+        <section className="hawk-settings-section space-y-4"><h2>Message content</h2>
+          {current.isEmbed && <div><label htmlFor="welcome-title" className="text-sm block mb-2">Embed title</label><input id="welcome-title" className="glass-input" value={current.title} maxLength={256} onFocus={e => { activeEditor.current = { element: e.currentTarget, field: 'title' }; }} onChange={e => setField('title', e.target.value)}/></div>}
+          <div><div className="flex justify-between mb-2"><label htmlFor="welcome-message" className="text-sm">Message body</label><span id="welcome-count" className={`text-xs font-mono ${current.description.length > limit ? 'text-critical-text' : 'text-text-muted'}`}>{current.description.length} / {limit}</span></div>
+            <textarea ref={textareaRef} id="welcome-message" rows={7} className="glass-input leading-relaxed" aria-describedby="welcome-count" aria-invalid={current.description.length > limit} value={current.description} onFocus={e => { activeEditor.current = { element: e.currentTarget, field: 'description' }; }} onChange={e => setField('description', e.target.value)}/>
+            {current.description.length > limit && <p role="alert" className="text-critical-text text-xs">Shorten the message to fit Discord's character limit.</p>}
           </div>
-
-          <div className="lg:col-span-5 sticky top-6">
-            <WelcomePreview
-              current={current}
-              guildName={guild?.name}
-              botUsername="Amo Bot"
-              botAvatarUrl={bot?.avatarUrl}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: Routing */}
-      {activeTab === 'routing' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SystemRoutingSection
-            current={current}
-            channels={channels}
-            setField={setField}
-          />
-        </div>
-      )}
-
-      {/* TAB 3: Raw JSON */}
-      {activeTab === 'json' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-[#101217] dark:text-white">Discord REST JSON Representation</h3>
-              <p className="text-xs text-slate-500 dark:text-[#8c949e]">Full embed payload sent to Discord Webhook and REST API channels.</p>
-            </div>
-            <button
-              onClick={handleCopyJson}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-slate-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#101217] dark:text-[#c1c7cd] hover:text-black dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
-            >
-              {copiedJson ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400 dark:text-[#717882]" />}
-              {copiedJson ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-          <pre className="p-4 rounded-lg bg-slate-50 dark:bg-[#121418] border border-black/[0.08] dark:border-[#20242c] text-xs font-mono text-slate-800 dark:text-[#c1c7cd] overflow-x-auto">
-            {JSON.stringify(jsonPayload, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      <SaveBar
-        isDirty={isDirty}
-        saveState={saveState}
-        onSave={save}
-        onReset={reset}
-        error={saveError}
-      />
+          <div><h3 className="text-xs text-text-secondary mb-2">Insert a variable into the active field</h3><div className="flex flex-wrap gap-2">{tokenVariables.map(t => <button key={t.label} type="button" onClick={e => {  insertToken(t.label); }} className="btn-secondary font-mono text-xs" title={t.desc}>{t.label}</button>)}</div></div>
+        </section>
+        {current.isEmbed && <section className="hawk-settings-section space-y-4"><h2>Embed appearance</h2><div><label htmlFor="welcome-color" className="text-sm block mb-2">Accent color</label><div className="flex gap-3"><input aria-label="Choose embed color" type="color" value={/^#[0-9a-f]{6}$/i.test(current.color) ? current.color : '#8899aa'} onChange={e => setField('color', e.target.value)} className="w-10 h-10 bg-transparent"/><input id="welcome-color" value={current.color} onChange={e => setField('color', e.target.value)} className="glass-input font-mono max-w-40"/></div></div>
+          {fields.filter(([field]) => field !== 'title').map(([field,label,max]) => <div key={field}><label htmlFor={`welcome-${field}`} className="text-sm block mb-2">{label}</label><input id={`welcome-${field}`} value={current[field] || ''} maxLength={max} className="glass-input" onFocus={e => { activeEditor.current = { element: e.currentTarget, field }; }} onChange={e => setField(field, e.target.value)}/></div>)}
+        </section>}
+        <section className="py-5"><button className="btn-ghost" onClick={() => setShowJson(!showJson)} aria-expanded={showJson}><Code size={14} className="mr-2"/>Advanced: message payload</button>{showJson && <div className="mt-3 space-y-3"><pre className="p-4 bg-surface-1 rounded-md text-xs overflow-auto max-h-80">{JSON.stringify(jsonPayload, null, 2)}</pre><button className="btn-secondary" onClick={handleCopyJson}>{copiedJson ? 'Copied' : 'Copy JSON'}</button></div>}</section>
+      </div>
+      <aside className="xl:sticky xl:top-0 space-y-3 min-w-0"><div className="flex justify-between text-xs"><h2 className="font-semibold">Live preview</h2><span className="text-text-muted">Illustrative member</span></div><div ref={previewRef} className="rounded-lg overflow-hidden bg-discord-chat p-4"><DiscordEmbedSimulator isEmbed={current.isEmbed} title={current.title} description={current.description} color={current.color} thumbnailUrl={current.thumbnailUrl === '{user.avatar}' ? null : current.thumbnailUrl} imageUrl={current.imageUrl || null} footerText={current.footerText} serverName={guild?.name} memberCount={guild?.approximateMemberCount ?? guild?.memberCount} botName={bot?.username || 'Hawk'} botAvatarUrl={bot?.avatarUrl}/></div><p className="text-xs text-text-muted leading-relaxed">{targetChannel ? `Delivery channel: #${targetChannel.name}.` : 'Choose a delivery channel.'} Preview updates are local until you save.</p></aside>
     </div>
-  );
+    <SaveBar isDirty={isDirty} saveState={saveState} error={saveError} onSave={save} onReset={reset}/>
+  </div>;
 }

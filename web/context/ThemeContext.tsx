@@ -1,56 +1,19 @@
 'use client';
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
-
-type Theme = 'light' | 'dark';
-
-interface ThemeContextType {
-  theme: Theme;
-  toggleTheme: () => void;
-  setTheme: (theme: Theme) => void;
-}
-
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
-  toggleTheme: () => {},
-  setTheme: () => {},
-});
-
+import { MotionConfig } from 'framer-motion';
+export type Theme = 'dark' | 'light' | 'system';
+const ThemeContext = createContext({ theme: 'system' as Theme, resolvedTheme: 'dark' as 'dark' | 'light', toggleTheme: () => {}, setTheme: (_theme: Theme) => {} });
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light');
-
+  const [theme, setTheme] = useState<Theme>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
+  useEffect(() => { try { const saved = localStorage.getItem('hawk_theme'); if (saved === 'dark' || saved === 'light' || saved === 'system') setTheme(saved); } catch { /* Storage may be unavailable; keep the current preference. */ } }, []);
   useEffect(() => {
-    const saved = localStorage.getItem('amo_theme') as Theme | null;
-    if (saved === 'dark' || saved === 'light') {
-      setThemeState(saved);
-      document.documentElement.classList.toggle('dark', saved === 'dark');
-      document.documentElement.classList.toggle('light', saved === 'light');
-    } else {
-      // Default to light to match reference design
-      setThemeState('light');
-      document.documentElement.classList.remove('dark');
-      document.documentElement.classList.add('light');
-    }
-  }, []);
-
-  const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
-    localStorage.setItem('amo_theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-    document.documentElement.classList.toggle('light', newTheme === 'light');
-  };
-
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
-
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+    const media = matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => { const resolved = theme === 'system' ? (media.matches ? 'dark' : 'light') : theme; setResolvedTheme(resolved); document.documentElement.classList.remove('dark', 'light'); document.documentElement.classList.add(resolved); document.documentElement.style.colorScheme = resolved; };
+    apply(); media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, [theme]);
+  const change = (value: Theme) => { setTheme(value); try { localStorage.setItem('hawk_theme', value); } catch { /* Storage may be unavailable; keep the current preference. */ } };
+  return <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme: change, toggleTheme: () => change(resolvedTheme === 'dark' ? 'light' : 'dark') }}><MotionConfig reducedMotion="user">{children}</MotionConfig></ThemeContext.Provider>;
 }
-
-export function useTheme() {
-  return useContext(ThemeContext);
-}
+export function useTheme() { return useContext(ThemeContext); }

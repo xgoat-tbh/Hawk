@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, canManageGuild, isGuildOwner } from '@/lib/auth';
+import { getSession, canManageGuild, canViewGuild, isGuildOwner } from '@/lib/auth';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 import { logAuditEvent } from '@/lib/audit';
 import { PermissionProfile, UserOverride } from '@/lib/permissions';
+import { resolveBuiltInCommand } from '@/lib/commands';
 import { fetchGuildPermissions } from '@/lib/permissionsService';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
-  const allowed = await canManageGuild(session.id, guildId);
+  const allowed = await canViewGuild(session.id, guildId);
   if (!allowed) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -161,29 +162,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         source: 'DASHBOARD',
       });
     } else if (action === 'save_command_acl') {
-      const { command, roleOverrides = [], userOverrides = [] } = data;
+      const { roleOverrides = [], userOverrides = [] } = data;
+      let command = data.command;
 
-      // Sync with PostgreSQL 'permits' table
-      await db.begin(async (tx) => {
-        await tx`DELETE FROM permits WHERE guild_id = ${guildId} AND command_name = ${command}`;
-        for (const ro of roleOverrides) {
-          if (ro.effect === 'ALLOW') {
-            await tx`
-              INSERT INTO permits (guild_id, target_type, target_id, command_name, module_name)
-              VALUES (${guildId}, 'role', ${ro.roleId}, ${command}, null)
-              ON CONFLICT (guild_id, target_type, target_id, command_name, module_name) DO NOTHING
-            `;
-          }
-        }
-        for (const uo of userOverrides) {
-          if (uo.effect === 'ALLOW') {
-            await tx`
-              INSERT INTO permits (guild_id, target_type, target_id, command_name, module_name)
-              VALUES (${guildId}, 'user', ${uo.userId}, ${command}, null)
-              ON CONFLICT (guild_id, target_type, target_id, command_name, module_name) DO NOTHING
-            `;
-          }
-        }
+      const catalogCommand = typeof command === 'string' ? resolveBuiltInCommand(command.toLowerCase()) : undefined;
+      let module = catalogCommand?.module;
+      if (!module && typeof command === 'string') {
+        const rows = await db`SELECT name FROM custom_commands WHERE guild_id = ${guildId} AND name = ${command}`;
+        if (rows.length) module = 'custom';
+      }
+      if (catalogCommand) command = catalogCommand.name;
+      const identities = catalogCommand ? [catalogCommand.name, ...catalogCommand.aliases] : [command];
+      if (!module || !Array.isArray(roleOverrides) || !Array.isArray(userOverrides) || roleOverrides.length + userOverrides.length > 500) return NextResponse.json({ error: 'Invalid command access rules' }, { status: 400 });
+      const valid = (target: unknown, effect: unknown) => typeof target === 'string' && /^\d{17,20}$/.test(target) && (effect === 'ALLOW' || effect === 'DENY');
+      if (!roleOverrides.every((r: any) => valid(r.roleId, r.effect)) || !userOverrides.every((u: any) => valid(u.userId, u.effect))) return NextResponse.json({ error: 'Invalid rule target or effect' }, { status: 400 });
+      await db.begin(async tx => {
+        await tx`SELECT pg_advisory_xact_lock(hashtext(${'acl:' + guildId + ':' + command}))`;
+        await tx`DELETE FROM permits WHERE guild_id = ${guildId} AND command_name = ANY(${identities})`;
+        for (const rule of roleOverrides) await tx`INSERT INTO permits (guild_id, target_type, target_id, command_name, module_name, effect) VALUES (${guildId}, 'role', ${rule.roleId}, ${command}, ${module}, ${rule.effect})`;
+        for (const rule of userOverrides) await tx`INSERT INTO permits (guild_id, target_type, target_id, command_name, module_name, effect) VALUES (${guildId}, 'user', ${rule.userId}, ${command}, ${module}, ${rule.effect})`;
+        await tx`SELECT pg_notify('dashboard_events', ${JSON.stringify({ guildId, event: 'config:changed' })})`;
       });
 
       await logAuditEvent({
@@ -198,6 +196,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         source: 'DASHBOARD',
       });
     }
+
+    else return NextResponse.json({ error: 'Unsupported permission action' }, { status: 400 });
 
     const updatedPermissions = await fetchGuildPermissions(guildId);
     return NextResponse.json({

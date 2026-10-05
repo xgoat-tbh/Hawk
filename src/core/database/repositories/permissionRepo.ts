@@ -1,6 +1,7 @@
 import { getDb } from '../pool.js';
 import type { PermitRecord } from '../../../types/permission.js';
 import { TTLCache } from '../../utils/TTLCache.js';
+import { resolvePermitEffect } from '../../permissions/permitEffect.js';
 
 const permitCache = new TTLCache<string, PermitRecord[]>(30_000);
 
@@ -46,16 +47,7 @@ export async function hasPermit(
   moduleName: string,
 ): Promise<boolean> {
   const permits = await getPermitsForGuild(guildId);
-  return permits.some((p) => {
-    const matchTarget = (p.targetType === 'user' && p.targetId === userId) ||
-                        (p.targetType === 'role' && roleIds.includes(p.targetId));
-    if (!matchTarget) return false;
-
-    const matchCmd = (p.commandName === commandName && p.moduleName === moduleName) ||
-                     (p.commandName === null && p.moduleName === moduleName) ||
-                     (p.commandName === null && p.moduleName === null);
-    return matchCmd;
-  });
+  return resolvePermitEffect(permits, userId, roleIds, commandName, moduleName) === 'ALLOW';
 }
 
 export async function addPermit(
@@ -181,6 +173,7 @@ function mapPermitRow(row: Record<string, unknown>): PermitRecord {
     targetId: row.target_id as string,
     commandName: row.command_name as string | null,
     moduleName: row.module_name as string | null,
+    effect: row.effect === 'DENY' ? 'DENY' : 'ALLOW',
     createdAt: row.created_at as Date,
   };
 }

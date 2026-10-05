@@ -2,8 +2,10 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Loader2, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import type { SaveState } from '@/hooks/useFormDraft';
-import { animateSaveBarEnter } from '@/lib/animations';
+import { AnimatePresence, motion } from 'framer-motion';
+import { saveBarVariants } from '@/lib/motion';
 
 interface SaveBarProps {
   isDirty?: boolean;
@@ -28,7 +30,7 @@ export function SaveBar({
 }: SaveBarProps) {
   const effectiveIsDirty = isDirty !== undefined ? isDirty : Boolean(hasChanges);
   const effectiveSaveState: SaveState =
-    saveState || (isSaving ? 'saving' : success ? 'success' : error ? 'error' : 'idle');
+    (effectiveIsDirty && saveState === 'success' ? 'idle' : saveState) || (isSaving ? 'saving' : success ? 'success' : error ? 'error' : 'idle');
 
   const barRef = useRef<HTMLDivElement>(null);
 
@@ -53,18 +55,13 @@ export function SaveBar({
     effectiveSaveState === 'success' ||
     effectiveSaveState === 'error';
 
-  useEffect(() => {
-    if (isVisible && barRef.current) {
-      animateSaveBarEnter(barRef.current);
-    }
-  }, [isVisible]);
-
-  if (!isVisible) return null;
-
-  return (
-    <div
+  if (typeof document === 'undefined') return null;
+  const host = document.getElementById("save-dock");
+  if (!host) return null;
+  return createPortal(
+    <AnimatePresence>{isVisible && <motion.div variants={saveBarVariants} initial="initial" animate="enter" exit="exit"
       ref={barRef}
-      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-full max-w-xl px-4 pointer-events-auto select-none"
+      className="hawk-save-bar" role="status" aria-live="polite"
     >
       <div
         className={`border rounded-lg px-4 py-2.5 flex items-center justify-between gap-4 backdrop-blur-xl shadow-popover-clean transition-colors duration-150 ${
@@ -72,35 +69,35 @@ export function SaveBar({
             ? 'bg-[#0d1611]/95 border-success-border text-success-text'
             : effectiveSaveState === 'error'
             ? 'bg-[#180f11]/95 border-critical-border text-critical-text'
-            : 'bg-white/95 dark:bg-[#121417]/95 border-black/[0.1] dark:border-[#2a2d33] shadow-lg'
+            : 'bg-white/95 dark:bg-surface-3/95 border-black/[0.1] dark:border-[#2a2d33] shadow-lg'
         }`}
       >
         {/* Left Side: Status Info */}
         <div className="flex items-center gap-2.5 text-xs">
           {effectiveSaveState === 'error' ? (
             <>
-              <AlertCircle className="w-4 h-4 text-critical shrink-0" />
+              <AlertCircle className="w-4 h-4 text-critical-text shrink-0" />
               <span className="text-critical-text font-medium text-xs truncate max-w-xs">
                 {error || 'Failed to save changes.'}
               </span>
             </>
           ) : effectiveSaveState === 'success' ? (
             <>
-              <Check className="w-4 h-4 text-success shrink-0" />
+              <Check className="w-4 h-4 text-success-text shrink-0" />
               <span className="text-success-text font-medium text-xs">
-                Saved to database
+                Changes saved
               </span>
             </>
           ) : effectiveSaveState === 'saving' ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-slate-500 dark:text-[#949aa2] shrink-0" />
-              <span className="text-[#101217] dark:text-[#ededed] font-medium text-xs">Persisting changes...</span>
+              <Loader2 className="w-4 h-4 animate-spin text-slate-500 dark:text-text-secondary shrink-0" />
+              <span className="text-text-primary dark:text-text-primary font-medium text-xs">Saving changes…</span>
             </>
           ) : (
             <>
               <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
-              <span className="text-[#101217] dark:text-[#ededed] font-medium text-xs">Careful — unsaved changes</span>
-              <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-mono text-slate-500 dark:text-[#949aa2] bg-slate-100 dark:bg-[#17191c] border border-black/[0.08] dark:border-[#1f2226] rounded">
+              <span className="text-text-primary dark:text-text-primary font-medium text-xs">Unsaved changes</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.2 text-[9px] font-sans text-slate-500 dark:text-text-secondary bg-slate-100 dark:bg-surface-3 border border-black/[0.08] dark:border-border rounded">
                 Ctrl+S
               </kbd>
             </>
@@ -128,8 +125,8 @@ export function SaveBar({
               </button>
             </>
           ) : effectiveSaveState === 'success' ? (
-            <span className="text-[10px] font-mono text-success-text uppercase tracking-wider px-2 py-0.5">
-              ✓ PERSISTED
+            <span className="text-[10px] font-sans text-success-text uppercase tracking-wider px-2 py-0.5">
+              Saved
             </span>
           ) : (
             <>
@@ -160,6 +157,6 @@ export function SaveBar({
           )}
         </div>
       </div>
-    </div>
+    </motion.div>}</AnimatePresence>, host
   );
 }

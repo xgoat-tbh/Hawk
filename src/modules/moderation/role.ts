@@ -76,7 +76,7 @@ async function handleRoleManagement(ctx: CommandContext): Promise<void> {
   const { parsed, guild, member, replyTarget, respond, channel } = ctx;
   const aliasUsed = parsed.aliasUsed.toLowerCase();
 
-  let args = [...parsed.args];
+  const args = [...parsed.args];
   let actionMode: ActionMode = 'toggle';
 
   // Check if alias implies add or remove

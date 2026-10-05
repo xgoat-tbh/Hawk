@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '@/lib/api';
 
 import React, { useState, useEffect } from 'react';
 import { X, Clock, UserCheck, Award, Radio, ShoppingBag, Zap, MessageSquare } from 'lucide-react';
@@ -21,7 +22,7 @@ export function ActivityLogDrawer({ isOpen, onClose }: ActivityLogDrawerProps) {
     const fetchActivity = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/guilds/${guildId}/activity?type=${filter}&limit=30`);
+        const res = await apiFetch(`/api/guilds/${guildId}/activity?type=${filter}&limit=30`);
         if (res.ok) {
           const data = await res.json();
           setItems(data.items || []);
@@ -76,13 +77,13 @@ export function ActivityLogDrawer({ isOpen, onClose }: ActivityLogDrawerProps) {
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-[#101217] dark:text-[#ededed]">Server Activity History</h3>
-              <p className="text-[11px] text-[#64748b] dark:text-[#94a3b8]">Live event stream and audit trail</p>
+              <h3 className="text-sm font-semibold text-text-primary dark:text-text-primary">Server Activity History</h3>
+              <p className="text-[11px] text-text-muted dark:text-text-muted">Live event stream and audit trail</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-[#94a3b8] hover:text-[#101217] dark:hover:text-white transition-colors"
+            className="p-1 rounded-md text-text-muted hover:text-text-primary dark:hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -97,7 +98,7 @@ export function ActivityLogDrawer({ isOpen, onClose }: ActivityLogDrawerProps) {
               className={`px-3 py-1 text-xs rounded-full whitespace-nowrap transition-colors ${
                 filter === f.id
                   ? 'bg-[#101217] text-white dark:bg-white dark:text-black font-semibold shadow-sm'
-                  : 'text-[#64748b] dark:text-[#94a3b8] hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
+                  : 'text-text-muted dark:text-text-muted hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
               }`}
             >
               {f.label}
@@ -108,13 +109,13 @@ export function ActivityLogDrawer({ isOpen, onClose }: ActivityLogDrawerProps) {
         {/* Content List */}
         <div className="flex-1 overflow-y-auto p-6 space-y-3">
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-xs text-[#94a3b8]">
+            <div className="flex items-center justify-center py-12 text-xs text-text-muted">
               Loading event feed...
             </div>
           ) : items.length === 0 ? (
             <div className="text-center py-12 space-y-1">
-              <div className="text-xs font-semibold text-[#101217] dark:text-[#ededed]">No events recorded</div>
-              <div className="text-[11px] text-[#94a3b8]">Events will appear here as members interact with the bot.</div>
+              <div className="text-xs font-semibold text-text-primary dark:text-text-primary">No events recorded</div>
+              <div className="text-[11px] text-text-muted">Events will appear here as members interact with the bot.</div>
             </div>
           ) : (
             items.map((item) => (
@@ -127,7 +128,7 @@ export function ActivityLogDrawer({ isOpen, onClose }: ActivityLogDrawerProps) {
                     {getEventIcon(item.type)}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-[#101217] dark:text-[#ededed] truncate">
+                    <div className="text-xs font-semibold text-text-primary dark:text-text-primary truncate">
                       {item.type === 'welcome'
                         ? 'Welcome message sent'
                         : item.type === 'role_reward'
@@ -142,14 +143,14 @@ export function ActivityLogDrawer({ isOpen, onClose }: ActivityLogDrawerProps) {
                         ? 'Channel message posted'
                         : 'Server Event'}
                     </div>
-                    <div className="text-[11px] text-[#64748b] dark:text-[#94a3b8] truncate">
-                      <span className="font-medium text-[#101217] dark:text-[#c8ccd0]">{item.actorName}</span>{' '}
+                    <div className="text-[11px] text-text-muted dark:text-text-muted truncate">
+                      <span className="font-medium text-text-primary dark:text-text-secondary">{item.actorName}</span>{' '}
                       {item.targetName}
                     </div>
                   </div>
                 </div>
 
-                <div className="text-[10px] font-mono text-[#94a3b8] shrink-0 whitespace-nowrap">
+                <div className="text-[10px] font-sans text-text-muted shrink-0 whitespace-nowrap">
                   {item.relativeTime}
                 </div>
               </div>

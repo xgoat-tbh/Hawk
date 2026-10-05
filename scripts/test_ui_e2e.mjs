@@ -2,42 +2,21 @@ import puppeteer from 'puppeteer';
 import path from 'path';
 import postgres from 'postgres';
 
-const ARTIFACT_DIR = 'C:/Users/Outcast/.gemini/antigravity/brain/ee2fd59a-a6b8-423e-b53f-1cbb1c697fee';
-const BASE_URL = 'http://localhost:3000';
-const GUILD_ID = '1517584175677308998';
-const TOKEN = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+const ARTIFACT_DIR = process.env.TEST_ARTIFACT_DIR || path.resolve('artifacts/ui');
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
+const GUILD_ID = process.env.TEST_GUILD_ID;
+const TOKEN = process.env.TEST_SESSION_TOKEN;
+const USER_ID = process.env.TEST_USER_ID;
+if (!GUILD_ID || !TOKEN || !USER_ID) throw new Error('TEST_GUILD_ID, TEST_SESSION_TOKEN and TEST_USER_ID are required');
 
 async function runTests() {
   console.log('🚀 Starting Puppeteer E2E UI Test Suite...');
 
-  // Ensure test session exists in PostgreSQL database
+  // Use an existing OTP-authenticated session; never mint privileged test sessions.
   const sql = postgres(process.env.DATABASE_URL);
-  try {
-    console.log('🔑 Ensuring active test session in dashboard_sessions table...');
-    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
-    await sql`
-      INSERT INTO dashboard_sessions (
-        token, user_id, username, discriminator, avatar, is_bot_owner, is_bot_admin, expires_at
-      ) VALUES (
-        ${TOKEN},
-        '1293525264650997842',
-        'Aaryan',
-        '0',
-        null,
-        true,
-        true,
-        ${expiresAt}
-      )
-      ON CONFLICT (token) DO UPDATE SET
-        expires_at = EXCLUDED.expires_at,
-        username = EXCLUDED.username,
-        is_bot_owner = EXCLUDED.is_bot_owner,
-        is_bot_admin = EXCLUDED.is_bot_admin
-    `;
-    console.log('✅ Session active for user Aaryan (1293525264650997842)');
-  } catch (dbErr) {
-    console.warn('⚠️ Could not insert session into DB:', dbErr);
-  }
+  const sessions = await sql`SELECT user_id FROM dashboard_sessions WHERE token = ${TOKEN} AND user_id = ${USER_ID} AND expires_at > NOW()`;
+  if (!sessions.length) { await sql.end(); throw new Error('A valid OTP-authenticated session is required'); }
+  await (await import('node:fs/promises')).mkdir(ARTIFACT_DIR, { recursive: true });
 
   const browser = await puppeteer.launch({
     headless: 'new',
@@ -54,10 +33,10 @@ async function runTests() {
   await page.setCookie({
     name: 'hawk_session',
     value: TOKEN,
-    domain: 'localhost',
+    domain: new URL(BASE_URL).hostname,
     path: '/',
-    httpOnly: false,
-    secure: false,
+    httpOnly: true,
+    secure: BASE_URL.startsWith('https:'),
   });
 
   const results = {

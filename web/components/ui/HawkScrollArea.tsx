@@ -41,7 +41,7 @@ export const HawkScrollArea = forwardRef<HTMLDivElement, HawkScrollAreaProps>(
         tabIndex={0}
         style={computedStyle}
         className={cn(
-          'relative focus:outline-none focus-visible:ring-1 focus-visible:ring-border-focus/50',
+          'hawk-scroll relative focus:outline-none focus-visible:ring-1 focus-visible:ring-border-focus/50',
           overflowClasses,
           className
         )}

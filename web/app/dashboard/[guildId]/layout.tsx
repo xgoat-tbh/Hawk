@@ -1,6 +1,6 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
-import { getSession, canManageGuild } from '@/lib/auth';
+import { getSession, canViewGuild } from '@/lib/auth';
 import { fetchBotGuilds } from '@/lib/discord';
 import { GuildDashboardShell } from '@/components/GuildDashboardShell';
 
@@ -17,7 +17,7 @@ export default async function GuildDashboardLayout({
   const { guildId } = await params;
 
   // Enforce server-side authorization: user must have permissions on this guild
-  const allowed = await canManageGuild(session.id, guildId);
+  const allowed = await canViewGuild(session.id, guildId);
   if (!allowed) {
     redirect('/dashboard');
   }

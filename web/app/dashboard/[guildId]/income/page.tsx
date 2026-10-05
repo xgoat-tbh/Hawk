@@ -1,11 +1,10 @@
 'use client';
+import { apiFetch } from '@/lib/api';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { RolePicker } from '@/components/ui/RolePicker';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { SettingRow } from '@/components/ui/SettingRow';
-import { StatCard } from '@/components/ui/StatCard';
 import { DataTable, Column } from '@/components/ui/DataTable';
 import { useGuildData } from '@/context/GuildContext';
 import { useToast } from '@/components/ui/Toast';
@@ -19,6 +18,7 @@ import {
   TrendingUp,
   RefreshCw,
   Loader2,
+  Sliders,
 } from 'lucide-react';
 
 interface IncomeRoleItem {
@@ -28,17 +28,21 @@ interface IncomeRoleItem {
 
 export default function IncomeRolesPage() {
   const { guildId } = useParams() as { guildId: string };
-  const { roles, config, refreshData } = useGuildData();
+  const { roles, config, refreshData, updateConfigLocally } = useGuildData();
   const toast = useToast();
 
-  const [activeTab, setActiveTab] = useState<'salaries' | 'assign'>('salaries');
+  const [activeTab, setActiveTab] = useState<'salaries' | 'assign' | 'cadence'>('salaries');
 
   const incomeRoles: IncomeRoleItem[] = config?.incomeRoles || [];
   const currencySymbol = config?.economy?.currency_symbol || '$';
+  const currentInterval = config?.economy?.income_reset || '24h';
 
   const [newRoleId, setNewRoleId] = useState<string | null>(null);
   const [newAmount, setNewAmount] = useState('500');
   const [isAdding, setIsAdding] = useState(false);
+
+  const [cadence, setCadence] = useState<string>(currentInterval);
+  const [savingCadence, setSavingCadence] = useState(false);
 
   const totalPool = incomeRoles.reduce((acc, r) => acc + (Number(r.income_amount) || 0), 0);
   const maxSalary = incomeRoles.length > 0 ? Math.max(...incomeRoles.map((r) => Number(r.income_amount) || 0)) : 0;
@@ -46,14 +50,14 @@ export default function IncomeRolesPage() {
   const handleAddRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRoleId || !newAmount) {
-      toast.error('Please select a role and enter an income amount.');
+      toast.error('Select role and specify payout amount');
       return;
     }
 
     setIsAdding(true);
 
     try {
-      const res = await fetch(`/api/guilds/${guildId}/config`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,7 +85,7 @@ export default function IncomeRolesPage() {
 
   const handleDeleteRole = async (roleId: string) => {
     try {
-      await fetch(`/api/guilds/${guildId}/config`, {
+      const response = await apiFetch(`/api/guilds/${guildId}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -89,10 +93,36 @@ export default function IncomeRolesPage() {
           data: { role_id: roleId },
         }),
       });
+      if (!response.ok) throw new Error('Failed to delete role salary');
       await refreshData();
       toast.success('Role salary removed.');
     } catch {
       toast.error('Failed to delete role salary');
+    }
+  };
+
+  const handleSaveCadence = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingCadence(true);
+    try {
+      const res = await apiFetch(`/api/guilds/${guildId}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          module: 'economy',
+          data: {
+            income_reset: cadence,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to update payout interval');
+      const result = await res.json();
+      updateConfigLocally('economy', result.data);
+      toast.success('Payout interval updated successfully.');
+    } catch (err: any) {
+      toast.error(err.message || 'Error saving payout interval');
+    } finally {
+      setSavingCadence(false);
     }
   };
 
@@ -103,10 +133,10 @@ export default function IncomeRolesPage() {
       render: (row) => {
         const role = roles.find((r) => r.id === row.role_id);
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-black/5 dark:bg-[#14161b] border border-black/10 dark:border-[#20242c] text-[#101217] dark:text-white">
-            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="flex items-center gap-1.5 font-sans text-xs text-text-primary">
+            <Shield className="w-3.5 h-3.5 text-info-text" />
             <span>@{role ? role.name : row.role_id}</span>
-          </span>
+          </div>
         );
       },
     },
@@ -114,7 +144,7 @@ export default function IncomeRolesPage() {
       key: 'salary',
       header: 'Salary Amount',
       render: (row) => (
-        <span className="font-mono text-xs font-semibold text-emerald-400">
+        <span className="font-sans text-xs font-semibold text-success-text">
           +{currencySymbol}{Number(row.income_amount).toLocaleString()}
         </span>
       ),
@@ -123,7 +153,7 @@ export default function IncomeRolesPage() {
       key: 'roleId',
       header: 'Role ID',
       render: (row) => (
-        <span className="font-mono text-xs text-[#717882]">{row.role_id}</span>
+        <span className="font-sans text-xs text-text-secondary">{row.role_id}</span>
       ),
     },
     {
@@ -134,105 +164,135 @@ export default function IncomeRolesPage() {
         <button
           type="button"
           onClick={() => handleDeleteRole(row.role_id)}
-          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
+          className="btn-outline-danger py-1 px-2 text-[11px] font-sans"
           title="Remove Salary"
         >
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-3 h-3 mr-1" />
+          remove
         </button>
       ),
     },
   ];
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
-            <Briefcase className="w-5 h-5 text-indigo-400" />
-            Role Salaries & Income
-          </h1>
-          <p className="mt-1 text-xs text-[#6b7280] dark:text-[#8c949e]">
-            Grant automated recurring currency payouts to members holding designated staff or VIP roles.
-          </p>
+    <div className="space-y-4 max-w-6xl mx-auto pb-24">
+      <PageHeader guildId={guildId} title="Role salaries" description="Schedule recurring payouts for members with designated roles." actions={<button
+            type="button"
+            onClick={() => {
+              refreshData();
+            }}
+            className="btn-secondary font-sans"
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            Refresh
+          </button>}/>
+
+      {/* Top 4 Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Configured Roles</span>
+            <span className="console-tag console-tag-readv">ROLES</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-text-primary tracking-tight">
+            {incomeRoles.length}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            active salary tiers
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            refreshData();
-            toast.info('Role income data refreshed.');
-          }}
-          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#14161b] hover:bg-gray-100 dark:hover:bg-[#1c1f26] border border-black/[0.08] dark:border-[#20242c] text-[#4b5563] dark:text-[#c1c7cd] hover:text-[#101217] dark:hover:text-white shadow-xs flex items-center gap-1.5 transition-colors self-start sm:self-auto"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh State
-        </button>
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Max Salary</span>
+            <span className="console-tag console-tag-economy">TOP</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-success-text tracking-tight">
+            +{currencySymbol}{maxSalary.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            highest single payout
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Total Pool</span>
+            <span className="console-tag console-tag-economy">SUM</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-text-primary tracking-tight">
+            +{currencySymbol}{totalPool.toLocaleString()}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            per cycle allocation
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-center justify-between text-[11px] font-sans text-text-secondary">
+            <span>Payout Cadence</span>
+            <span className="console-tag console-tag-readv">TIMER</span>
+          </div>
+          <div className="mt-2 text-xl font-bold font-sans text-text-primary tracking-tight">
+            {currentInterval}
+          </div>
+          <div className="mt-1 text-[10px] font-sans text-text-muted">
+            automated schedule
+          </div>
+        </div>
       </div>
 
-      {/* StatCards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Configured Roles"
-          value={incomeRoles.length}
-          subtitle="Roles receiving periodic payouts"
-          icon={Briefcase}
-        />
-        <StatCard
-          title="Max Salary"
-          value={`${currencySymbol}${maxSalary.toLocaleString()}`}
-          subtitle="Highest single role allocation"
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Total Pool"
-          value={`${currencySymbol}${totalPool.toLocaleString()}`}
-          subtitle="Sum of active role salaries"
-          icon={Coins}
-        />
-        <StatCard
-          title="Payout Cadence"
-          value={config?.economy?.income_reset || '24h'}
-          subtitle="Automated payment cycle"
-          icon={Clock}
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium">
+      {/* Terminal Tab Strip */}
+      <div className="flex items-center gap-1 border-b border-white/[0.06] pb-2 text-xs font-sans">
         <button
           onClick={() => setActiveTab('salaries')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
             activeTab === 'salaries'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white'
-              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
+              ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <Briefcase className="w-4 h-4" />
-          Active Salaries ({incomeRoles.length})
+          <Briefcase className="w-3.5 h-3.5" />
+          <span>active salaries ({incomeRoles.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('assign')}
-          className={`pb-3 border-b-2 flex items-center gap-2 transition-colors ${
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
             activeTab === 'assign'
-              ? 'border-indigo-500 text-indigo-600 dark:text-white'
-              : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
+              ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
           }`}
         >
-          <Plus className="w-4 h-4" />
-          Assign Role Salary
+          <Plus className="w-3.5 h-3.5" />
+          <span>+ assign role salary</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cadence')}
+          className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
+            activeTab === 'cadence'
+              ? 'bg-surface-4 text-text-primary border border-white/[0.08]'
+              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
+          }`}
+        >
+          <Clock className="w-3.5 h-3.5" />
+          <span>payout interval</span>
         </button>
       </div>
 
       {/* TAB 1: Active Salaries */}
       {activeTab === 'salaries' && (
-        <div className="space-y-4">
+        <div className="surface-container">
+          <div className="panel-header">
+            <span>role salary allocations</span>
+            <span className="text-text-secondary">{incomeRoles.length} configured</span>
+          </div>
           <DataTable
             columns={roleColumns}
             data={incomeRoles}
             pageSize={10}
-            emptyMessage="No role salaries configured. Click 'Assign Role Salary' to create one."
+            emptyMessage="No role salaries configured. Switch to tab to assign one."
             rowKey={(r) => r.role_id}
           />
         </div>
@@ -240,56 +300,101 @@ export default function IncomeRolesPage() {
 
       {/* TAB 2: Assign Role Salary */}
       {activeTab === 'assign' && (
-        <form onSubmit={handleAddRole} className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Assign Role Salary"
-            description="Select a server role and designate its recurring payout."
-          />
-
-          <SettingRow
-            label="Target Discord Role"
-            description="Members holding this role will receive periodic currency deposits."
-          >
-            <div className="w-64">
-              <RolePicker
-                roles={roles}
-                value={newRoleId}
-                onChange={setNewRoleId}
-                placeholder="Select server role..."
-              />
-            </div>
-          </SettingRow>
-
-          <SettingRow
-            label={`Income Amount (${currencySymbol})`}
-            description="Currency amount paid out each automated cycle."
-          >
-            <div className="w-48 flex items-center gap-2">
-              <span className="text-xs font-mono text-gray-500 dark:text-[#6e747c]">{currencySymbol}</span>
-              <input
-                type="number"
-                min={1}
-                max={1000000000}
-                value={newAmount}
-                onChange={(e) => setNewAmount(e.target.value)}
-                placeholder="500"
-                className="bg-white dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg px-3 py-1.5 font-mono text-xs w-full text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500"
-                required
-              />
-            </div>
-          </SettingRow>
-
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={isAdding || !newRoleId}
-              className="px-4 py-2 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white flex items-center gap-2 transition-colors"
-            >
-              {isAdding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              <span>Assign Salary</span>
-            </button>
+        <div className="surface-container p-4 space-y-4 font-sans max-w-2xl">
+          <div className="panel-header -mx-4 -mt-4 mb-4">
+            <span>assign role salary</span>
           </div>
-        </form>
+
+          <form onSubmit={handleAddRole} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-text-primary font-semibold block">Target Discord Role</label>
+              <div className="text-[11px] text-text-secondary">Members possessing this role receive automated recurring payouts.</div>
+              <div className="pt-1 w-full max-w-md">
+                <RolePicker
+                  roles={roles}
+                  value={newRoleId}
+                  onChange={setNewRoleId}
+                  placeholder="Select server role..."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-text-primary font-semibold block">Income Amount ({currencySymbol})</label>
+              <div className="text-[11px] text-text-secondary">Amount deposited directly into member's wallet each interval.</div>
+              <div className="pt-1 flex items-center gap-2 w-full max-w-xs">
+                <span className="text-xs font-sans text-text-secondary">{currencySymbol}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={1000000000}
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  placeholder="500"
+                  className="glass-input font-sans text-right"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-white/[0.06] flex justify-end">
+              <button
+                type="submit"
+                disabled={isAdding || !newRoleId}
+                className="btn-primary"
+              >
+                {isAdding ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                )}
+                <span>+ [assign salary]</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 3: Payout Interval Config */}
+      {activeTab === 'cadence' && (
+        <div className="surface-container p-4 space-y-4 font-sans max-w-2xl">
+          <div className="panel-header -mx-4 -mt-4 mb-4">
+            <span>automated payout interval</span>
+          </div>
+
+          <form onSubmit={handleSaveCadence} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-text-primary font-semibold block">Payout Frequency</label>
+              <div className="text-[11px] text-text-secondary">Specifies how often automated salaries are disbursed to qualifying members.</div>
+              <div className="pt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-md">
+                {['1h', '6h', '12h', '24h', '48h', '7d'].map((intervalOption) => (
+                  <button
+                    key={intervalOption}
+                    type="button"
+                    onClick={() => setCadence(intervalOption)}
+                    className={`py-2 px-3 rounded-md text-xs font-sans text-center border transition-colors ${
+                      cadence === intervalOption
+                        ? 'bg-surface-4 text-success-text border-success/40 font-bold'
+                        : 'bg-surface-1 text-text-secondary border-white/[0.06] hover:text-text-primary hover:border-white/[0.12]'
+                    }`}
+                  >
+                    {intervalOption}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-white/[0.06] flex justify-end">
+              <button
+                type="submit"
+                disabled={savingCadence}
+                className="btn-primary"
+              >
+                {savingCadence ? 'saving...' : 'save interval'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

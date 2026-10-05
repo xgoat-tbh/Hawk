@@ -16,6 +16,7 @@ export default defineCommand({
     const name = ctx.parsed.args.join(' ');
     if (name !== ctx.guild.name) {
       await ctx.respond.error(`Please confirm by typing the exact server name: \`${ctx.guild.name}\``);
+      return;
     }
 
     await resetEconomy(ctx.guild.id);

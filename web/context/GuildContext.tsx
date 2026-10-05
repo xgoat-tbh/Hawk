@@ -1,6 +1,8 @@
 'use client';
+import { apiFetch } from '@/lib/api';
+import { acquireSocket, releaseSocket } from '@/lib/socket';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { DiscordChannel, DiscordRole, DiscordEmoji, DiscordGuild } from '@/lib/discord';
 
 interface BotProfile {
@@ -77,25 +79,29 @@ export function GuildProvider({
     isAdmin: boolean;
     modules: Record<string, { view: boolean; manage: boolean }>;
   } | null>(null);
-  const [loadingStep, setLoadingStep] = useState(1);
+  const requestRef = useRef(0);
+  const loadedRef = useRef(false);
+  const inFlight = useRef<Promise<Response> | null>(null);
 
   const fetchGuildBundle = useCallback(async () => {
-    setLoading(true);
+    const requestId = ++requestRef.current;
+    if (!loadedRef.current) setLoading(true);
     setError(null);
-    setLoadingStep(1);
-
-    const stepTimer = setInterval(() => {
-      setLoadingStep((prev) => (prev < 3 ? prev + 1 : prev));
-    }, 280);
 
     try {
-      const res = await fetch(`/api/guilds/${guildId}`);
+      const pending = inFlight.current || apiFetch(`/api/guilds/${guildId}`);
+      inFlight.current = pending;
+      const response = await pending;
+      const res = response.clone();
+      if (inFlight.current === pending) inFlight.current = null;
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || `HTTP ${res.status}: Failed to load server data.`);
       }
 
       const data = await res.json();
+      if (requestId !== requestRef.current) return;
+      loadedRef.current = true;
       if (data.guild) setGuild(data.guild);
       if (data.bot) setBot(data.bot);
       if (data.channels) setChannels(data.channels);
@@ -105,31 +111,26 @@ export function GuildProvider({
       setIsOwner(Boolean(data.isOwner));
       if (data.userPermissions) setUserPermissions(data.userPermissions);
     } catch (err: any) {
+      inFlight.current = null;
       console.error('Failed to fetch guild bundle:', err);
-      setError(err.message || 'Error loading server data.');
+      if (requestId === requestRef.current) setError(err.message || 'Error loading server data.');
     } finally {
-      clearInterval(stepTimer);
-      // Complete 360 circuit upon data resolution
-      setLoadingStep(4);
-      setTimeout(() => {
-        setLoading(false);
-      }, 350);
+      if (requestId === requestRef.current) setLoading(false);
     }
   }, [guildId]);
 
   useEffect(() => {
     fetchGuildBundle();
+    return () => { requestRef.current++; };
   }, [fetchGuildBundle]);
 
+  useEffect(() => { const socket = acquireSocket(guildId); const changed = () => { void fetchGuildBundle(); }; socket.on('config:changed', changed); return () => { socket.off('config:changed', changed); releaseSocket(guildId); }; }, [guildId, fetchGuildBundle]);
   const updateConfigLocally = useCallback((moduleName: string, data: any) => {
     setConfig((prev: any) => ({
       ...prev,
       [moduleName]: data,
     }));
   }, []);
-
-  const progressPercent =
-    loadingStep === 1 ? 30 : loadingStep === 2 ? 65 : loadingStep === 3 ? 90 : 100;
 
   return (
     <GuildContext.Provider
@@ -149,71 +150,7 @@ export function GuildProvider({
         updateConfigLocally,
       }}
     >
-      {loading ? (
-        <div className="fixed inset-0 z-50 bg-[#050505] flex flex-col items-center justify-center p-6 select-none animate-in fade-in duration-200">
-          <div className="max-w-xs w-full flex flex-col items-center text-center space-y-5">
-            {/* Full-Bleed Square Logo with Perimeter Loading Bar */}
-            <div className="relative w-[72px] h-[72px] shadow-2xl flex items-center justify-center">
-              {/* Logo completely fills the square: sharp edges, no padding, no empty space */}
-              <div className="w-full h-full overflow-hidden bg-white/[0.04]">
-                {guild?.iconUrl ? (
-                  <img
-                    src={guild.iconUrl}
-                    alt={guild.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-white font-mono">
-                      {initialGuildName ? initialGuildName.slice(0, 2).toUpperCase() : 'HK'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* SVG 360 Sharp Square Edge Loader running directly on the perimeter */}
-              <svg
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                viewBox="0 0 72 72"
-                fill="none"
-              >
-                {/* Background track along the square frame edge */}
-                <path
-                  d="M 36 1 L 71 1 L 71 71 L 1 71 L 1 1 Z"
-                  stroke="rgba(255, 255, 255, 0.15)"
-                  strokeWidth="2"
-                  strokeLinejoin="miter"
-                />
-                {/* Animated 360° Loading Stroke along the square frame */}
-                <path
-                  d="M 36 1 L 71 1 L 71 71 L 1 71 L 1 1 Z"
-                  stroke="#ededed"
-                  strokeWidth="2.5"
-                  strokeLinejoin="miter"
-                  pathLength={100}
-                  strokeDasharray="100"
-                  strokeDashoffset={100 - progressPercent}
-                  style={{
-                    transition: 'stroke-dashoffset 350ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.95))',
-                  }}
-                />
-              </svg>
-            </div>
-
-            <div className="space-y-1">
-              <h2 className="text-sm font-semibold text-white tracking-tight">
-                {guild?.name || initialGuildName || 'Discord Server'}
-              </h2>
-              <p className="text-[11px] text-white/40">
-                Synchronizing live configuration modules & Discord API state...
-              </p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        children
-      )}
+      {children}
     </GuildContext.Provider>
   );
 }

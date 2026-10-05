@@ -2,6 +2,7 @@ import postgres from 'postgres';
 import dotenv from 'dotenv';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 
 dotenv.config();
 
@@ -10,9 +11,8 @@ const SOURCE_URL =
   process.env.DATABASE_URL ||
   '';
 
-const TARGET_URL =
-  process.env.TARGET_DATABASE_URL ||
-  'postgresql://amoindia:mypsswrd@103.118.182.43:5432/amoindia?sslmode=disable';
+const TARGET_URL = process.env.TARGET_DATABASE_URL || '';
+if (!TARGET_URL) throw new Error('TARGET_DATABASE_URL is required');
 
 if (!SOURCE_URL) {
   console.error('ERROR: Missing SOURCE_DATABASE_URL or DATABASE_URL in environment.');
@@ -269,6 +269,11 @@ async function main() {
         break;
       }
     }
+
+    const confirmation = createInterface({ input: process.stdin, output: process.stdout });
+    const answer = await confirmation.question('Type REPLACE TARGET DATABASE to confirm permanent replacement: ');
+    confirmation.close();
+    if (answer !== 'REPLACE TARGET DATABASE') throw new Error('Transfer cancelled');
 
     // 4. Truncate all tables at once in cascade
     console.log('\n[4/6] Truncating target tables...');

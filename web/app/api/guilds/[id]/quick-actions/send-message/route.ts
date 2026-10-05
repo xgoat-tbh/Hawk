@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, canManageGuild } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { fetchGuildChannels } from '@/lib/discord';
 
 export async function POST(
   req: NextRequest,
@@ -15,17 +16,19 @@ export async function POST(
 
   try {
     const { channelId, content } = await req.json();
-    if (!channelId || !content?.trim()) {
+    if (typeof channelId !== 'string' || !/^\d{17,20}$/.test(channelId) || typeof content !== 'string' || !content.trim() || content.length > 2000) {
       return NextResponse.json({ error: 'Channel and message content are required' }, { status: 400 });
     }
 
+    const channels = await fetchGuildChannels(guildId);
+    if (!channels.some(channel => channel.id === channelId && [0, 5].includes(channel.type))) return NextResponse.json({ error: 'Select a text channel in this server' }, { status: 400 });
     const hawkClient = (globalThis as any).hawkClient;
     let sent = false;
 
     if (hawkClient?.channels?.cache) {
       const channel = hawkClient.channels.cache.get(channelId);
       if (channel && channel.isTextBased()) {
-        await channel.send(content.trim());
+        await channel.send({ content: content.trim(), allowedMentions: { parse: [] } });
         sent = true;
       }
     }
@@ -39,7 +42,7 @@ export async function POST(
           Authorization: `Bot ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content: content.trim() }),
+        body: JSON.stringify({ content: content.trim(), allowed_mentions: { parse: [] } }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -48,8 +51,8 @@ export async function POST(
       sent = true;
     }
 
-    // Log to activity_log
-    await db`
+    // Discord has already accepted the message; audit failures cannot undo it.
+    try { await db`
       INSERT INTO activity_log (guild_id, type, actor_name, target_name, details)
       VALUES (
         ${guildId},
@@ -60,6 +63,7 @@ export async function POST(
       )
     `;
 
+    } catch (error) { console.error('Message sent; audit delivery failed:', error); }
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('Send message quick action error:', err);

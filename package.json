@@ -8,14 +8,17 @@
     "web"
   ],
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/dev.ts",
     "build": "tsc && npm run build --prefix web",
     "postinstall": "tsc && npm run build --prefix web",
-    "start": "node dist/index.js",
+    "start": "node dist/start.js",
     "lint": "eslint src/",
     "test": "tsx --test tests/**/*.test.ts",
     "migrate": "tsx src/core/database/migrations/runner.ts",
-    "db:transfer": "tsx scripts/transfer_db.ts"
+    "db:transfer": "tsx scripts/transfer_db.ts",
+    "predev": "node scripts/generate_command_registry.mjs && node scripts/copy_monaco.mjs",
+    "prebuild": "node scripts/generate_command_registry.mjs",
+    "prestart": "node scripts/generate_command_registry.mjs"
   },
   "dependencies": {
     "@discordjs/rest": "^2.4.0",
@@ -27,9 +30,11 @@
     "postgres": "^3.4.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "socket.io": "^4.8.4",
     "typescript": "^5.8.0"
   },
   "devDependencies": {
+    "@axe-core/puppeteer": "^4.13.0",
     "@eslint/js": "^9.20.0",
     "@types/node": "^22.15.0",
     "eslint": "^9.20.0",
@@ -38,7 +43,8 @@
     "typescript-eslint": "^8.25.0"
   },
   "overrides": {
-    "postcss": "^8.5.26"
+    "postcss": "^8.5.26",
+    "dompurify": "^3.4.16"
   },
   "engines": {
     "node": ">=20.0.0"

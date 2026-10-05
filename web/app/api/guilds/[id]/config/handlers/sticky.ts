@@ -1,14 +1,15 @@
 import { db } from '@/lib/db';
-import { sendChannelMessage, deleteChannelMessage } from '@/lib/discord';
+import { sendChannelMessage, deleteChannelMessage, fetchGuildChannels } from '@/lib/discord';
 import { cleanSnowflake, cleanString, HandlerResult } from '../helpers';
 
 export async function handleSticky(guildId: string, module: string, data: any): Promise<HandlerResult> {
   if (module === 'sticky_add' || module === 'sticky_set' || module === 'sticky_update') {
     const channel_id = cleanSnowflake(data.channel_id);
-    const content = cleanString(data.content || data.message, 4000);
+    const content = cleanString(data.content || data.message, 2000);
     if (!channel_id || !content) {
       return { success: false, error: 'Channel and notice content are required.', status: 400 };
     }
+    if (!(await fetchGuildChannels(guildId)).some(c => c.id === channel_id && [0, 5].includes(c.type))) return { success: false, error: 'Choose a text channel in this server.', status: 400 };
 
     let oldMessageId = '0';
     try {
@@ -49,6 +50,7 @@ export async function handleSticky(guildId: string, module: string, data: any): 
 
   if (module === 'sticky_delete') {
     const channel_id = cleanSnowflake(data.channel_id);
+    if (!channel_id || !(await fetchGuildChannels(guildId)).some(c => c.id === channel_id)) return { success: false, error: 'Channel is not in this server.', status: 400 };
     if (channel_id) {
       try {
         const existing = await db`

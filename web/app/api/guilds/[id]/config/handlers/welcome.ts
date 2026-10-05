@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { cleanSnowflake, cleanString, HandlerResult } from '../helpers';
+import { cleanSnowflake, cleanString, cleanUrl, HandlerResult } from '../helpers';
 
 export async function handleWelcome(guildId: string, data: any): Promise<HandlerResult> {
   const { config = {}, embed = {} } = data;
@@ -17,8 +17,8 @@ export async function handleWelcome(guildId: string, data: any): Promise<Handler
   const title = cleanString(embed.title, 256) || 'Welcome to {server}!';
   const description = cleanString(embed.description, 4096) || 'Hey {user}, welcome! Check out the rules.';
   const footer_text = cleanString(embed.footer_text, 2048) || null;
-  const image_url = embed.image_url && typeof embed.image_url === 'string' && embed.image_url.startsWith('http') ? embed.image_url.trim() : null;
-  const thumbnail_url = embed.thumbnail_url && typeof embed.thumbnail_url === 'string' ? embed.thumbnail_url.trim() : null;
+  const image_url = cleanUrl(embed.image_url);
+  const thumbnail_url = embed.thumbnail_url === '{user.avatar}' ? '{user.avatar}' : cleanUrl(embed.thumbnail_url);
 
   const greetPayloadObj = is_embed
     ? {

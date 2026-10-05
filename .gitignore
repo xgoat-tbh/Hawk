@@ -42,3 +42,8 @@ Thumbs.db
 *.tar.gz
 .restart_state.json
 
+
+# Rebuild diagnostics
+.rebuild/
+tsc_errors*.log
+web/public/monaco/

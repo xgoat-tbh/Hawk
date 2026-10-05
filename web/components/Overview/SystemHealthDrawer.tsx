@@ -30,13 +30,13 @@ export function SystemHealthDrawer({ isOpen, onClose, health }: SystemHealthDraw
               <Activity className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-[#101217] dark:text-[#ededed]">System Health & Diagnostics</h3>
-              <p className="text-[11px] text-[#64748b] dark:text-[#94a3b8]">Live bot cluster and runtime metrics</p>
+              <h3 className="text-sm font-semibold text-text-primary dark:text-text-primary">System Health & Diagnostics</h3>
+              <p className="text-[11px] text-text-muted dark:text-text-muted">Live bot cluster and runtime metrics</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-[#94a3b8] hover:text-[#101217] dark:hover:text-white transition-colors"
+            className="p-1 rounded-md text-text-muted hover:text-text-primary dark:hover:text-white transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -61,12 +61,12 @@ export function SystemHealthDrawer({ isOpen, onClose, health }: SystemHealthDraw
               <div className="flex items-center gap-3">
                 <Cpu className="w-4 h-4 text-indigo-500" />
                 <div>
-                  <div className="text-xs font-medium text-[#101217] dark:text-[#ededed]">CPU Utilization</div>
-                  <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8]">Process scheduler load</div>
+                  <div className="text-xs font-medium text-text-primary dark:text-text-primary">CPU Utilization</div>
+                  <div className="text-[10px] text-text-muted dark:text-text-muted">Process scheduler load</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-bold font-mono text-[#101217] dark:text-[#ededed]">{health.cpu}%</div>
+                <div className="text-sm font-bold font-sans text-text-primary dark:text-text-primary">{health.cpu}%</div>
                 <div className="w-20 h-1.5 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden mt-1">
                   <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${health.cpu}%` }} />
                 </div>
@@ -77,12 +77,12 @@ export function SystemHealthDrawer({ isOpen, onClose, health }: SystemHealthDraw
               <div className="flex items-center gap-3">
                 <HardDrive className="w-4 h-4 text-sky-500" />
                 <div>
-                  <div className="text-xs font-medium text-[#101217] dark:text-[#ededed]">Memory Heap</div>
-                  <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8]">V8 runtime allocated memory</div>
+                  <div className="text-xs font-medium text-text-primary dark:text-text-primary">Memory Heap</div>
+                  <div className="text-[10px] text-text-muted dark:text-text-muted">V8 runtime allocated memory</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-bold font-mono text-[#101217] dark:text-[#ededed]">{health.memory}%</div>
+                <div className="text-sm font-bold font-sans text-text-primary dark:text-text-primary">{health.memory}%</div>
                 <div className="w-20 h-1.5 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden mt-1">
                   <div className="h-full bg-sky-500 rounded-full" style={{ width: `${health.memory}%` }} />
                 </div>
@@ -93,13 +93,13 @@ export function SystemHealthDrawer({ isOpen, onClose, health }: SystemHealthDraw
               <div className="flex items-center gap-3">
                 <Radio className="w-4 h-4 text-emerald-500" />
                 <div>
-                  <div className="text-xs font-medium text-[#101217] dark:text-[#ededed]">Gateway Latency</div>
-                  <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8]">WebSocket heartbeat ping</div>
+                  <div className="text-xs font-medium text-text-primary dark:text-text-primary">Gateway Latency</div>
+                  <div className="text-[10px] text-text-muted dark:text-text-muted">WebSocket heartbeat ping</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-bold font-mono text-[#101217] dark:text-[#ededed]">{health.gateway}ms</div>
-                <span className="inline-block px-1.5 py-0.5 text-[9px] font-mono text-emerald-500 bg-emerald-500/10 rounded mt-0.5">
+                <div className="text-sm font-bold font-sans text-text-primary dark:text-text-primary">{health.gateway}ms</div>
+                <span className="inline-block px-1.5 py-0.5 text-[9px] font-sans text-emerald-500 bg-emerald-500/10 rounded mt-0.5">
                   Excellent
                 </span>
               </div>
@@ -109,13 +109,13 @@ export function SystemHealthDrawer({ isOpen, onClose, health }: SystemHealthDraw
               <div className="flex items-center gap-3">
                 <Server className="w-4 h-4 text-purple-500" />
                 <div>
-                  <div className="text-xs font-medium text-[#101217] dark:text-[#ededed]">Cluster Uptime</div>
-                  <div className="text-[10px] text-[#64748b] dark:text-[#94a3b8]">Service SLA compliance</div>
+                  <div className="text-xs font-medium text-text-primary dark:text-text-primary">Cluster Uptime</div>
+                  <div className="text-[10px] text-text-muted dark:text-text-muted">Service SLA compliance</div>
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-bold font-mono text-[#101217] dark:text-[#ededed]">{health.uptime}</div>
-                <span className="text-[10px] text-[#64748b] dark:text-[#94a3b8]">Continuous</span>
+                <div className="text-sm font-bold font-sans text-text-primary dark:text-text-primary">{health.uptime}</div>
+                <span className="text-[10px] text-text-muted dark:text-text-muted">Continuous</span>
               </div>
             </div>
           </div>

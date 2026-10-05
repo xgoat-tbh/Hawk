@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, canManageGuild } from '@/lib/auth';
+import { getSession, canManageGuild, canViewGuild } from '@/lib/auth';
 import { fetchGuildAuditLogs, logAuditEvent } from '@/lib/audit';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
-  const allowed = await canManageGuild(session.id, guildId);
+  const allowed = await canViewGuild(session.id, guildId);
   if (!allowed) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

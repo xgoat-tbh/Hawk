@@ -1,3 +1,4 @@
+import { resolveRole } from '../../core/resolver/RoleResolver.js';
 import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { removeIncomeRole } from './incomeService.js';
@@ -18,13 +19,9 @@ export default defineCommand({
       return;
     }
 
-    const roleMatch = ctx.parsed.args[0].match(/<@&(\d+)>/);
-    if (!roleMatch) {
-      await ctx.respond.error('Invalid role mention. Usage: `remove-income-role <@role>`');
-      return;
-    }
-
-    const roleId = roleMatch[1];
+    const result = resolveRole(ctx.parsed.args[0], ctx.guild);
+    if (!result.success) { await ctx.respond.error(result.error || 'Could not find that role'); return; }
+    const roleId = result.value.id;
 
     await removeIncomeRole(ctx.guild!.id, roleId);
     await ctx.respond.success(`Successfully removed income configuration for role <@&${roleId}>.`);

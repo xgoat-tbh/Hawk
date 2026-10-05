@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { getSession, canViewGuild, canManageGuild } from '@/lib/auth';
 import { db } from '@/lib/db';
 
 export async function GET(
@@ -10,6 +10,7 @@ export async function GET(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
+  if (!await canViewGuild(session.id, guildId)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   try {
     const [row] = await db`
@@ -42,6 +43,7 @@ export async function POST(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { id: guildId } = await params;
+  if (!await canManageGuild(session.id, guildId)) return NextResponse.json({ error: 'Editor access required' }, { status: 403 });
 
   try {
     const body = await req.json();

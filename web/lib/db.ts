@@ -1,10 +1,8 @@
 import postgres from 'postgres';
 import '@/lib/env';
 
-const rawUrl =
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_URL ||
-  'postgresql://postgres:postgres@localhost:5432/hawk';
+const rawUrl = process.env.DATABASE_URL;
+if (!rawUrl) throw new Error('DATABASE_URL must be configured for the Hawk dashboard');
 
 const isLocalOrDisabled =
   rawUrl.includes('localhost') ||
@@ -40,13 +38,17 @@ export const db =
 
 if (process.env.NODE_ENV !== 'production') globalForDb.db = db;
 
+let schemaInFlight: Promise<void> | null = null;
+
 /**
  * Idempotently ensures all critical schema tables and columns exist in PostgreSQL.
  */
 export async function ensureDatabaseSchema(): Promise<void> {
   if (globalForDb.schemaEnsured) return;
+  if (schemaInFlight) return schemaInFlight;
 
-  try {
+  schemaInFlight = (async () => {
+    try {
     // 1. Core Guild Config
     await db`
       CREATE TABLE IF NOT EXISTS guild_config (
@@ -243,6 +245,7 @@ export async function ensureDatabaseSchema(): Promise<void> {
         target_id TEXT NOT NULL,
         command_name TEXT,
         module_name TEXT,
+        effect TEXT NOT NULL DEFAULT 'ALLOW' CHECK (effect IN ('ALLOW', 'DENY')),
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE(guild_id, target_type, target_id, command_name, module_name)
       )
@@ -291,8 +294,28 @@ export async function ensureDatabaseSchema(): Promise<void> {
     await db`CREATE INDEX IF NOT EXISTS idx_activity_log_guild_created ON activity_log(guild_id, created_at DESC)`.catch(() => {});
     await db`CREATE INDEX IF NOT EXISTS idx_activity_log_type ON activity_log(guild_id, type)`.catch(() => {});
 
+    // 15. Economy Audit Log
+    await db`
+      CREATE TABLE IF NOT EXISTS economy_audit_log (
+        id SERIAL PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        actor_id TEXT NOT NULL,
+        target_id TEXT,
+        action TEXT NOT NULL,
+        amount BIGINT,
+        details TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `;
+    await db`CREATE INDEX IF NOT EXISTS idx_economy_audit_guild ON economy_audit_log (guild_id, created_at DESC)`.catch(() => {});
+
     globalForDb.schemaEnsured = true;
   } catch (error) {
     console.warn('Database schema verification notice:', error);
+  } finally {
+    schemaInFlight = null;
   }
+  })();
+
+  return schemaInFlight;
 }

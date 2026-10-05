@@ -178,7 +178,7 @@ async function handleMute(ctx: CommandContext, rawArgs: string[], defaultState: 
     return;
   }
 
-  let args = [...rawArgs];
+  const args = [...rawArgs];
   let targetState = defaultState;
 
   if (args.length > 0) {
@@ -262,7 +262,7 @@ async function handleMuteAll(ctx: CommandContext, args: string[], defaultState: 
     return;
   }
 
-  let channelArgs = [...args];
+  const channelArgs = [...args];
   let targetState = defaultState;
 
   if (channelArgs.length > 0) {
@@ -352,7 +352,7 @@ async function handleDeafen(ctx: CommandContext, rawArgs: string[], defaultState
     return;
   }
 
-  let args = [...rawArgs];
+  const args = [...rawArgs];
   let targetState = defaultState;
 
   if (args.length > 0) {
@@ -435,7 +435,7 @@ async function handleDeafenAll(ctx: CommandContext, args: string[], defaultState
     return;
   }
 
-  let channelArgs = [...args];
+  const channelArgs = [...args];
   let targetState = defaultState;
 
   if (channelArgs.length > 0) {

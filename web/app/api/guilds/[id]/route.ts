@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, canManageGuild, isGuildOwner, getUserModulePermissions } from '@/lib/auth';
+import { getSession, canViewGuild, isGuildOwner, getUserModulePermissions } from '@/lib/auth';
 import { fetchBotGuilds, fetchGuildDetails, fetchGuildChannels, fetchGuildRoles, fetchGuildEmojis, fetchBotProfile } from '@/lib/discord';
 import { db, ensureDatabaseSchema } from '@/lib/db';
 
@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id: guildId } = await params;
 
   // Enforce server-side authorization: user must have Manage Guild/Admin on this server or be bot owner/admin
-  const allowed = await canManageGuild(session.id, guildId);
+  const allowed = await canViewGuild(session.id, guildId);
   if (!allowed) {
     return NextResponse.json(
       { error: 'Forbidden: You are not authorized to view or configure this server.' },

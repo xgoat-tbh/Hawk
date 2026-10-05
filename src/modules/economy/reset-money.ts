@@ -19,6 +19,7 @@ export default defineCommand({
     if (mentionToken && mentionToken.value) {
       if (!ctx.member.permissions.has('ManageGuild')) {
         await ctx.respond.error('You do not have permission to reset other users\' balances.');
+        return;
       }
       targetId = mentionToken.value;
     }

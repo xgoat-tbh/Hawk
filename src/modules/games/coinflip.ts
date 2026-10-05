@@ -3,7 +3,8 @@ import { defineCommand } from '../../types/command.js';
 import type { CommandContext } from '../../types/command.js';
 import { deductCash, addCash } from '../economy/economyService.js';
 import { logTransaction } from '../../core/database/repositories/transactionRepo.js';
-import { getGameCooldown } from '../../core/database/repositories/gameCooldownRepo.js';
+import { getGameSettings } from '../../core/database/repositories/gameCooldownRepo.js';
+import { validGameBet } from '../../core/utils/gameBet.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
 
 // Cooldown tracker per guild:user:coinflip
@@ -22,6 +23,9 @@ export default defineCommand({
 
   async execute(ctx: CommandContext): Promise<void> {
     const { guild, member, parsed, respond, channel } = ctx;
+    const settings = await getGameSettings(guild.id, 'coinflip');
+    if (!settings.enabled) { await respond.denied('Coinflip is disabled in this server.'); return; }
+    const config = await getEconomyConfig(guild.id);
 
     if (parsed.args.length === 0) {
       await respond.error(`Usage: \`${parsed.prefix}coinflip <amount> [h | t]\``);
@@ -37,8 +41,8 @@ export default defineCommand({
       betAmount = parseInt(rawAmount, 10);
     }
 
-    if (isNaN(betAmount) || betAmount <= 0) {
-      await respond.error('Please enter a valid bet amount greater than 0.');
+    if (!validGameBet(betAmount, config.minBet, config.maxBet)) {
+      await respond.error(`Enter a whole bet between ${config.minBet} and ${config.maxBet}.`);
       return;
     }
 
@@ -56,7 +60,7 @@ export default defineCommand({
     }
 
     // Cooldown check (default 15s)
-    const cooldownSecs = await getGameCooldown(guild.id, 'coinflip');
+    const cooldownSecs = settings.cooldown;
     const cooldownKey = `${guild.id}:${member.id}:coinflip`;
     const lastPlayed = userCoinflipCooldowns.get(cooldownKey) || 0;
     const now = Date.now();
@@ -77,7 +81,6 @@ export default defineCommand({
 
     userCoinflipCooldowns.set(cooldownKey, now);
 
-    const config = await getEconomyConfig(guild.id);
     const sym = config?.currencySymbol || '$';
 
     // Phase 1: Spinning coin placeholder animation

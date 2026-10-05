@@ -1,7 +1,9 @@
 'use client';
+import { apiFetch } from '@/lib/api';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
+import { AnimatedDrawer } from '@/components/ui/AnimatedDrawer';
 import { RolePicker } from '@/components/ui/RolePicker';
 import { UserPicker } from '@/components/ui/UserPicker';
 import { HawkSelect } from '@/components/ui/HawkSelect';
@@ -40,9 +42,10 @@ export function AccessPreviewer({
 }: AccessPreviewerProps) {
   const { guildId } = useParams() as { guildId: string };
 
-  const [targetType, setTargetType] = useState<'role' | 'user'>('role');
-  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(roles[0]?.id || null);
-  const [testUserId, setTestUserId] = useState('');
+  const searchParams = useSearchParams();
+  const [targetType, setTargetType] = useState<'role' | 'user'>(searchParams.get('user') ? 'user' : 'role');
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(searchParams.get('role') || roles[0]?.id || null);
+  const [testUserId, setTestUserId] = useState(searchParams.get('user') || '');
   const [isSuperAdminSim, setIsSuperAdminSim] = useState(false);
 
   // Sub-tab view: 'modules' | 'commands'
@@ -66,14 +69,24 @@ export function AccessPreviewer({
     { value: 'user', label: 'Preview by User' },
   ];
 
+  useEffect(() => {
+    const user = searchParams.get('user'); const role = searchParams.get('role');
+    if (user) { setTargetType('user'); setTestUserId(user); }
+    else if (role) { setTargetType('role'); setSelectedRoleId(role); }
+  }, [searchParams]);
+
   const targetId = targetType === 'role' ? selectedRoleId || '' : testUserId.trim();
 
   // Fetch simulation data whenever target or simulation settings change
   useEffect(() => {
     let isCurrent = true;
+    const controller = new AbortController();
+    setSimData(null);
+    setInspectedCommand(null);
+    setInspectedModule(null);
 
     async function fetchSimulation() {
-      if (!guildId) return;
+      if (!guildId || !targetId) { setIsLoading(false); return; }
 
       setIsLoading(true);
       setError(null);
@@ -85,7 +98,7 @@ export function AccessPreviewer({
           simulateAdmin: String(isSuperAdminSim),
         });
 
-        const res = await fetch(`/api/guilds/${guildId}/permissions/simulate?${query.toString()}`);
+        const res = await apiFetch(`/api/guilds/${guildId}/permissions/simulate?${query.toString()}`, { signal: controller.signal });
         if (!res.ok) throw new Error('Failed to fetch permission simulation');
 
         const data: SimulationResponse = await res.json();
@@ -108,10 +121,12 @@ export function AccessPreviewer({
       }
     }
 
-    fetchSimulation();
+    const timer = setTimeout(fetchSimulation, targetType === "user" ? 180 : 0);
 
     return () => {
       isCurrent = false;
+      controller.abort();
+      clearTimeout(timer);
     };
   }, [guildId, targetType, targetId, isSuperAdminSim]);
 
@@ -136,22 +151,22 @@ export function AccessPreviewer({
   return (
     <div className="space-y-5">
       {/* Simulation Controls Header */}
-      <div className="p-4 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] shadow-xs space-y-3">
+      <div className="p-4 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-gray-400 dark:text-[#a9adb2]" />
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-[#101217] dark:text-[#f1f2f3]">
+            <Eye className="w-4 h-4 text-text-muted dark:text-text-secondary" />
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-text-primary dark:text-text-primary">
               Access Simulator & Rule Explainer
             </h4>
           </div>
           {isLoading && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#7e8389]">
+            <div className="flex items-center gap-1.5 text-xs text-text-muted dark:text-text-muted">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               <span>Resolving rules...</span>
             </div>
           )}
         </div>
-        <p className="text-[11px] text-gray-500 dark:text-[#7e8389]">
+        <p className="text-[11px] text-text-muted dark:text-text-muted">
           Simulate resolved dashboard visibility, bot command ACL overrides, and deterministic rule precedence.
         </p>
 
@@ -185,12 +200,12 @@ export function AccessPreviewer({
           )}
 
           <div className="sm:col-span-3 flex items-center justify-end">
-            <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-[#a9adb2] cursor-pointer select-none">
+            <label className="flex items-center gap-2 text-xs text-text-muted dark:text-text-secondary cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={isSuperAdminSim}
                 onChange={(e) => setIsSuperAdminSim(e.target.checked)}
-                className="rounded border-gray-300 dark:border-[#24272b] bg-white dark:bg-[#121417] text-indigo-600 focus:ring-0"
+                className="rounded border-gray-300 dark:border-border-strong bg-white dark:bg-surface-3 text-info-text focus:ring-0"
               />
               <span>Simulate Bot Admin</span>
             </label>
@@ -217,36 +232,36 @@ export function AccessPreviewer({
       {/* Overview Metric Summary Cards */}
       {simData && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div className="p-3 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] shadow-xs space-y-1">
-            <span className="text-[10px] font-mono uppercase text-gray-500 dark:text-[#7e8389]">Accessible Modules</span>
-            <div className="text-lg font-bold text-[#101217] dark:text-[#f1f2f3]">
-              {simData.summary.accessibleModules} <span className="text-xs font-normal text-gray-500 dark:text-[#7e8389]">/ {simData.summary.totalModules}</span>
+          <div className="p-3 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong shadow-xs space-y-1">
+            <span className="text-[10px] font-sans uppercase text-text-muted dark:text-text-muted">Accessible Modules</span>
+            <div className="text-lg font-bold text-text-primary dark:text-text-primary">
+              {simData.summary.accessibleModules} <span className="text-xs font-normal text-text-muted dark:text-text-muted">/ {simData.summary.totalModules}</span>
             </div>
           </div>
 
-          <div className="p-3 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] shadow-xs space-y-1">
-            <span className="text-[10px] font-mono uppercase text-gray-500 dark:text-[#7e8389]">Restricted Modules</span>
-            <div className="text-lg font-bold text-gray-600 dark:text-[#a9adb2]">
+          <div className="p-3 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong shadow-xs space-y-1">
+            <span className="text-[10px] font-sans uppercase text-text-muted dark:text-text-muted">Restricted Modules</span>
+            <div className="text-lg font-bold text-text-muted dark:text-text-secondary">
               {simData.summary.restrictedModules}
             </div>
           </div>
 
           <div className="p-3 rounded-md bg-success-soft/30 border border-success-border space-y-1">
-            <span className="text-[10px] font-mono uppercase text-success-text">Commands Allowed</span>
+            <span className="text-[10px] font-sans uppercase text-success-text">Commands Allowed</span>
             <div className="text-lg font-bold text-success-text">
-              {simData.summary.allowedCommands} <span className="text-xs font-normal text-gray-500 dark:text-[#7e8389]">/ {simData.summary.totalCommands}</span>
+              {simData.summary.allowedCommands} <span className="text-xs font-normal text-text-muted dark:text-text-muted">/ {simData.summary.totalCommands}</span>
             </div>
           </div>
 
           <div className="p-3 rounded-md bg-critical-soft/30 border border-critical-border space-y-1">
-            <span className="text-[10px] font-mono uppercase text-critical-text">Commands Denied</span>
+            <span className="text-[10px] font-sans uppercase text-critical-text">Commands Denied</span>
             <div className="text-lg font-bold text-critical-text">
               {simData.summary.deniedCommands}
             </div>
           </div>
 
           <div className="p-3 rounded-md bg-warning-soft/30 border border-warning-border space-y-1 col-span-2 sm:col-span-1">
-            <span className="text-[10px] font-mono uppercase text-warning-text">Overrides Active</span>
+            <span className="text-[10px] font-sans uppercase text-warning-text">Overrides Active</span>
             <div className="text-lg font-bold text-warning-text">
               {simData.summary.overriddenCommands}
             </div>
@@ -261,8 +276,8 @@ export function AccessPreviewer({
           onClick={() => setActiveSubTab('commands')}
           className={`flex items-center gap-2 px-3.5 py-2 text-xs font-medium border-b-2 transition-all ${
             activeSubTab === 'commands'
-              ? 'border-indigo-600 dark:border-[#f1f2f3] text-indigo-600 dark:text-[#f1f2f3] font-semibold'
-              : 'border-transparent text-gray-500 dark:text-[#7e8389] hover:text-[#101217] dark:hover:text-[#f1f2f3]'
+              ? 'border-indigo-600 dark:border-text-primary text-info-text dark:text-text-primary font-semibold'
+              : 'border-transparent text-text-muted dark:text-text-muted hover:text-text-primary dark:hover:text-text-primary'
           }`}
         >
           <CommandIcon className="w-3.5 h-3.5" />
@@ -274,8 +289,8 @@ export function AccessPreviewer({
           onClick={() => setActiveSubTab('modules')}
           className={`flex items-center gap-2 px-3.5 py-2 text-xs font-medium border-b-2 transition-all ${
             activeSubTab === 'modules'
-              ? 'border-indigo-600 dark:border-[#f1f2f3] text-indigo-600 dark:text-[#f1f2f3] font-semibold'
-              : 'border-transparent text-gray-500 dark:text-[#7e8389] hover:text-[#101217] dark:hover:text-[#f1f2f3]'
+              ? 'border-indigo-600 dark:border-text-primary text-info-text dark:text-text-primary font-semibold'
+              : 'border-transparent text-text-muted dark:text-text-muted hover:text-text-primary dark:hover:text-text-primary'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
@@ -287,19 +302,19 @@ export function AccessPreviewer({
       {activeSubTab === 'commands' && (
         <div className="space-y-4">
           {/* Command Search & Quick Filters */}
-          <div className="p-3 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="p-3 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="relative flex-1 max-w-sm">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#7e8389]" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted dark:text-text-muted" />
               <input
                 type="text"
                 placeholder="Search commands by name or description..."
                 value={commandSearch}
                 onChange={(e) => setCommandSearch(e.target.value)}
-                className="glass-input pl-8 text-xs font-sans text-[#101217] dark:text-white"
+                className="glass-input pl-8 text-xs font-sans text-text-primary dark:text-white"
               />
             </div>
 
-            <div className="flex items-center gap-1 bg-gray-100 dark:bg-[#0a0b0d] p-0.5 rounded-md border border-black/[0.08] dark:border-[#24272b]">
+            <div className="flex items-center gap-1 bg-gray-100 dark:bg-surface-1 p-0.5 rounded-md border border-black/[0.08] dark:border-border-strong">
               {(['ALL', 'ALLOWED', 'DENIED', 'OVERRIDDEN'] as const).map((filter) => (
                 <button
                   key={filter}
@@ -307,8 +322,8 @@ export function AccessPreviewer({
                   onClick={() => setCommandFilter(filter)}
                   className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                     commandFilter === filter
-                      ? 'bg-white dark:bg-[#e6e8eb] text-[#101217] dark:text-[#0d0e10] shadow-xs font-semibold'
-                      : 'text-gray-500 dark:text-[#7e8389] hover:text-[#101217] dark:hover:text-[#f1f2f3]'
+                      ? 'bg-white dark:bg-[#e6e8eb] text-text-primary dark:text-panel shadow-xs font-semibold'
+                      : 'text-text-muted dark:text-text-muted hover:text-text-primary dark:hover:text-text-primary'
                   }`}
                 >
                   {filter === 'ALL'
@@ -325,18 +340,18 @@ export function AccessPreviewer({
 
           {/* Interactive Command Explanation Drawer */}
           {inspectedCommand && (
-            <div className="p-4 rounded-md bg-white dark:bg-[#121417] border border-black/[0.08] dark:border-[#2b2f34] shadow-xs space-y-3">
+            <AnimatedDrawer isOpen={Boolean(inspectedCommand)} onClose={() => setInspectedCommand(null)} title={`Command access: ${inspectedCommand.command}`} width="max-w-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-info" />
-                  <h5 className="text-xs font-semibold text-[#101217] dark:text-[#f1f2f3]">
-                    Why Can / Can't {simData?.subject.name || 'This Role'} Use <span className="font-mono text-indigo-600 dark:text-white">!{inspectedCommand.command}</span>?
+                  <HelpCircle className="w-4 h-4 text-info-text" />
+                  <h5 className="text-xs font-semibold text-text-primary dark:text-text-primary">
+                    Why Can / Can't {simData?.subject.name || 'This Role'} Use <span className="font-sans text-info-text dark:text-white">!{inspectedCommand.command}</span>?
                   </h5>
                 </div>
                 <button
                   type="button"
                   onClick={() => setInspectedCommand(null)}
-                  className="text-[11px] text-gray-500 dark:text-[#7e8389] hover:text-[#101217] dark:hover:text-[#f1f2f3]"
+                  className="text-[11px] text-text-muted dark:text-text-muted hover:text-text-primary dark:hover:text-text-primary"
                 >
                   Close Explainer
                 </button>
@@ -365,7 +380,7 @@ export function AccessPreviewer({
                 </div>
 
                 {inspectedCommand.hasOverride && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-warning-soft border border-warning-border text-warning-text">
+                  <span className="text-[10px] font-sans px-2 py-0.5 rounded bg-warning-soft border border-warning-border text-warning-text">
                     Custom Override Active
                   </span>
                 )}
@@ -373,7 +388,7 @@ export function AccessPreviewer({
 
               {/* Rule Chain Inspector */}
               <div className="space-y-1.5 pt-1">
-                <span className="text-[10px] font-mono uppercase text-gray-500 dark:text-[#7e8389]">
+                <span className="text-[10px] font-sans uppercase text-text-muted dark:text-text-muted">
                   Deterministic Rule Resolution Chain
                 </span>
 
@@ -384,18 +399,18 @@ export function AccessPreviewer({
                       className={`p-2.5 rounded-md border transition-all ${
                         step.isWinningRule
                           ? step.result === 'ALLOW'
-                            ? 'bg-success-soft/50 border-success-border text-[#101217] dark:text-[#f1f2f3] ring-1 ring-success-border'
-                            : 'bg-critical-soft/50 border-critical-border text-[#101217] dark:text-[#f1f2f3] ring-1 ring-critical-border'
-                          : 'bg-gray-50 dark:bg-[#0d0e10] border-black/[0.08] dark:border-[#24272b] text-gray-500 dark:text-[#7e8389]'
+                            ? 'bg-success-soft/50 border-success-border text-text-primary dark:text-text-primary ring-1 ring-success-border'
+                            : 'bg-critical-soft/50 border-critical-border text-text-primary dark:text-text-primary ring-1 ring-critical-border'
+                          : 'bg-gray-50 dark:bg-panel border-black/[0.08] dark:border-border-strong text-text-muted dark:text-text-muted'
                       }`}
                     >
-                      <div className="flex items-center justify-between font-mono text-[11px]">
-                        <span className={step.isWinningRule ? 'font-semibold text-[#101217] dark:text-white' : 'text-gray-600 dark:text-[#a9adb2]'}>
+                      <div className="flex items-center justify-between font-sans text-[11px]">
+                        <span className={step.isWinningRule ? 'font-semibold text-text-primary dark:text-white' : 'text-text-muted dark:text-text-secondary'}>
                           {step.step}
                         </span>
                         <div className="flex items-center gap-2">
                           {step.isWinningRule && (
-                            <span className="text-[9px] font-sans uppercase px-1.5 py-0.2 rounded bg-info-soft text-info border border-info-border">
+                            <span className="text-[9px] font-sans uppercase px-1.5 py-0.2 rounded bg-info-soft text-info-text border border-info-border">
                               Winning Rule
                             </span>
                           )}
@@ -405,26 +420,26 @@ export function AccessPreviewer({
                                 ? 'text-success-text font-bold'
                                 : step.result === 'DENY'
                                 ? 'text-critical-text font-bold'
-                                : 'text-gray-500 dark:text-[#7e8389]'
+                                : 'text-text-muted dark:text-text-muted'
                             }
                           >
                             {step.result}
                           </span>
                         </div>
                       </div>
-                      <p className="text-[11px] text-gray-600 dark:text-[#d5d7da] mt-1 leading-relaxed">{step.detail}</p>
+                      <p className="text-[11px] text-text-muted dark:text-text-secondary mt-1 leading-relaxed">{step.detail}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
+            </AnimatedDrawer>
           )}
 
           {/* Commands Data Table */}
-          <div className="border border-black/[0.08] dark:border-[#24272b] rounded-md overflow-hidden bg-white dark:bg-[#0d0e10]">
+          <div className="border border-black/[0.08] dark:border-border-strong rounded-md overflow-hidden bg-white dark:bg-panel">
             <HawkScrollArea maxHeight="55vh">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-[#08090a] border-b border-black/[0.08] dark:border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-[#7e8389]">
+                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-surface-0 border-b border-black/[0.08] dark:border-[#1c1f23] text-[10px] font-sans uppercase tracking-wider text-text-muted dark:text-text-muted">
                   <tr>
                     <th className="py-2.5 px-4">Command</th>
                     <th className="py-2.5 px-4">Category</th>
@@ -436,7 +451,7 @@ export function AccessPreviewer({
                 <tbody className="divide-y divide-black/[0.08] dark:divide-[#1c1f23]">
                   {filteredCommands.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-[#7e8389] text-xs">
+                      <td colSpan={5} className="py-8 text-center text-text-muted dark:text-text-muted text-xs">
                         No commands matching the search criteria.
                       </td>
                     </tr>
@@ -447,18 +462,18 @@ export function AccessPreviewer({
                         <tr
                           key={cmd.command}
                           onClick={() => setInspectedCommand(cmd)}
-                          className={`hover:bg-gray-50 dark:hover:bg-[#121417]/50 cursor-pointer transition-colors ${
-                            inspectedCommand?.command === cmd.command ? 'bg-indigo-50/50 dark:bg-[#121417]' : ''
+                          className={`hover:bg-gray-50 dark:hover:bg-surface-3/50 cursor-pointer transition-colors ${
+                            inspectedCommand?.command === cmd.command ? 'bg-indigo-50/50 dark:bg-surface-3' : ''
                           }`}
                         >
                           <td className="py-2.5 px-4">
-                            <div className="font-mono font-medium text-[#101217] dark:text-[#f1f2f3]">
+                            <div className="font-sans font-medium text-text-primary dark:text-text-primary">
                               !{cmd.command}
                             </div>
-                            <div className="text-[10px] text-gray-500 dark:text-[#7e8389] truncate max-w-xs">{cmd.description}</div>
+                            <div className="text-[10px] text-text-muted dark:text-text-muted truncate max-w-xs">{cmd.description}</div>
                           </td>
 
-                          <td className="py-2.5 px-4 capitalize text-gray-600 dark:text-[#a9adb2]">
+                          <td className="py-2.5 px-4 capitalize text-text-muted dark:text-text-secondary">
                             {cmd.category}
                           </td>
 
@@ -476,14 +491,14 @@ export function AccessPreviewer({
                                 </span>
                               )}
                               {cmd.hasOverride && (
-                                <span className="text-[9px] font-mono text-warning-text bg-warning-soft border border-warning-border px-1.5 py-0.5 rounded">
+                                <span className="text-[9px] font-sans text-warning-text bg-warning-soft border border-warning-border px-1.5 py-0.5 rounded">
                                   OVERRIDE
                                 </span>
                               )}
                             </div>
                           </td>
 
-                          <td className="py-2.5 px-4 text-gray-500 dark:text-[#7e8389] font-mono text-[11px]">
+                          <td className="py-2.5 px-4 text-text-muted dark:text-text-muted font-sans text-[11px]">
                             {cmd.requiredDiscordPerm || 'None'}
                           </td>
 
@@ -516,42 +531,42 @@ export function AccessPreviewer({
         <div className="space-y-4">
           {/* Why Can / Can't Access Module Explainer Card */}
           {selectedModuleDetail && (
-            <div className="p-4 rounded-md bg-white dark:bg-[#121417] border border-black/[0.08] dark:border-[#2b2f34] shadow-xs space-y-2.5">
+            <div className="p-4 rounded-md bg-white dark:bg-surface-3 border border-black/[0.08] dark:border-border-strong shadow-xs space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-info" />
-                  <h5 className="text-xs font-semibold text-[#101217] dark:text-[#f1f2f3]">
+                  <HelpCircle className="w-4 h-4 text-info-text" />
+                  <h5 className="text-xs font-semibold text-text-primary dark:text-text-primary">
                     Permission Breakdown: {selectedModuleDetail.module.label}
                   </h5>
                 </div>
                 <button
                   type="button"
                   onClick={() => setInspectedModule(null)}
-                  className="text-[11px] text-gray-500 dark:text-[#7e8389] hover:text-[#101217] dark:hover:text-[#f1f2f3]"
+                  className="text-[11px] text-text-muted dark:text-text-muted hover:text-text-primary dark:hover:text-text-primary"
                 >
                   Close Explainer
                 </button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3 rounded bg-gray-50 dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] space-y-1">
+                <div className="p-3 rounded bg-gray-50 dark:bg-panel border border-black/[0.08] dark:border-border-strong space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] uppercase text-gray-500 dark:text-[#7e8389]">VIEW PERMISSION</span>
+                    <span className="font-sans text-[10px] uppercase text-text-muted dark:text-text-muted">VIEW PERMISSION</span>
                     <span className={selectedModuleDetail.canView ? 'text-success-text font-bold' : 'text-critical-text font-bold'}>
                       {selectedModuleDetail.canView ? 'GRANTED' : 'DENIED'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-600 dark:text-[#d5d7da]">{selectedModuleDetail.viewReason}</p>
+                  <p className="text-[11px] text-text-muted dark:text-text-secondary">{selectedModuleDetail.viewReason}</p>
                 </div>
 
-                <div className="p-3 rounded bg-gray-50 dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] space-y-1">
+                <div className="p-3 rounded bg-gray-50 dark:bg-panel border border-black/[0.08] dark:border-border-strong space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] uppercase text-gray-500 dark:text-[#7e8389]">MANAGE PERMISSION</span>
+                    <span className="font-sans text-[10px] uppercase text-text-muted dark:text-text-muted">MANAGE PERMISSION</span>
                     <span className={selectedModuleDetail.canManage ? 'text-success-text font-bold' : 'text-critical-text font-bold'}>
                       {selectedModuleDetail.canManage ? 'GRANTED' : 'DENIED'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-gray-600 dark:text-[#d5d7da]">{selectedModuleDetail.manageReason}</p>
+                  <p className="text-[11px] text-text-muted dark:text-text-secondary">{selectedModuleDetail.manageReason}</p>
                 </div>
               </div>
 
@@ -577,7 +592,7 @@ export function AccessPreviewer({
 
               <HawkScrollArea maxHeight="350px" className="space-y-2 pr-1">
                 {(simData?.modules || []).filter((m) => m.canView).length === 0 ? (
-                  <div className="text-xs text-gray-500 dark:text-[#7e8389] p-3">No dashboard modules accessible.</div>
+                  <div className="text-xs text-text-muted dark:text-text-muted p-3">No dashboard modules accessible.</div>
                 ) : (
                   (simData?.modules || [])
                     .filter((m) => m.canView)
@@ -585,17 +600,17 @@ export function AccessPreviewer({
                       <div
                         key={item.module.module}
                         onClick={() => setInspectedModule(item.module.module)}
-                        className={`p-2.5 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] space-y-1 cursor-pointer hover:border-gray-400 dark:hover:border-[#373b42] transition-colors ${
+                        className={`p-2.5 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong space-y-1 cursor-pointer hover:border-gray-400 dark:hover:border-[#373b42] transition-colors ${
                           inspectedModule === item.module.module ? 'ring-1 ring-info' : ''
                         }`}
                       >
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-[#101217] dark:text-[#f1f2f3]">{item.module.label}</span>
-                          <span className="text-[10px] font-mono text-success-text">
+                          <span className="font-medium text-text-primary dark:text-text-primary">{item.module.label}</span>
+                          <span className="text-[10px] font-sans text-success-text">
                             {item.canManage ? 'FULL MANAGE' : 'READ ONLY'}
                           </span>
                         </div>
-                        <p className="text-[10px] text-gray-500 dark:text-[#7e8389]">{item.viewReason}</p>
+                        <p className="text-[10px] text-text-muted dark:text-text-muted">{item.viewReason}</p>
                       </div>
                     ))
                 )}
@@ -613,7 +628,7 @@ export function AccessPreviewer({
 
               <HawkScrollArea maxHeight="350px" className="space-y-2 pr-1">
                 {(simData?.modules || []).filter((m) => !m.canView).length === 0 ? (
-                  <div className="text-xs text-gray-500 dark:text-[#7e8389] p-3">No restricted modules. User has full server visibility.</div>
+                  <div className="text-xs text-text-muted dark:text-text-muted p-3">No restricted modules. User has full server visibility.</div>
                 ) : (
                   (simData?.modules || [])
                     .filter((m) => !m.canView)
@@ -621,15 +636,15 @@ export function AccessPreviewer({
                       <div
                         key={item.module.module}
                         onClick={() => setInspectedModule(item.module.module)}
-                        className={`p-2.5 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] space-y-1 cursor-pointer hover:border-gray-400 dark:hover:border-[#373b42] transition-colors ${
+                        className={`p-2.5 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong space-y-1 cursor-pointer hover:border-gray-400 dark:hover:border-[#373b42] transition-colors ${
                           inspectedModule === item.module.module ? 'ring-1 ring-info' : ''
                         }`}
                       >
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-medium text-gray-600 dark:text-[#a9adb2]">{item.module.label}</span>
-                          <span className="text-[10px] font-mono text-critical-text">DENIED</span>
+                          <span className="font-medium text-text-muted dark:text-text-secondary">{item.module.label}</span>
+                          <span className="text-[10px] font-sans text-critical-text">DENIED</span>
                         </div>
-                        <p className="text-[10px] text-gray-500 dark:text-[#7e8389]">{item.viewReason}</p>
+                        <p className="text-[10px] text-text-muted dark:text-text-muted">{item.viewReason}</p>
                       </div>
                     ))
                 )}

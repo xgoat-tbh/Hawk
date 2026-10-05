@@ -33,9 +33,10 @@ export function getModuleCommands(moduleName: string, includeHidden = false): Co
     .filter((c): c is CommandDefinition => c !== undefined && (includeHidden || !c.hidden));
 }
 
-export function getModules(includeOwner = false): string[] {
-  if (includeOwner) return Array.from(modules.keys());
-  return Array.from(modules.keys()).filter(m => m !== 'owner');
+export function getModules(includeOwner = false, includeDynamic = false): string[] {
+  const names = Array.from(new Set([...modules.keys(), ...(includeDynamic ? ['custom'] : [])]));
+  if (includeOwner) return names;
+  return names.filter(m => m !== 'owner');
 }
 
 export function getAllCommands(includeOwner = false): CommandDefinition[] {

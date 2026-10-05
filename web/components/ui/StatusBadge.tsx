@@ -42,14 +42,14 @@ export function StatusDot({ variant = 'neutral', className = '' }: { variant?: S
         return 'bg-info';
       case 'disabled':
       default:
-        return 'bg-[#6e747c]';
+        return 'bg-text-muted';
     }
   };
 
   return <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${getDotColor()} ${className}`} />;
 }
 
-export function StatusBadge({
+function StatusBadgeComponent({
   status,
   variant = 'neutral',
   dot = true,
@@ -90,9 +90,9 @@ export function StatusBadge({
       case 'disabled':
       default:
         return {
-          bg: 'bg-[#121417]',
-          text: 'text-[#949aa2]',
-          border: 'border-[#1f2226]',
+          bg: 'bg-surface-3',
+          text: 'text-text-secondary',
+          border: 'border-border',
         };
     }
   };
@@ -101,10 +101,12 @@ export function StatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider border ${colors.bg} ${colors.text} ${colors.border} select-none ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-sans uppercase tracking-wider border ${colors.bg} ${colors.text} ${colors.border} select-none ${className}`}
     >
       {dot && <StatusDot variant={variant} />}
       <span>{status}</span>
     </span>
   );
 }
+
+export const StatusBadge = React.memo(StatusBadgeComponent);

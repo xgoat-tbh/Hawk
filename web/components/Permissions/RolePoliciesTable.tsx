@@ -71,7 +71,7 @@ export function RolePoliciesTable({
   return (
     <div className="space-y-4">
       {/* Add Role Policy Bar */}
-      <div className="p-4 rounded-md bg-white dark:bg-[#0d0e10] border border-black/[0.08] dark:border-[#24272b] shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <div className="p-4 rounded-md bg-white dark:bg-panel border border-black/[0.08] dark:border-border-strong shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="flex-1">
           <RolePicker
             roles={roles}
@@ -102,10 +102,10 @@ export function RolePoliciesTable({
       </div>
 
       {/* Role Policies Data Table with HawkScrollArea */}
-      <div className="border border-black/[0.08] dark:border-[#24272b] rounded-md overflow-hidden bg-white dark:bg-[#0d0e10]">
+      <div className="border border-black/[0.08] dark:border-border-strong rounded-md overflow-hidden bg-white dark:bg-panel">
         <HawkScrollArea maxHeight="45vh">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-[#08090a] border-b border-black/[0.08] dark:border-[#1c1f23] text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-[#7e8389]">
+            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-surface-0 border-b border-black/[0.08] dark:border-[#1c1f23] text-[10px] font-sans uppercase tracking-wider text-text-muted dark:text-text-muted">
               <tr>
                 <th className="py-2.5 px-4">Discord Role</th>
                 <th className="py-2.5 px-4">Assigned Profile</th>
@@ -116,7 +116,7 @@ export function RolePoliciesTable({
             <tbody className="divide-y divide-black/[0.08] dark:divide-[#1c1f23]">
               {policies.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-gray-500 dark:text-[#7e8389] text-xs">
+                  <td colSpan={4} className="py-8 text-center text-text-muted dark:text-text-muted text-xs">
                     No roles mapped to permission profiles. Map roles above to grant access.
                   </td>
                 </tr>
@@ -124,11 +124,11 @@ export function RolePoliciesTable({
                 policies.map((p) => {
                   const currentRole = roles.find((r) => r.id === p.roleId);
                   return (
-                    <tr key={p.roleId} className="hover:bg-gray-50 dark:hover:bg-[#121417]/50 transition-colors">
+                    <tr key={p.roleId} className="hover:bg-gray-50 dark:hover:bg-surface-3/50 transition-colors">
                       <td className="py-2.5 px-4">
                         <div className="flex items-center gap-2">
-                          <Shield className="w-3.5 h-3.5 text-gray-400 dark:text-[#7e8389] shrink-0" />
-                          <span className="font-medium text-[#101217] dark:text-[#f1f2f3]">
+                          <Shield className="w-3.5 h-3.5 text-text-muted dark:text-text-muted shrink-0" />
+                          <span className="font-medium text-text-primary dark:text-text-primary">
                             @{currentRole?.name || p.roleName}
                           </span>
                         </div>
@@ -150,7 +150,7 @@ export function RolePoliciesTable({
                         <button
                           type="button"
                           onClick={() => handleRemovePolicy(p.roleId)}
-                          className="p-1.5 rounded-md text-gray-400 dark:text-[#7e8389] hover:text-critical-text hover:bg-critical-soft transition-colors"
+                          className="p-1.5 rounded-md text-text-muted dark:text-text-muted hover:text-critical-text hover:bg-critical-soft transition-colors"
                           title="Remove policy"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

@@ -1,17 +1,18 @@
 'use client';
 
+import { toast } from 'sonner';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 export type SaveState = 'idle' | 'saving' | 'success' | 'error';
 
 /**
  * Deep equality helper with value normalization.
- * Treats null, undefined, and empty strings identically for optional fields,
- * and string numbers identically to numeric representations where appropriate.
+ * Treats missing values consistently and sorts object keys.
+ * Preserves user text exactly so whitespace-only edits remain dirty.
  */
 export function normalizeValue(val: any): any {
   if (val === null || val === undefined) return null;
-  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'string') return val;
   if (Array.isArray(val)) return val.map(normalizeValue);
   if (typeof val === 'object') {
     const normalized: Record<string, any> = {};
@@ -33,10 +34,11 @@ interface UseFormDraftOptions<T> {
   initialData?: T | null;
   onSave?: (draft: T) => Promise<T | void>;
   autoDismissSuccessMs?: number;
+  autoSaveMs?: number;
 }
 
 export function useFormDraft<T extends Record<string, any>>(options: UseFormDraftOptions<T>) {
-  const { initialData, onSave, autoDismissSuccessMs = 2500 } = options;
+  const { initialData, onSave, autoDismissSuccessMs = 2500, autoSaveMs = 0 } = options;
 
   const [persisted, setPersistedState] = useState<T | null>(initialData || null);
   const [draft, setDraftState] = useState<T | null>(initialData || null);
@@ -139,33 +141,44 @@ export function useFormDraft<T extends Record<string, any>>(options: UseFormDraf
     setError(null);
   }, []);
 
+  const savingRef = useRef(false);
+
   // Save execution handler
   const save = useCallback(async (): Promise<boolean> => {
-    if (!draft || !onSave || saveState === 'saving') return false;
+    if (!draft || !onSave || savingRef.current) return false;
+    savingRef.current = true;
 
     setSaveState('saving');
     setError(null);
 
     try {
       const canonicalData = await onSave(draft);
-      if (canonicalData) {
-        const cloned = JSON.parse(JSON.stringify(canonicalData));
-        setPersistedState(cloned);
-        setDraftState(cloned);
-      } else {
-        const cloned = JSON.parse(JSON.stringify(draft));
-        setPersistedState(cloned);
-        setDraftState(cloned);
-      }
+      const cloned = JSON.parse(JSON.stringify(canonicalData || draft));
+      setPersistedState(cloned);
+      setDraftState(latest => isConfigEqual(latest, draft) ? cloned : latest);
       setSaveState('success');
+      toast.success('Changes saved');
       return true;
     } catch (err: any) {
       console.error('Save failed:', err);
       setError(err.message || 'Failed to save configuration changes.');
       setSaveState('error');
+      toast.error(err.message || 'Could not save changes');
       return false;
+    } finally {
+      savingRef.current = false;
     }
-  }, [draft, onSave, saveState]);
+  }, [draft, onSave]);
+
+  // Keep the debounce tied to edits, rather than an inline callback identity.
+  // Errors require another edit or an explicit retry, never a retry loop.
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useEffect(() => {
+    if (!autoSaveMs || !isDirty || saveState === 'saving' || saveState === 'error') return;
+    const timer = setTimeout(() => { void saveRef.current(); }, autoSaveMs);
+    return () => clearTimeout(timer);
+  }, [draft, isDirty, saveState, autoSaveMs]);
 
   return {
     persisted,

@@ -219,16 +219,7 @@ export const MODULE_DEFINITIONS: ModulePermission[] = [
       { id: 'confessions', label: 'Anonymous Confessions', action: 'manage' },
     ],
   },
-  {
-    module: 'media',
-    label: 'Media-Only Channels',
-    category: 'COMMUNITY',
-    actions: { view: true, manage: true, delete: true },
-    subItems: [
-      { id: 'media_channels', label: 'Designate Gallery Channels', action: 'manage' },
-      { id: 'autothread', label: 'Auto-Discussion Threads', action: 'manage' },
-    ],
-  },
+  { module: 'custom', label: 'Custom commands', category: 'SERVER', actions: { view: true, manage: true, delete: true } },
   {
     module: 'sticky',
     label: 'Persistent Sticky Notices',
@@ -263,7 +254,7 @@ export const DEFAULT_PRESET_PROFILES: PermissionProfile[] = [
   {
     id: 'moderator',
     name: 'Moderator',
-    description: 'Access to moderation logs, suggestions, confessions, sticky notices, and media channels.',
+    description: 'Access to moderation logs, suggestions, confessions, sticky notices, and custom commands.',
     isPreset: true,
     inheritsFrom: null,
     permissions: {
@@ -276,7 +267,6 @@ export const DEFAULT_PRESET_PROFILES: PermissionProfile[] = [
       gaming: { view: true, manage: true, delete: false },
       welcome: { view: true, manage: false, delete: false },
       community: { view: true, manage: true, delete: false },
-      media: { view: true, manage: true, delete: true },
       sticky: { view: true, manage: true, delete: true },
       audit: { view: true, manage: false, delete: false },
     },
@@ -297,7 +287,6 @@ export const DEFAULT_PRESET_PROFILES: PermissionProfile[] = [
       gaming: { view: false, manage: false, delete: false },
       welcome: { view: false, manage: false, delete: false },
       community: { view: false, manage: false, delete: false },
-      media: { view: false, manage: false, delete: false },
       sticky: { view: false, manage: false, delete: false },
       audit: { view: true, manage: false, delete: false },
     },
@@ -318,7 +307,6 @@ export const DEFAULT_PRESET_PROFILES: PermissionProfile[] = [
       gaming: { view: true, manage: true, delete: true },
       welcome: { view: true, manage: true, delete: false },
       community: { view: true, manage: true, delete: false },
-      media: { view: true, manage: true, delete: true },
       sticky: { view: true, manage: true, delete: true },
       audit: { view: false, manage: false, delete: false },
     },
@@ -568,7 +556,8 @@ export function resolveEffectiveCommandAccess(params: {
   });
 
   // Step 4: Explicit Role Overrides & Database Permits (Role Level)
-  const roleAclOverride = cmdAcl?.roleOverrides?.find((r) => userRoleIds.includes(r.roleId));
+  const matchingRoleRules = cmdAcl?.roleOverrides?.filter(r => userRoleIds.includes(r.roleId)) || [];
+  const roleAclOverride = matchingRoleRules.find(r => r.effect === 'DENY') || matchingRoleRules[0];
   const rolePermit = permits.find(
     (p) =>
       p.target_type === 'role' &&

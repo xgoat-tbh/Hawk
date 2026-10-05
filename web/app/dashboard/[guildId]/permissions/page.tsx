@@ -1,19 +1,20 @@
-'use client';
+﻿'use client';
+import * as Tabs from '@radix-ui/react-tabs';
+import { apiFetch } from '@/lib/api';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { AnimatedDrawer } from '@/components/ui/AnimatedDrawer';
+import { HawkSelect } from '@/components/ui/HawkSelect';
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useGuildData } from '@/context/GuildContext';
+import { useToast } from '@/components/ui/Toast';
 import { PermissionMatrix } from '@/components/Permissions/PermissionMatrix';
 import { CommandAclDrawer } from '@/components/Permissions/CommandAclDrawer';
 import { RolePoliciesTable } from '@/components/Permissions/RolePoliciesTable';
 import { UserOverridesList } from '@/components/Permissions/UserOverridesList';
 import { AccessPreviewer } from '@/components/Permissions/AccessPreviewer';
-import { AuditLogTable } from '@/components/Permissions/AuditLogTable';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { HawkSelect } from '@/components/ui/HawkSelect';
-import { HawkScrollArea } from '@/components/ui/HawkScrollArea';
-import { StatCard } from '@/components/ui/StatCard';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import {
   Shield,
   Command,
@@ -24,6 +25,13 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
+  Clock,
+  Filter,
+  RefreshCw,
+  Loader2,
+  ChevronRight,
+  ShieldAlert,
+  Sliders,
 } from 'lucide-react';
 import {
   PermissionProfile,
@@ -33,102 +41,154 @@ import {
   DEFAULT_PRESET_PROFILES,
 } from '@/lib/permissions';
 
+import type { AuditEvent as AuditLogEntry } from '@/lib/audit';
+import { formatAuditValue } from '@/lib/auditDisplay';
+
 export default function PermissionsMasterPage() {
   const { guildId } = useParams() as { guildId: string };
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'access';
+  const router = useRouter();
+  const initialTab = searchParams.get('tab') === 'simulator' ? 'preview' : searchParams.get('tab') || 'commands';
 
   const { roles } = useGuildData();
+  const { success, error, info } = useToast();
 
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [profiles, setProfiles] = useState<PermissionProfile[]>(DEFAULT_PRESET_PROFILES);
+  useEffect(() => { setActiveTab(initialTab); setCommandSearch(searchParams.get("command") || ""); }, [initialTab, searchParams]);
+  const [profiles, setProfiles] = useState<PermissionProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>('administrator');
   const [rolePolicies, setRolePolicies] = useState<RolePolicy[]>([]);
   const [userOverrides, setUserOverrides] = useState<UserOverride[]>([]);
   const [commandAcls, setCommandAcls] = useState<CommandAcl[]>([]);
   const [selectedCommandForAcl, setSelectedCommandForAcl] = useState<CommandAcl | null>(null);
 
-  const [commandSearch, setCommandSearch] = useState('');
+  const [commandSearch, setCommandSearch] = useState(searchParams.get('command') || '');
   const [commandFilter, setCommandFilter] = useState<'ALL' | 'OVERRIDDEN' | 'CRITICAL'>('ALL');
   const [isOwner, setIsOwner] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const commandFilterOptions = [
-    { value: 'ALL', label: 'All Commands' },
-    { value: 'OVERRIDDEN', label: 'Has Overrides' },
-    { value: 'CRITICAL', label: 'High/Critical Risk' },
-  ];
+  // Audit Tab State
+  const [selectedAudit, setSelectedAudit] = useState<AuditLogEntry | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditSearch, setAuditSearch] = useState('');
+  const [auditModule, setAuditModule] = useState('ALL');
+  const [auditSeverity, setAuditSeverity] = useState('ALL');
 
   // Fetch live permissions bundle
-  useEffect(() => {
-    async function loadPermissions() {
-      try {
-        const res = await fetch(`/api/guilds/${guildId}/permissions`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.profiles) setProfiles(data.profiles);
-          if (data.rolePolicies) setRolePolicies(data.rolePolicies);
-          if (data.userOverrides) setUserOverrides(data.userOverrides);
-          if (data.commandAcls) setCommandAcls(data.commandAcls);
-          if (data.isOwner !== undefined) setIsOwner(Boolean(data.isOwner));
-        }
-      } catch (err) {
-        console.error('Failed to load permissions:', err);
+  const loadPermissions = useCallback(async () => {
+    try {
+      const res = await apiFetch(`/api/guilds/${guildId}/permissions`);
+      if (!res.ok) throw new Error("Unable to load permissions. Check your access and retry.");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.profiles) setProfiles(data.profiles);
+        if (data.rolePolicies) setRolePolicies(data.rolePolicies);
+        if (data.userOverrides) setUserOverrides(data.userOverrides);
+        if (data.commandAcls) setCommandAcls(data.commandAcls);
+        if (data.isOwner !== undefined) setIsOwner(Boolean(data.isOwner));
       }
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Unable to load permissions.');
     }
-    loadPermissions();
   }, [guildId]);
+
+  useEffect(() => {
+    loadPermissions();
+  }, [loadPermissions]);
+
+  // Fetch live audit trail from DB
+  const loadAuditLogs = useCallback(async () => {
+    setAuditLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (auditModule !== 'ALL') params.append('module', auditModule);
+      if (auditSeverity !== 'ALL') params.append('severity', auditSeverity);
+      if (auditSearch.trim()) params.append('q', auditSearch.trim());
+
+      const res = await apiFetch(`/api/guilds/${guildId}/audit?${params.toString()}`);
+      if (!res.ok) throw new Error("Unable to load audit history. Check access and retry.");
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data.logs || []);
+        const entryId = searchParams.get('entry');
+        if (entryId) setSelectedAudit((data.logs || []).find((entry: AuditLogEntry) => entry.id === entryId) || null);
+      }
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Unable to load audit history.');
+    } finally {
+      setAuditLoading(false);
+    }
+  }, [guildId, auditModule, auditSeverity, auditSearch]);
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      loadAuditLogs();
+    }
+  }, [activeTab, loadAuditLogs]);
 
   const handleSaveProfiles = async (updatedProfiles: PermissionProfile[]) => {
     try {
-      setProfiles(updatedProfiles);
-      await fetch(`/api/guilds/${guildId}/permissions`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/permissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'save_profiles', data: { profiles: updatedProfiles } }),
       });
+      if (!res.ok) throw new Error('Failed to persist profile updates');
+      setProfiles(updatedProfiles);
       setStatusMessage('Access profiles saved successfully.');
+      success('Permission profiles updated');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error saving profiles');
+      const msg = err.message || 'Error saving profiles';
+      setErrorMessage(msg);
+      error(msg);
     }
   };
 
   const handleSaveRolePolicies = async (updated: RolePolicy[]) => {
     try {
-      setRolePolicies(updated);
-      await fetch(`/api/guilds/${guildId}/permissions`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/permissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'save_role_policies', data: { rolePolicies: updated } }),
       });
+      if (!res.ok) throw new Error('Failed to save role policies');
+      setRolePolicies(updated);
       setStatusMessage('Role policies updated.');
+      success('Role policies synchronized');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error updating role policies');
+      const msg = err.message || 'Error updating role policies';
+      setErrorMessage(msg);
+      error(msg);
     }
   };
 
   const handleSaveUserOverrides = async (updated: UserOverride[]) => {
     try {
-      setUserOverrides(updated);
-      await fetch(`/api/guilds/${guildId}/permissions`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/permissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'save_user_overrides', data: { userOverrides: updated } }),
       });
+      if (!res.ok) throw new Error('Failed to update user overrides');
+      setUserOverrides(updated);
       setStatusMessage('User overrides updated.');
+      success('User overrides saved');
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error updating user overrides');
+      const msg = err.message || 'Error updating user overrides';
+      setErrorMessage(msg);
+      error(msg);
     }
   };
 
   const handleSaveCommandAcl = async (updated: CommandAcl) => {
     try {
-      await fetch(`/api/guilds/${guildId}/permissions`, {
+      const res = await apiFetch(`/api/guilds/${guildId}/permissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -140,13 +200,18 @@ export default function PermissionsMasterPage() {
           },
         }),
       });
+      if (!res.ok) throw new Error('Failed to update command permit');
       setCommandAcls((prev) =>
         prev.map((c) => (c.command === updated.command ? updated : c))
       );
       setStatusMessage(`Command permit updated for !${updated.command}`);
+      success(`Command ACL updated for !${updated.command}`);
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error updating command ACL');
+      const msg = err.message || 'Error updating command ACL';
+      setErrorMessage(msg);
+      error(msg);
+      throw err;
     }
   };
 
@@ -169,140 +234,210 @@ export default function PermissionsMasterPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-24">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#101217] dark:text-[#f0f2f5] flex items-center gap-2.5">
-            <Shield className="w-5 h-5 text-indigo-400" />
-            Permissions & Access Rules
-          </h1>
-          <p className="mt-1 text-xs text-[#6b7280] dark:text-[#8c949e]">
-            Configure dashboard access profiles, Discord command ACL overrides, role policies, and audit trails.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-4 max-w-7xl mx-auto pb-16">
+      <PageHeader guildId={guildId} title="Permissions & rules" description="Manage dashboard access, command policies, and individual exceptions. Inspect how each decision is resolved." actions={<button className="btn-secondary" onClick={loadPermissions}><RefreshCw size={14} className="mr-2"/>Refresh access</button>}/>
+      {/* Alert Banners */}
       {statusMessage && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-400">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-md bg-success/10 border border-success/20 flex items-center gap-2 text-xs font-sans text-success-text">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-success-text" />
           <span>{statusMessage}</span>
         </div>
       )}
       {errorMessage && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2 text-xs text-rose-400">
-          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+        <div className="p-3 rounded-md bg-critical/10 border border-critical/20 flex items-center gap-2 text-xs font-sans text-critical-text">
+          <AlertCircle className="w-4 h-4 shrink-0 text-critical-text" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Overview StatCards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Access Profiles"
-          value={profiles.length}
-          subtitle="Granular permission sets"
-          icon={Shield}
-        />
-        <StatCard
-          title="Role Policies"
-          value={rolePolicies.length}
-          subtitle="Mapped Discord server roles"
-          icon={Users}
-        />
-        <StatCard
-          title="User Overrides"
-          value={userOverrides.length}
-          subtitle="Explicit member exceptions"
-          icon={User}
-        />
-        <StatCard
-          title="Command ACLs"
-          value={commandAcls.length}
-          subtitle="Protected bot commands"
-          icon={Command}
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-black/[0.08] dark:border-[#1a1d24] gap-6 text-xs font-medium overflow-x-auto">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 py-3 text-xs text-text-secondary"><span><strong className="text-text-primary">{commandAcls.length}</strong> command policies</span><span><strong className="text-text-primary">{rolePolicies.length}</strong> role policies</span><span><strong className="text-text-primary">{userOverrides.length}</strong> user overrides</span><span><strong className="text-text-primary">{profiles.length}</strong> profiles</span></div>
+      {/* 3. Numbered Navigation Tabs */}
+      <Tabs.Root value={activeTab} onValueChange={value => router.push(`/dashboard/${guildId}/permissions?tab=${value}`)}><Tabs.List aria-label="Access management sections" className="flex items-center gap-1 border-b border-border pb-0 font-sans text-xs overflow-x-auto">
         {[
-          { id: 'access', label: 'Dashboard Access', icon: Shield },
-          { id: 'commands', label: 'Command Permissions', icon: Command },
-          { id: 'roles', label: 'Role Policies', icon: Users },
-          { id: 'users', label: 'User Overrides', icon: User },
-          { id: 'preview', label: 'Access Preview', icon: Eye },
-          { id: 'audit', label: 'Audit Log', icon: History },
+          { id: 'commands', tag: '', label: 'command acls', icon: Command },
+          { id: 'profiles', tag: '', label: 'access profiles', icon: Shield },
+          { id: 'roles', tag: '', label: 'role policies', icon: Users },
+          { id: 'users', tag: '', label: 'user overrides', icon: User },
+          { id: 'preview', tag: '', label: 'simulator', icon: Eye },
+          { id: 'audit', tag: '', label: 'audit trail', icon: History },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
-            <button
+            <Tabs.Trigger
               key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 border-b-2 flex items-center gap-2 transition-colors whitespace-nowrap ${
+              value={tab.id}
+
+              className={`px-3 py-2 border-b-2 flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
                 isActive
-                  ? 'border-indigo-500 text-indigo-600 dark:text-white'
-                  : 'border-transparent text-gray-500 dark:text-[#717882] hover:text-gray-700 dark:hover:text-[#c1c7cd]'
+                  ? 'border-accent text-text-primary font-semibold bg-surface-4/50'
+                  : 'border-transparent text-text-secondary hover:text-text-primary hover:bg-white/[0.02]'
               }`}
             >
-              <Icon className="w-4 h-4" />
+
+              <Icon className="w-3.5 h-3.5" />
               <span>{tab.label}</span>
-            </button>
+            </Tabs.Trigger>
           );
         })}
-      </div>
+      </Tabs.List></Tabs.Root>
 
-      {/* TAB 1: Dashboard Access & Permission Matrix */}
-      {activeTab === 'access' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Profiles List (4 cols) */}
-            <div className="lg:col-span-4 bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-3 shadow-xs">
-              <SectionHeader
-                title="Profiles Matrix"
-                description="Select a role profile to inspect and configure permission grants."
-              />
+      {/* 4. TAB CONTENTS */}
 
-              <HawkScrollArea maxHeight="60vh" className="space-y-2 pr-1">
-                {profiles.map((p) => (
+      {/* TAB 1: Command Access Control Lists */}
+      {activeTab === 'commands' && (
+        <div className="surface-container space-y-0">
+          <div className="panel-header flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-success-text">commands &gt;</span>
+              <span className="text-text-secondary">command acls ({filteredCommands.length} of {commandAcls.length})</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-48 sm:w-64">
+                <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder="filter commands..."
+                  value={commandSearch}
+                  onChange={(e) => setCommandSearch(e.target.value)}
+                  className="glass-input pl-7 text-[11px] py-1 font-sans"
+                />
+              </div>
+
+              <HawkSelect label="Command filter" className="min-w-[150px]" value={commandFilter} onChange={value => setCommandFilter(value as any)} options={[{ value: 'ALL', label: 'all commands' }, { value: 'OVERRIDDEN', label: 'overridden only' }, { value: 'CRITICAL', label: 'high/critical risk' }]}/>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="bg-sidebar border-b border-white/[0.06] text-[10px] text-text-muted uppercase tracking-wider select-none">
+                <tr>
+                  <th className="py-2.5 px-4">Command</th>
+                  <th className="py-2.5 px-4">Category</th>
+                  <th className="py-2.5 px-4">Default Profile</th>
+                  <th className="py-2.5 px-4">Overrides</th>
+                  <th className="py-2.5 px-4 text-right">Risk Level</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {filteredCommands.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-text-secondary text-xs">
+                      no commands matching search criteria
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCommands.map((cmd) => {
+                    const overrideCount = (cmd.roleOverrides?.length || 0) + (cmd.userOverrides?.length || 0);
+
+                    const riskTagClass =
+                      cmd.dangerLevel === 'CRITICAL' || cmd.dangerLevel === 'HIGH'
+                        ? 'text-critical-text bg-critical/10 border-critical/25'
+                        : cmd.dangerLevel === 'MEDIUM'
+                        ? 'text-warning-text bg-warning/10 border-warning/25'
+                        : 'text-success-text bg-success/10 border-success/25';
+
+                    return (
+                      <tr
+                        key={cmd.command}
+                        onClick={() => setSelectedCommandForAcl(cmd)}
+                        className="hover:bg-white/[0.02] cursor-pointer transition-colors"
+                      >
+                        <td className="py-2.5 px-4 font-semibold text-text-primary">
+                          <span className="text-success-text">!</span>{cmd.command}
+                        </td>
+                        <td className="py-2.5 px-4 text-text-secondary capitalize">
+                          {cmd.category}
+                        </td>
+                        <td className="py-2.5 px-4 text-text-secondary capitalize">
+                          {cmd.defaultRoleProfile}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          {overrideCount > 0 ? (
+                            <span className="text-[10px] font-sans text-success-text bg-success/10 border border-success/20 px-2 py-0.5 rounded">
+                              {overrideCount} {overrideCount === 1 ? 'override' : 'overrides'}
+                            </span>
+                          ) : (
+                            <span className="text-text-muted text-[11px]">0 overrides</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4 text-right">
+                          <span className={`inline-block text-[10px] font-sans px-2 py-0.5 rounded border uppercase ${riskTagClass}`}>
+                            {cmd.dangerLevel}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <CommandAclDrawer
+            command={selectedCommandForAcl}
+            isOpen={Boolean(selectedCommandForAcl)}
+            onClose={() => setSelectedCommandForAcl(null)}
+            roles={roles}
+            onSave={handleSaveCommandAcl}
+          />
+        </div>
+      )}
+
+      {/* TAB 2: Profiles Matrix */}
+      {activeTab === 'profiles' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          {/* Left Profiles List (4 cols) */}
+          <div className="lg:col-span-4 surface-container">
+            <div className="panel-header">
+              <span className="text-success-text">profiles &gt;</span>
+              <span className="text-text-secondary">permission sets</span>
+            </div>
+
+            <div className="p-3 space-y-2 max-h-[65vh] overflow-y-auto">
+              {profiles.map((p) => {
+                const isSelected = selectedProfileId === p.id;
+                return (
                   <div
                     key={p.id}
                     onClick={() => setSelectedProfileId(p.id)}
-                    className={`p-3.5 rounded-lg border cursor-pointer transition-all ${
-                      selectedProfileId === p.id
-                        ? 'bg-indigo-50 dark:bg-[#14161b] border-indigo-500/50 text-[#101217] dark:text-white shadow-sm'
-                        : 'bg-gray-50 dark:bg-[#121418] border-black/[0.08] dark:border-[#1a1d24] text-gray-700 dark:text-[#c1c7cd] hover:border-gray-300 dark:hover:border-[#262a33] hover:bg-gray-100 dark:hover:bg-[#16181d]'
+                    className={`p-3 rounded-md border cursor-pointer transition-all font-sans ${
+                      isSelected
+                        ? 'bg-surface-4 border-success/40 text-white shadow-sm'
+                        : 'bg-surface-1 border-white/[0.04] text-text-secondary hover:border-white/[0.1] hover:text-text-primary'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[#101217] dark:text-white">{p.name}</span>
+                      <span className="text-xs font-semibold text-text-primary">{p.name}</span>
                       {p.isPreset && (
-                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                          Preset
+                        <span className="text-[9px] font-sans uppercase px-1.5 py-0.5 rounded bg-white/[0.06] text-text-secondary border border-white/[0.08]">
+                          preset
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-gray-500 dark:text-[#8c949e] mt-1 line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-text-muted mt-1 line-clamp-2 leading-relaxed">
                       {p.description}
                     </p>
                   </div>
-                ))}
-              </HawkScrollArea>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right Matrix View (8 cols) */}
+          <div className="lg:col-span-8 surface-container">
+            <div className="panel-header">
+              <div className="flex items-center gap-2">
+                <span className="text-success-text">matrix &gt;</span>
+                <span className="text-text-primary">{activeProfile.name}</span>
+              </div>
+              <span className="font-sans text-[10px] text-text-secondary px-2 py-0.5 rounded bg-white/[0.04]">
+                {activeProfile.isPreset ? 'preset profile' : 'custom profile'}
+              </span>
             </div>
 
-            {/* Right Matrix View (8 cols) */}
-            <div className="lg:col-span-8 bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-              <div className="flex items-center justify-between pb-3 border-b border-black/[0.08] dark:border-[#1a1d24]">
-                <div>
-                  <h3 className="text-sm font-semibold text-[#101217] dark:text-white tracking-tight">{activeProfile.name}</h3>
-                  <p className="text-xs text-gray-500 dark:text-[#8c949e] mt-0.5">{activeProfile.description}</p>
-                </div>
-
-                <StatusBadge status={activeProfile.isPreset ? 'Preset Profile' : 'Custom'} variant="info" />
-              </div>
-
+            <div className="p-4 sm:p-6">
               <PermissionMatrix
                 profile={activeProfile}
                 onChange={(updated) => {
@@ -316,172 +451,168 @@ export default function PermissionsMasterPage() {
         </div>
       )}
 
-      {/* TAB 2: Command Permissions & ACLs */}
-      {activeTab === 'commands' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Bot Command Access Control Lists"
-            description="Manage role and user overrides per command to restrict destructive or economy commands."
-          />
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#717882]" />
-              <input
-                type="text"
-                placeholder="Search commands or descriptions..."
-                value={commandSearch}
-                onChange={(e) => setCommandSearch(e.target.value)}
-                className="w-full bg-white dark:bg-[#14161b] border border-black/[0.08] dark:border-[#20242c] rounded-lg pl-9 pr-3 py-1.5 text-xs text-[#101217] dark:text-white focus:outline-none focus:border-indigo-500 font-sans"
-              />
-            </div>
-
-            <div className="w-48">
-              <HawkSelect
-                options={commandFilterOptions}
-                value={commandFilter}
-                onChange={(val) => setCommandFilter(val as any)}
-                searchable={false}
-              />
-            </div>
-          </div>
-
-          {/* Commands Table */}
-          <div className="border border-black/[0.08] dark:border-[#1a1d24] rounded-lg overflow-hidden bg-white dark:bg-[#121418]">
-            <HawkScrollArea maxHeight="55vh">
-              <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-[#0d0e11] border-b border-black/[0.08] dark:border-[#1a1d24] text-[10px] font-mono uppercase tracking-wider text-gray-500 dark:text-[#717882]">
-                  <tr>
-                    <th className="py-3 px-4">Command</th>
-                    <th className="py-3 px-4">Category</th>
-                    <th className="py-3 px-4">Default Profile</th>
-                    <th className="py-3 px-4">Overrides</th>
-                    <th className="py-3 px-4 text-right">Risk Level</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/[0.08] dark:divide-[#1a1d24]">
-                  {filteredCommands.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-gray-500 dark:text-[#717882] text-xs">
-                        No commands matching search criteria.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCommands.map((cmd) => {
-                      const overrideCount = (cmd.roleOverrides?.length || 0) + (cmd.userOverrides?.length || 0);
-                      return (
-                        <tr
-                          key={cmd.command}
-                          onClick={() => setSelectedCommandForAcl(cmd)}
-                          className="hover:bg-gray-50 dark:hover:bg-[#16181d]/60 cursor-pointer transition-colors"
-                        >
-                          <td className="py-3 px-4 font-mono font-medium text-[#101217] dark:text-white">
-                            !{cmd.command}
-                          </td>
-                          <td className="py-3 px-4 text-gray-500 dark:text-[#8c949e] capitalize">
-                            {cmd.category}
-                          </td>
-                          <td className="py-3 px-4 text-gray-700 dark:text-[#c1c7cd] capitalize">
-                            {cmd.defaultRoleProfile}
-                          </td>
-                          <td className="py-3 px-4">
-                            {overrideCount > 0 ? (
-                              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-                                {overrideCount} custom {overrideCount === 1 ? 'override' : 'overrides'}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500 dark:text-[#717882] font-mono text-xs">0 overrides</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <StatusBadge
-                              status={cmd.dangerLevel}
-                              variant={
-                                cmd.dangerLevel === 'CRITICAL' || cmd.dangerLevel === 'HIGH'
-                                  ? 'danger'
-                                  : cmd.dangerLevel === 'MEDIUM'
-                                  ? 'warning'
-                                  : 'neutral'
-                              }
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </HawkScrollArea>
-          </div>
-
-          <CommandAclDrawer
-            command={selectedCommandForAcl}
-            isOpen={Boolean(selectedCommandForAcl)}
-            onClose={() => setSelectedCommandForAcl(null)}
-            roles={roles}
-            onSave={handleSaveCommandAcl}
-          />
-        </div>
-      )}
-
       {/* TAB 3: Role Policies */}
       {activeTab === 'roles' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Role Policies Configuration"
-            description="Assign permission profiles to Discord server roles."
-          />
-          <RolePoliciesTable
-            policies={rolePolicies}
-            profiles={profiles}
-            roles={roles}
-            onSavePolicies={handleSaveRolePolicies}
-          />
+        <div className="surface-container">
+          <div className="panel-header">
+            <span className="text-success-text">roles &gt;</span>
+            <span className="text-text-secondary">discord server role permission assignments</span>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            <RolePoliciesTable
+              policies={rolePolicies}
+              profiles={profiles}
+              roles={roles}
+              onSavePolicies={handleSaveRolePolicies}
+            />
+          </div>
         </div>
       )}
 
       {/* TAB 4: User Overrides */}
       {activeTab === 'users' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="User Overrides & Exceptions"
-            description="Grant explicit profile assignments to individual Discord users regardless of roles."
-          />
-          <UserOverridesList
-            overrides={userOverrides}
-            onSaveOverrides={handleSaveUserOverrides}
-            isOwner={isOwner}
-            profiles={profiles}
-          />
+        <div className="surface-container">
+          <div className="panel-header">
+            <span className="text-success-text">users &gt;</span>
+            <span className="text-text-secondary">explicit member overrides &amp; exceptions</span>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            <UserOverridesList
+              overrides={userOverrides}
+              onSaveOverrides={handleSaveUserOverrides}
+              isOwner={isOwner}
+              profiles={profiles}
+            />
+          </div>
         </div>
       )}
 
-      {/* TAB 5: Access Preview Simulator */}
+      {/* TAB 5: Access Rights Simulator */}
       {activeTab === 'preview' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Access Rights Simulator"
-            description="Test effective permissions for any member or role combination in your guild."
-          />
-          <AccessPreviewer
-            roles={roles}
-            profiles={profiles}
-            rolePolicies={rolePolicies}
-            userOverrides={userOverrides}
-          />
+        <div className="surface-container">
+          <div className="panel-header">
+            <span className="text-success-text">simulator &gt;</span>
+            <span className="text-text-secondary">effective rights inspector</span>
+          </div>
+
+          <div className="p-4 sm:p-6">
+            <AccessPreviewer
+              roles={roles}
+              profiles={profiles}
+              rolePolicies={rolePolicies}
+              userOverrides={userOverrides}
+            />
+          </div>
         </div>
       )}
 
-      {/* TAB 6: Security Audit Log */}
+      {/* TAB 6: Security Audit Trail (Real DB logs) */}
       {activeTab === 'audit' && (
-        <div className="bg-white dark:bg-[#0c0d10] border border-black/[0.08] dark:border-[#1a1d24] rounded-xl p-5 space-y-5 shadow-xs">
-          <SectionHeader
-            title="Permissions Change Audit Log"
-            description="Immutable ledger tracking every modification to profiles, role policies, and command overrides."
-          />
-          <AuditLogTable guildId={guildId} />
+        <div className="surface-container space-y-0">
+          <div className="panel-header flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-success-text">audit &gt;</span>
+              <span className="text-text-secondary">real security &amp; permission activity stream ({auditLogs.length} events)</span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative w-40 sm:w-56">
+                <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder="search audit..."
+                  value={auditSearch}
+                  onChange={(e) => setAuditSearch(e.target.value)}
+                  className="glass-input pl-7 text-[11px] py-1 font-sans"
+                />
+              </div>
+
+              <HawkSelect label="Audit module" className="min-w-[150px]" value={auditModule} onChange={value => setAuditModule(value)} options={[{ value: 'ALL', label: 'all modules' }, { value: 'permissions', label: 'permissions' }, { value: 'economy', label: 'economy' }, { value: 'store', label: 'store' }, { value: 'welcome', label: 'welcome' }, { value: 'general', label: 'general' }]}/>
+
+              <HawkSelect label="Audit severity" className="min-w-[150px]" value={auditSeverity} onChange={value => setAuditSeverity(value)} options={[{ value: 'ALL', label: 'all severities' }, { value: 'INFO', label: 'info' }, { value: 'WARNING', label: 'warning' }, { value: 'CRITICAL', label: 'critical' }]}/>
+
+              <button
+                type="button"
+                onClick={loadAuditLogs}
+                aria-label="Refresh audit log"
+                disabled={auditLoading}
+                className="btn-secondary py-1 px-2 text-[11px] shrink-0"
+              >
+                <RefreshCw className={`w-3 h-3 ${auditLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="bg-sidebar border-b border-white/[0.06] text-[10px] text-text-muted uppercase tracking-wider select-none">
+                <tr>
+                  <th className="py-2.5 px-4">Timestamp</th>
+                  <th className="py-2.5 px-4">Actor</th>
+                  <th className="py-2.5 px-4">Module / Action</th>
+                  <th className="py-2.5 px-4">Changes</th>
+                  <th className="py-2.5 px-4 text-right">Severity</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {auditLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-text-secondary">
+                      <Loader2 className="w-5 h-5 mx-auto animate-spin text-success-text" />
+                      <p className="mt-2 text-xs">loading real audit records from database...</p>
+                    </td>
+                  </tr>
+                ) : auditLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center text-text-secondary text-xs">
+                      no audit activity recorded for this criteria
+                    </td>
+                  </tr>
+                ) : (
+                  auditLogs.map((log) => {
+                    const sevClass =
+                      log.severity === 'CRITICAL'
+                        ? 'text-critical-text bg-critical/10 border-critical/25'
+                        : log.severity === 'WARNING'
+                        ? 'text-warning-text bg-warning/10 border-warning/25'
+                        : 'text-info-text bg-info/10 border-info/25';
+
+                    const formattedDate = new Date(log.timestamp).toISOString().replace('T', ' ').substring(0, 19);
+
+                    return (
+                      <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-2.5 px-4 text-text-secondary text-[11px] whitespace-nowrap">
+                          <button className="text-left hover:underline font-mono" onClick={() => setSelectedAudit(log)} aria-label={`Inspect ${log.action} at ${formattedDate}`}>{formattedDate}</button>
+                        </td>
+                        <td className="py-2.5 px-4 text-text-primary font-semibold whitespace-nowrap">
+                          {log.userName || log.userId}
+                        </td>
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <span className="text-success-text font-semibold">[{log.module}]</span>{' '}
+                          <span className="text-text-secondary">{log.action}</span>
+                        </td>
+                        <td className="py-2.5 px-4 text-text-secondary text-[11px]">
+                          <button className="text-text-secondary hover:underline" onClick={() => setSelectedAudit(log)}>View change details</button>
+                        </td>
+                        <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                          <span className={`inline-block text-[10px] font-sans px-2 py-0.5 rounded border uppercase ${sevClass}`}>
+                            {log.severity}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+      <AnimatedDrawer isOpen={Boolean(selectedAudit)} onClose={() => setSelectedAudit(null)} title="Audit details" subtitle={selectedAudit?.action}>
+        {selectedAudit && <div className="space-y-5 text-sm"><dl className="space-y-3"><div><dt className="text-text-muted">Actor</dt><dd>{selectedAudit.userName || selectedAudit.userId}</dd></div><div><dt className="text-text-muted">Time</dt><dd className="font-mono text-xs">{selectedAudit.timestamp}</dd></div><div><dt className="text-text-muted">Module</dt><dd>{selectedAudit.module}</dd></div><div><dt className="text-text-muted">Severity</dt><dd>{selectedAudit.severity}</dd></div></dl><h3 className="font-semibold">Changes</h3><div><h4 className="text-text-muted text-xs mb-2">Previous value</h4><pre className="whitespace-pre-wrap break-words text-xs font-mono">{formatAuditValue(selectedAudit.previousValue, selectedAudit.target || '')}</pre></div><div><h4 className="text-text-muted text-xs mb-2">New value</h4><pre className="whitespace-pre-wrap break-words text-xs font-mono">{formatAuditValue(selectedAudit.newValue, selectedAudit.target || '')}</pre></div></div>}
+      </AnimatedDrawer>
     </div>
   );
 }

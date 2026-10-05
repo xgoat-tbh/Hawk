@@ -4,6 +4,7 @@ import type { PermissionCheckResult, PermissionContext } from '../../types/permi
 import { AuthorityLevel } from '../../types/permission.js';
 import { env } from '../config/environment.js';
 import * as permissionRepo from '../database/repositories/permissionRepo.js';
+import { resolvePermitEffect } from './permitEffect.js';
 
 export function getAuthorityLevel(userId: string, guildOwnerId?: string): AuthorityLevel {
   if (env.botOwnerIds.includes(userId) || userId === env.botOwnerId) return AuthorityLevel.Owner;
@@ -41,8 +42,9 @@ export async function checkPermission(
     return { allowed: true, authority: AuthorityLevel.Normal, reason: 'Global public command' };
   }
 
-  const hasCustomPermit = await permissionRepo.hasPermit(ctx.guildId, ctx.userId, ctx.memberRoleIds, ctx.commandName, ctx.moduleName);
-  if (hasCustomPermit) {
+  const effect = resolvePermitEffect(await permissionRepo.getPermitsForGuild(ctx.guildId), ctx.userId, ctx.memberRoleIds, ctx.commandName, ctx.moduleName);
+  if (effect === 'DENY') return { allowed: false, authority, reason: 'An explicit command access rule denies this command.' };
+  if (effect === 'ALLOW') {
     return { allowed: true, authority: AuthorityLevel.Permitted, reason: 'Custom access override granted' };
   }
 
