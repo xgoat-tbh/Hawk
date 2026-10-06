@@ -35,6 +35,42 @@ test('live schema bootstrap and partial config changes preserve stored data', as
    assert.equal(economy.audit_channel_id, channel); assert.equal(economy.pvc_category_id, channel); assert.equal(economy.auto_cleanup, false);
    await pvc.handlePvc(guild, { pvc_category_id: null }); assert.equal((await db`SELECT pvc_category_id FROM economy_config WHERE guild_id = ${guild}`)[0].pvc_category_id, null);
   });
+  await t.test('parking and recreating a PVC preserves paid expiry and cascades access entries', async () => {
+   const rollback = new Error('rollback PVC lifecycle check');
+   try {
+    await db.begin(async tx => {
+     const expiry = new Date(Date.now() + 3600000);
+     await tx`INSERT INTO pvc_sessions (channel_id, guild_id, owner_id, expires_at, auto_pay_enabled, room_name, bitrate) VALUES ('enhancement-pvc', ${guild}, 'enhancement-owner', ${expiry}, true, 'Preserved room', 64000)`;
+     await tx`INSERT INTO pvc_access (channel_id, target_id, target_type, access) VALUES ('enhancement-pvc', 'enhancement-role', 'ROLE', 'ALLOW')`;
+     for (const id of ['pending-enhancement-pvc', 'recreated-enhancement-pvc']) {
+      await tx`UPDATE pvc_sessions SET channel_id = ${id} WHERE guild_id = ${guild}`;
+      const row = (await tx`SELECT * FROM pvc_sessions WHERE channel_id = ${id}`)[0];
+      assert.equal(row.expires_at.getTime(), expiry.getTime()); assert.equal(row.room_name, 'Preserved room'); assert.equal(row.bitrate, 64000); assert.equal(row.auto_pay_enabled, true);
+      assert.equal((await tx`SELECT channel_id FROM pvc_access WHERE target_id = 'enhancement-role'`)[0].channel_id, id);
+     }
+     throw rollback;
+    });
+   } catch (error) { if (error !== rollback) throw error; }
+  });
+  await t.test('PVC payment rolls back if rental persistence fails and commits with pending credit', async () => {
+   const user = '999900000000000153';
+   await db`INSERT INTO economy_balances (guild_id, user_id, cash, bank) VALUES (${guild}, ${user}, 1000, 0)`;
+   try {
+    const wrapped = { begin: (operation: any) => db.begin(tx => operation(async (strings: TemplateStringsArray, ...values: any[]) => {
+     if (strings.join('').includes('INSERT INTO pvc_sessions')) throw new Error('Injected rental write failure');
+     return tx(strings, ...values);
+    })) };
+    const dependencies = { '../../core/database/pool.js': { getDb: () => wrapped }, '../economy/economyService.js': { ensureBalance: async () => {} } };
+    const failing = loadModule('src/modules/pvc/pvcService.ts', dependencies);
+    await assert.rejects(failing.reservePvcTime(guild, user, 1, 100), /Injected rental write failure/);
+    assert.equal(Number((await db`SELECT cash FROM economy_balances WHERE guild_id = ${guild} AND user_id = ${user}`)[0].cash), 1000);
+    assert.equal((await db`SELECT * FROM pvc_sessions WHERE guild_id = ${guild} AND owner_id = ${user}`).length, 0);
+    const service = loadModule('src/modules/pvc/pvcService.ts', { ...dependencies, '../../core/database/pool.js': { getDb: () => db } });
+    const rental = await service.reservePvcTime(guild, user, 1, 100);
+    assert.equal(rental.channelId, `pending-${guild}-${user}`); assert.ok(rental.expiresAt.getTime() > Date.now());
+    assert.equal(Number((await db`SELECT cash FROM economy_balances WHERE guild_id = ${guild} AND user_id = ${user}`)[0].cash), 900);
+   } finally { await db`DELETE FROM pvc_sessions WHERE guild_id = ${guild} AND owner_id = ${user}`; await db`DELETE FROM economy_balances WHERE guild_id = ${guild} AND user_id = ${user}`; }
+  });
  } finally {
   await db`DELETE FROM guild_config WHERE guild_id = ${guild}`; await db`DELETE FROM economy_config WHERE guild_id = ${guild}`; await closeDb();
  }

@@ -31,6 +31,19 @@ test('native Discord admin bypasses private permit checks but cannot use owner-o
  assert.equal((await checker.checkPermission({ name: 'reset', module: 'owner', ownerOnly: true }, context, member)).allowed, false);
 });
 
+test('native Administrator command access does not bypass Discord role hierarchy', () => {
+ const helper = loadModule('src/modules/moderation/roleHelpers.ts', { '../../core/permissions/PermissionChecker.js': { getAuthorityLevel: (id: string) => id === 'bot-owner' ? 4 : 2 } });
+ const guild = { id: 'guild', ownerId: 'guild-owner', members: { me: { roles: { highest: { position: 20 } } } } };
+ const junior = { id: 'junior-admin', roles: { highest: { position: 5 } } };
+ const senior = { id: 'senior-admin', roles: { highest: { position: 10 } } };
+ const role = { id: 'role', position: 10, managed: false };
+ assert.equal(helper.canExecutorManage(guild, junior, role), false);
+ assert.equal(helper.canExecutorManage(guild, junior, undefined, senior), false);
+ assert.equal(helper.canExecutorManage(guild, { ...junior, id: 'guild-owner' }, role), true);
+ assert.equal(helper.canExecutorManage(guild, { ...junior, id: 'bot-owner' }, role), true);
+ assert.equal(helper.isRoleManageable(guild, { ...role, position: 21 }, { ...junior, id: 'bot-owner' }), false);
+});
+
 test('AFK message hot path never edits a self-selected AFK nickname without a record', async () => {
  let renames = 0;
  const handler = loadModule('src/modules/general/_afkHandler.ts', { '../../core/database/repositories/afkRepo.js': { getAfk: () => null }, './afkUI.js': {}, './afkSanitizer.js': { removeAfkNickname: async () => renames++ }, '../../core/logging/ConsoleLogger.js': { consoleLog: () => {} } });
@@ -66,7 +79,7 @@ test('PVC gatekeeper fetches evicted channels and does not create a duplicate', 
  let created = 0; let fetched = 0; let moved = 0;
  const session = { channelId: 'voice', expiresAt: new Date(Date.now() + 60000) };
  const handler = loadModule('src/modules/pvc/_pvcGatekeeper.ts', { '../../core/database/repositories/economyConfigRepo.js': { getEconomyConfig: async () => ({ pvcJtcChannelId: 'jtc' }) }, './pvcService.js': { getSessionByOwner: async () => session }, '../economy/economyService.js': {}, '../../core/database/pool.js': { getDb: () => async () => [] } });
- const guild = { id: 'guild', channels: { fetch: async () => { fetched++; return { id: 'voice' }; }, create: async () => { created++; } } };
+ const guild = { id: 'guild', channels: { fetch: async () => { fetched++; return { id: 'voice', type: 2, permissionOverwrites: { cache: new Map() } }; }, create: async () => { created++; } } };
  await handler.handlePvcVoiceStateUpdate({ channelId: null }, { guild, channelId: 'jtc', member: { id: 'user', voice: { setChannel: async () => moved++ } } });
  assert.equal(fetched, 1); assert.equal(moved, 1); assert.equal(created, 0);
 });

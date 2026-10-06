@@ -11,7 +11,7 @@ export function canExecutorManage(
   const authority = getAuthorityLevel(executor.id, guild.ownerId, executor);
 
   // Server Owner, Bot Owner, and Bot Admin bypass EXECUTOR role hierarchy checks (still bounded by Bot's role hierarchy)
-  if (authority >= AuthorityLevel.ServerAdmin) {
+  if (executor.id === guild.ownerId || authority >= AuthorityLevel.BotAdmin) {
     return true;
   }
 

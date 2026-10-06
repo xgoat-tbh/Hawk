@@ -136,14 +136,14 @@ function ActionNode({ data, selected }: NodeProps<HawkNode>) {
         selected
           ? 'border-accent shadow-[0_0_20px_rgba(99,102,241,0.35)] ring-1 ring-accent'
           : 'border-border/80 hover:border-text-secondary/50'
-      } bg-surface-panel text-text-primary`}
+      } bg-panel text-text-primary`}
     >
       {/* Input Handle */}
       {data.action !== 'trigger' && (
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-3 !h-3 !border-2 !border-surface-panel !bg-accent !-left-1.5 shadow-md hover:scale-125 transition-transform"
+          className="!w-3 !h-3 !border-2 !border-panel !bg-accent !-left-1.5 shadow-md hover:scale-125 transition-transform"
         />
       )}
 
@@ -176,7 +176,7 @@ function ActionNode({ data, selected }: NodeProps<HawkNode>) {
             type="source"
             position={Position.Right}
             style={{ top: '65%' }}
-            className="!w-3 !h-3 !border-2 !border-surface-panel !bg-success-text !-right-1.5 shadow-md hover:scale-125 transition-transform"
+            className="!w-3 !h-3 !border-2 !border-panel !bg-success-text !-right-1.5 shadow-md hover:scale-125 transition-transform"
             aria-label="Yes branch"
           />
           <span className="text-critical-text ml-auto mr-1">No</span>
@@ -185,7 +185,7 @@ function ActionNode({ data, selected }: NodeProps<HawkNode>) {
             type="source"
             position={Position.Right}
             style={{ top: '85%' }}
-            className="!w-3 !h-3 !border-2 !border-surface-panel !bg-critical-text !-right-1.5 shadow-md hover:scale-125 transition-transform"
+            className="!w-3 !h-3 !border-2 !border-panel !bg-critical-text !-right-1.5 shadow-md hover:scale-125 transition-transform"
             aria-label="No branch"
           />
         </div>
@@ -193,7 +193,7 @@ function ActionNode({ data, selected }: NodeProps<HawkNode>) {
         <Handle
           type="source"
           position={Position.Right}
-          className="!w-3 !h-3 !border-2 !border-surface-panel !bg-accent !-right-1.5 shadow-md hover:scale-125 transition-transform"
+          className="!w-3 !h-3 !border-2 !border-panel !bg-accent !-right-1.5 shadow-md hover:scale-125 transition-transform"
         />
       )}
     </div>

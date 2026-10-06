@@ -1,121 +1,74 @@
-import type { VoiceState, TextChannel, VoiceChannel } from 'discord.js';
-import { ChannelType, PermissionFlagsBits } from 'discord.js';
+import type { VoiceState, TextChannel, VoiceChannel, OverwriteResolvable } from 'discord.js';
+import { ChannelType, PermissionFlagsBits, EmbedBuilder } from 'discord.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
-import { getSessionByOwner, createSession } from './pvcService.js';
-import { deductFundsPreferCash } from '../economy/economyService.js';
-import { EmbedBuilder } from 'discord.js';
+import { getSessionByOwner, reservePvcTime, getAccessList } from './pvcService.js';
 import { getDb } from '../../core/database/pool.js';
+import { cleanupEmptyPvc, stripLegacyOwnerGrant, withPvcOwnerLock } from './pvcLifecycle.js';
 
 export async function handlePvcVoiceStateUpdate(oldState: VoiceState, newState: VoiceState): Promise<void> {
   const guild = newState.guild;
   const config = await getEconomyConfig(guild.id);
-  
-  if (!config.pvcJtcChannelId) return;
-  
-  // Join JTC channel
-  if (newState.channelId === config.pvcJtcChannelId && oldState.channelId !== newState.channelId) {
+  if (config.pvcJtcChannelId && newState.channelId === config.pvcJtcChannelId && oldState.channelId !== newState.channelId && newState.member) {
     const member = newState.member;
-    if (!member) return;
-
-    let existingSession = await getSessionByOwner(guild.id, member.id);
-    const db = getDb();
-
-    // Check if user has a pending session
-    if (!existingSession) {
-      const pendingChannelId = 'pending-' + member.id;
-      const rows = await db`SELECT * FROM pvc_sessions WHERE channel_id = ${pendingChannelId} AND guild_id = ${guild.id}`;
-      if (rows.length > 0) {
-        existingSession = {
-          channelId: rows[0].channel_id,
-          guildId: rows[0].guild_id,
-          ownerId: rows[0].owner_id,
-          expiresAt: rows[0].expires_at,
-          autoPayEnabled: rows[0].auto_pay_enabled,
-          isLocked: rows[0].is_locked,
-          isHidden: rows[0].is_hidden,
-          userLimit: rows[0].user_limit,
-        };
-      }
-    }
-
-    if (existingSession && existingSession.expiresAt > new Date()) {
-      // Re-create or move member to existing channel
-      let vc = existingSession.channelId.startsWith('pending-') ? null : (await guild.channels.fetch(existingSession.channelId).catch(() => null)) as VoiceChannel;
-      
-      if (!vc) {
-        // Create new VC
-        vc = await guild.channels.create({
-          name: `${member.user.username}'s PVC`,
-          type: ChannelType.GuildVoice,
-          parent: config.pvcCategoryId || undefined,
-          permissionOverwrites: [
-            {
-              id: guild.roles.everyone.id,
-              allow: [],
-              deny: existingSession.isHidden ? [PermissionFlagsBits.ViewChannel] : (existingSession.isLocked ? [PermissionFlagsBits.Connect] : [])
-            },
-            {
-              id: member.id,
-              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ViewChannel],
-            }
-          ],
-          userLimit: existingSession.userLimit || 0
-        });
-        
-        // Update session channel ID in DB
-        await db`UPDATE pvc_sessions SET channel_id = ${vc.id} WHERE channel_id = ${existingSession.channelId}`;
-      }
-      
-      await member.voice.setChannel(vc).catch(() => {});
-      return;
-    }
-    
-    // No session or expired session, try auto-buy 1 hour
-    if (!existingSession || existingSession.expiresAt <= new Date()) {
+    await withPvcOwnerLock(guild.id, member.id, async () => {
+      let existing = await getSessionByOwner(guild.id, member.id);
+      const needsPurchase = !existing || existing.expiresAt <= new Date();
       try {
-        await deductFundsPreferCash(guild.id, member.id, config.pvcHourlyRate);
-        
-        // Create new VC
-        const vc = await guild.channels.create({
-          name: `${member.user.username}'s PVC`,
-          type: ChannelType.GuildVoice,
-          parent: config.pvcCategoryId || undefined,
-          permissionOverwrites: [
-            {
-              id: guild.roles.everyone.id,
-              allow: [],
-            },
-            {
-              id: member.id,
-              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ViewChannel],
-            }
-          ],
-        });
-        
-        if (existingSession) {
-            await db`UPDATE pvc_sessions SET expires_at = ${new Date(Date.now() + 3600000)}, channel_id = ${vc.id} WHERE channel_id = ${existingSession.channelId}`;
-        } else {
-            await createSession(vc.id, guild.id, member.id, 1);
+        if (needsPurchase) {
+          existing = await reservePvcTime(guild.id, member.id, 1, config.pvcHourlyRate);
         }
+        let vc = existing && !existing.channelId.startsWith('pending-')
+          ? await guild.channels.fetch(existing.channelId).catch(() => null) as VoiceChannel | null : null;
+        if (vc && vc.type !== ChannelType.GuildVoice) throw new Error('PVC is not a voice channel');
+        const db = getDb();
+        if (!vc) {
+          const access = existing ? await getAccessList(existing.channelId) : [];
+          const overwrites: OverwriteResolvable[] = [
+            { id: guild.roles.everyone.id, allow: [], deny: [
+              ...(existing?.isHidden ? [PermissionFlagsBits.ViewChannel] : []),
+              ...(existing?.isLocked ? [PermissionFlagsBits.Connect] : []),
+            ] },
+            { id: member.id, type: 1, allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ViewChannel] },
+            ...access.filter(entry => entry.targetId !== member.id && entry.targetId !== guild.roles.everyone.id).map(entry => ({
+              id: entry.targetId, type: entry.targetType === 'ROLE' ? 0 as const : 1 as const,
+              allow: entry.access === 'ALLOW' ? [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ViewChannel] : [],
+              deny: entry.access === 'DENY' ? [PermissionFlagsBits.Connect] : [],
+            })),
+          ];
+          vc = await guild.channels.create({
+            name: existing?.roomName || `${member.user.username}'s PVC`, type: ChannelType.GuildVoice,
+            parent: config.pvcCategoryId || undefined, permissionOverwrites: overwrites,
+            userLimit: existing?.userLimit || 0,
+            bitrate: existing?.bitrate ? Math.min(existing.bitrate, guild.maximumBitrate) : undefined,
+          });
+          try {
+            if (!existing) throw new Error('PVC rental reservation missing');
+            // ACL foreign keys follow the new ID; rental expiry and settings remain intact.
+            const updated = await db`UPDATE pvc_sessions SET channel_id = ${vc.id} WHERE channel_id = ${existing.channelId} AND guild_id = ${guild.id} RETURNING channel_id`;
+            if (!updated.length) throw new Error('PVC rental attachment failed');
+          } catch (error) {
+            await vc.delete('PVC rental attachment failed').catch(failure => console.error('[PVC] Could not remove unattached channel:', failure));
+            throw error;
+          }
+        }
+        await stripLegacyOwnerGrant(vc, member.id);
         await member.voice.setChannel(vc).catch(() => {});
-      } catch (e) {
-        // Insufficient funds
+      } catch (error) {
+        if (!(error instanceof Error) || !['Insufficient funds', 'No balance record found'].includes(error.message)) throw error;
         await member.voice.disconnect('Insufficient funds for PVC').catch(() => {});
         if (config.pvcCommandChannelId) {
-          const channel = (await guild.channels.fetch(config.pvcCommandChannelId).catch(() => null)) as TextChannel;
-          if (channel) {
-            const embed = new EmbedBuilder()
-              .setTitle('Insufficient Funds')
+          const channel = await guild.channels.fetch(config.pvcCommandChannelId).catch(() => null) as TextChannel | null;
+          if (channel?.isTextBased()) {
+            const embed = new EmbedBuilder().setTitle('Insufficient Funds')
               .setDescription(`<@${member.id}>, you do not have enough funds to create a PVC. Use \`!pvc buy <hours>\` to purchase VC time. Hourly rate is **${config.pvcHourlyRate}**.`)
               .setColor('#FF0000');
-            await channel.send({ embeds: [embed] }).catch(() => {});
+            await channel.send({ embeds: [embed], allowedMentions: { parse: [] } }).catch(() => {});
           }
         }
       }
-    }
+    });
   }
-  
-  // Handle leaves - if channel is empty and is a PVC, we leave it alone since scheduler handles expiry, but maybe delete if we want?
-  // Requirements: "if it's empty and the session exists, optionally keep it alive (don't delete, let scheduler handle expiry)"
-  // So we don't need to do anything.
+  if (oldState.channelId && oldState.channelId !== newState.channelId) {
+    await cleanupEmptyPvc(guild, oldState.channelId);
+  }
 }

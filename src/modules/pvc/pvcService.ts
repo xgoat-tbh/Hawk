@@ -1,5 +1,6 @@
 import { getDb } from '../../core/database/pool.js';
-import { deductFundsPreferCash, ensureBalance } from '../economy/economyService.js';
+import { ensureBalance } from '../economy/economyService.js';
+import { withPvcOwnerLock } from './pvcLocks.js';
 
 
 export interface PvcSession {
@@ -11,6 +12,8 @@ export interface PvcSession {
   isLocked: boolean;
   isHidden: boolean;
   userLimit: number;
+  roomName?: string | null;
+  bitrate?: number | null;
 }
 
 export interface PvcAccessEntry {
@@ -30,6 +33,8 @@ function mapSessionRow(row: Record<string, any>): PvcSession {
     isLocked: row.is_locked,
     isHidden: row.is_hidden,
     userLimit: row.user_limit,
+    roomName: row.room_name,
+    bitrate: row.bitrate,
   };
 }
 
@@ -171,56 +176,33 @@ export async function buyPvcTime(
   hours: number,
   hourlyRate: number
 ): Promise<{ channelId?: string; extended: boolean }> {
+  return withPvcOwnerLock(guildId, userId, async () => {
+    const existing = await getSessionByOwner(guildId, userId);
+    const session = await reservePvcTime(guildId, userId, hours, hourlyRate);
+    return { channelId: session.channelId, extended: !!existing };
+  });
+}
+
+/** Commit payment and rental credit together before making any Discord requests. */
+export async function reservePvcTime(guildId: string, userId: string, hours: number, hourlyRate: number): Promise<PvcSession> {
+  if (!Number.isInteger(hours) || hours <= 0 || hours > 720 || !Number.isFinite(hourlyRate) || hourlyRate < 0) throw new Error('Invalid PVC purchase');
   const db = getDb();
   const totalCost = hours * hourlyRate;
   
   await ensureBalance(guildId, userId);
   
-  const result = await db.begin(async (tx) => {
-    await deductFundsPreferCash(guildId, userId, totalCost);
-    
-    // Check if user already has a session
-    const existing = await tx`SELECT * FROM pvc_sessions WHERE guild_id = ${guildId} AND owner_id = ${userId}`;
-    if (existing.length > 0) {
-      await tx`
-        UPDATE pvc_sessions
-        SET expires_at = expires_at + (${hours * 60} * interval '1 minute')
-        WHERE channel_id = ${existing[0].channel_id}
-      `;
-      return { channelId: existing[0].channel_id, extended: true };
+  return db.begin(async tx => {
+    const balances = await tx`SELECT cash, bank FROM economy_balances WHERE guild_id = ${guildId} AND user_id = ${userId} FOR UPDATE`;
+    if (!balances.length || Number(balances[0].cash) + Number(balances[0].bank) < totalCost) throw new Error('Insufficient funds');
+    const fromCash = Math.min(Number(balances[0].cash), totalCost);
+    await tx`UPDATE economy_balances SET cash = cash - ${fromCash}, bank = bank - ${totalCost - fromCash}, updated_at = NOW() WHERE guild_id = ${guildId} AND user_id = ${userId}`;
+    const existing = await tx`SELECT * FROM pvc_sessions WHERE guild_id = ${guildId} AND owner_id = ${userId} FOR UPDATE`;
+    if (existing.length) {
+      const rows = await tx`UPDATE pvc_sessions SET expires_at = GREATEST(expires_at, NOW()) + (${hours} * interval '1 hour') WHERE channel_id = ${existing[0].channel_id} RETURNING *`;
+      return mapSessionRow(rows[0]);
     }
-    
-    // No session exists, user bought time. We DO NOT create session here because there's no channel yet.
-    // Wait, the spec says: "create or extend session... If user already has a session, extend it. Otherwise the actual channel creation happens in the gatekeeper."
-    // But we need a place to store that they paid for time before they join the gatekeeper.
-    // Or wait, they get refunded if they don't have a channel?
-    // Let's create a "pending" session with channelId = 'pending-' + userId, then update it later?
-    // The requirement says: "Otherwise the actual channel creation happens in the gatekeeper."
-    // Let's create a pending session where channelId = ownerId + '-pending'.
-    
-    const pendingChannelId = 'pending-' + userId;
-    const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
-    
-    // actually, let's just insert with 'pending-' + userId as channel_id. 
-    // wait, what if they buy 2 hours, then another 2 hours before joining?
-    // Let's see if pending channel exists
-    const existingPending = await tx`SELECT * FROM pvc_sessions WHERE guild_id = ${guildId} AND channel_id = ${pendingChannelId}`;
-    if (existingPending.length > 0) {
-      await tx`
-        UPDATE pvc_sessions
-        SET expires_at = expires_at + (${hours * 60} * interval '1 minute')
-        WHERE channel_id = ${pendingChannelId}
-      `;
-      return { channelId: pendingChannelId, extended: true };
-    }
-    
-    await tx`
-      INSERT INTO pvc_sessions (channel_id, guild_id, owner_id, expires_at)
-      VALUES (${pendingChannelId}, ${guildId}, ${userId}, ${expiresAt})
-    `;
-    
-    return { channelId: pendingChannelId, extended: false };
+    const pendingChannelId = `pending-${guildId}-${userId}`;
+    const rows = await tx`INSERT INTO pvc_sessions (channel_id, guild_id, owner_id, expires_at) VALUES (${pendingChannelId}, ${guildId}, ${userId}, NOW() + (${hours} * interval '1 hour')) RETURNING *`;
+    return mapSessionRow(rows[0]);
   });
-  
-  return result;
 }

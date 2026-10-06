@@ -1,25 +1,23 @@
 import type { Client, TextChannel } from 'discord.js';
-import { getExpiringSessionsForAutoPay, getSessionsExpiringWithin, getExpiredSessions, extendSession, deleteSession } from './pvcService.js';
+import { getExpiringSessionsForAutoPay, getSessionsExpiringWithin, getExpiredSessions, getSessionByOwner, reservePvcTime, deleteSession } from './pvcService.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
-import { deductFundsPreferCash } from '../economy/economyService.js';
+import { withPvcOwnerLock } from './pvcLocks.js';
 import { EmbedBuilder } from 'discord.js';
 
 export async function checkPvcExpirations(client: Client): Promise<void> {
   // 1. Get sessions with autoPayEnabled where expires_at <= NOW() + 2 minutes
   const autoPaySessions = await getExpiringSessionsForAutoPay(2);
   
-  for (const session of autoPaySessions) {
-    const config = await getEconomyConfig(session.guildId);
-    try {
-      const { deductedFromCash, deductedFromBank } = await deductFundsPreferCash(session.guildId, session.ownerId, config.pvcHourlyRate);
-      if (deductedFromCash > 0 || deductedFromBank > 0) {
-        await extendSession(session.channelId, 60); // 1 hour
-      }
-    } catch (e) {
-      // Failed to deduct, leave it to expire
-    }
+  for (const observed of autoPaySessions) {
+    await withPvcOwnerLock(observed.guildId, observed.ownerId, async () => {
+      const current = await getSessionByOwner(observed.guildId, observed.ownerId);
+      if (!current?.autoPayEnabled || current.expiresAt.getTime() > Date.now() + 120_000) return;
+      const config = await getEconomyConfig(current.guildId);
+      try { await reservePvcTime(current.guildId, current.ownerId, 1, config.pvcHourlyRate); }
+      catch { /* Insufficient funds: leave the paid session until its expiry. */ }
+    });
   }
-  
+
   // 3. Get sessions expiring within 10 minutes (and not auto-pay), send warning
   // Warning happens once per session, we don't have a flag to prevent spam, but let's assume we fetch them and just warn.
   // Actually the prompt says "Get sessions expiring within 10 minutes (and not auto-pay), send warning to pvcCommandChannelId"
@@ -50,22 +48,21 @@ export async function checkPvcExpirations(client: Client): Promise<void> {
   
   // 4. Get expired sessions: disconnect all members, delete Discord channel, delete from DB
   const expired = await getExpiredSessions();
-  for (const session of expired) {
-    try {
-      const guild = client.guilds.cache.get(session.guildId);
-      if (guild) {
-        const channel = (await guild.channels.fetch(session.channelId).catch(() => null));
-        if (channel && channel.isVoiceBased()) {
-          for (const [, member] of channel.members) {
-            await member.voice.disconnect('PVC Expired').catch(() => {});
-          }
-          await channel.delete('PVC Expired').catch(() => {});
+  for (const observed of expired) {
+    await withPvcOwnerLock(observed.guildId, observed.ownerId, async () => {
+      const current = await getSessionByOwner(observed.guildId, observed.ownerId);
+      if (!current || current.expiresAt.getTime() > Date.now()) return;
+      const guild = client.guilds.cache.get(current.guildId);
+      if (guild && !current.channelId.startsWith('pending-')) {
+        const channel = await guild.channels.fetch(current.channelId).catch(() => null);
+        if (channel?.isVoiceBased()) {
+          for (const [, member] of channel.members) await member.voice.disconnect('PVC Expired').catch(() => {});
+          // Preserve the DB session on a failed deletion so the next tick retries it.
+          await channel.delete('PVC Expired');
         }
       }
-    } catch (e) {
-      // Ignore errors deleting channel
-    }
-    await deleteSession(session.channelId);
+      await deleteSession(current.channelId);
+    });
   }
 }
 

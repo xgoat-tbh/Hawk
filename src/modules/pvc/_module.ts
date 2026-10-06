@@ -4,11 +4,26 @@ import { handlePvcButton } from './_pvcButtonHandler.js';
 import { handlePvcSelect } from './_pvcSelectHandler.js';
 import { handlePvcVoiceStateUpdate } from './_pvcGatekeeper.js';
 import { startPvcScheduler, stopPvcScheduler } from './pvcScheduler.js';
-import { getSessionByOwner, setUserLimit, extendSession } from './pvcService.js';
+import { reconcilePvcPermissions } from './pvcLifecycle.js';
+import { getSessionByOwner, setUserLimit, buyPvcTime } from './pvcService.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
-import { deductFundsPreferCash } from '../economy/economyService.js';
 
 let schedulerTimer: NodeJS.Timeout | null = null;
+let reconciliationTimer: NodeJS.Timeout | null = null;
+
+async function reconcilePermissions(client: Client): Promise<void> {
+  try {
+    await reconcilePvcPermissions(client);
+    if (reconciliationTimer) clearInterval(reconciliationTimer);
+    reconciliationTimer = null;
+  } catch {
+    console.warn('[PVC] Permission reconciliation deferred; retrying in 30 seconds.');
+    if (!reconciliationTimer) {
+      reconciliationTimer = setInterval(() => { void reconcilePermissions(client); }, 30_000);
+      reconciliationTimer.unref();
+    }
+  }
+}
 
 export default {
   name: 'pvc',
@@ -66,14 +81,9 @@ export default {
       }
 
       const config = await getEconomyConfig(guildId);
-      const cost = hours * (config.pvcHourlyRate || 100);
+      const cost = hours * config.pvcHourlyRate;
       try {
-        const { deductedFromCash, deductedFromBank } = await deductFundsPreferCash(guildId, userId, cost);
-        if (deductedFromCash === 0 && deductedFromBank === 0) {
-          await interaction.reply({ content: `Insufficient funds. You need ${config.currencySymbol || '$'}${cost.toLocaleString()} to add ${hours} hour(s).`, flags: MessageFlags.Ephemeral });
-          return;
-        }
-        await extendSession(session.channelId, hours * 60);
+        await buyPvcTime(guildId, userId, hours, config.pvcHourlyRate);
         await interaction.reply({ content: `Successfully added **${hours} hour(s)** to your PVC for **${config.currencySymbol || '$'}${cost.toLocaleString()}**.`, flags: MessageFlags.Ephemeral });
       } catch (err: any) {
         await interaction.reply({ content: err.message || 'Failed to add hours. Please check your economy balance.', flags: MessageFlags.Ephemeral });
@@ -87,9 +97,12 @@ export default {
   
   onReady: async (client: Client) => {
     schedulerTimer = startPvcScheduler(client);
+    await reconcilePermissions(client);
   },
   
   onShutdown: async () => {
+    if (reconciliationTimer) clearInterval(reconciliationTimer);
+    reconciliationTimer = null;
     if (schedulerTimer) {
       stopPvcScheduler(schedulerTimer);
     }

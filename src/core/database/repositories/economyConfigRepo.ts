@@ -22,6 +22,7 @@ export interface EconomyConfig {
   robCooldown: number;
   auditChannelId: string | null;
   pvcHourlyRate: number;
+  autoCleanup: boolean;
   pvcJtcChannelId: string | null;
   pvcCategoryId: string | null;
   pvcCommandChannelId: string | null;
@@ -51,6 +52,7 @@ const DEFAULTS: Omit<EconomyConfig, 'guildId'> = {
   robCooldown: 120,
   auditChannelId: null,
   pvcHourlyRate: 100,
+  autoCleanup: true,
   pvcJtcChannelId: null,
   pvcCategoryId: null,
   pvcCommandChannelId: null,
@@ -80,6 +82,7 @@ function mapRow(row: Record<string, unknown>): EconomyConfig {
     robCooldown: Number(row.rob_cooldown ?? DEFAULTS.robCooldown),
     auditChannelId: (row.audit_channel_id as string) ?? null,
     pvcHourlyRate: Number(row.pvc_hourly_rate ?? DEFAULTS.pvcHourlyRate),
+    autoCleanup: (row.auto_cleanup as boolean) ?? DEFAULTS.autoCleanup,
     pvcJtcChannelId: (row.pvc_jtc_channel_id as string) ?? null,
     pvcCategoryId: (row.pvc_category_id as string) ?? null,
     pvcCommandChannelId: (row.pvc_command_channel_id as string) ?? null,
@@ -135,6 +138,7 @@ export async function setEconomyConfigField(
     robCooldown: 'rob_cooldown',
     auditChannelId: 'audit_channel_id',
     pvcHourlyRate: 'pvc_hourly_rate',
+    autoCleanup: 'auto_cleanup',
     pvcJtcChannelId: 'pvc_jtc_channel_id',
     pvcCategoryId: 'pvc_category_id',
     pvcCommandChannelId: 'pvc_command_channel_id',
