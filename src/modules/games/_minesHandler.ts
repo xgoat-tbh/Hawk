@@ -1,5 +1,6 @@
 import type { ButtonInteraction } from 'discord.js';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 import { addCash } from '../economy/economyService.js';
 import { logTransaction } from '../../core/database/repositories/transactionRepo.js';
 
@@ -13,7 +14,7 @@ export interface MinesSession {
   revealedGems: Set<number>;
   currentMultiplier: number;
   active: boolean;
-  timeoutTimer: NodeJS.Timeout;
+  timeoutTimer: NodeJS.Timeout | null;
 }
 
 const activeMinesGames = new Map<string, MinesSession>();
@@ -27,6 +28,36 @@ export function getMinesSession(gameId: string): MinesSession | undefined {
 
 export function registerMinesSession(session: MinesSession): void {
   activeMinesGames.set(session.gameId, session);
+  armMinesTimeout(session);
+}
+
+export async function expireMinesSession(session: MinesSession): Promise<void> {
+  if (!session.active || activeMinesGames.get(session.gameId) !== session) return;
+  // Reserve settlement synchronously so clicks and another timeout cannot pay twice.
+  session.active = false;
+  const payout = session.revealedGems.size > 0 ? Math.floor(session.betAmount * session.currentMultiplier) : 0;
+  try {
+    if (payout > 0) await addCash(session.guildId, session.userId, payout);
+  } catch (error) {
+    // Keep the session available for retry rather than silently losing the payout.
+    session.active = true;
+    armMinesTimeout(session, 30_000);
+    consoleLog('error', 'mines', `Timeout payout failed for ${session.gameId}: ${String(error)}`);
+    return;
+  }
+  activeMinesGames.delete(session.gameId);
+  if (session.timeoutTimer) clearTimeout(session.timeoutTimer);
+  if (payout > 0) await logTransaction(session.guildId, session.userId, 'mines', payout, 'games', null, `Mines auto-cashout after 5m inactivity ($${payout})`).catch(error => {
+    consoleLog('error', 'mines', `Could not log timeout payout for ${session.gameId}: ${String(error)}`);
+  });
+}
+
+export function armMinesTimeout(session: MinesSession, milliseconds = 300_000): void {
+  if (session.timeoutTimer) clearTimeout(session.timeoutTimer);
+  session.timeoutTimer = setTimeout(() => expireMinesSession(session).catch(error => {
+    consoleLog('error', 'mines', `Timeout settlement failed for ${session.gameId}: ${String(error)}`);
+  }), milliseconds);
+  session.timeoutTimer.unref?.();
 }
 
 export function getStartingMultiplier(mineCount: number): number {
@@ -116,32 +147,20 @@ export async function handleMinesButton(interaction: ButtonInteraction): Promise
     return;
   }
 
-  // Reset 5-minute inactivity timer
-  clearTimeout(session.timeoutTimer);
-  session.timeoutTimer = setTimeout(async () => {
-    if (session.active) {
-      session.active = false;
-      activeMinesGames.delete(gameId);
-      const payout = Math.floor(session.betAmount * session.currentMultiplier);
-      if (session.revealedGems.size > 0 && payout > 0) {
-        await addCash(session.guildId, session.userId, payout).catch(() => {});
-        await logTransaction(
-          session.guildId,
-          session.userId,
-          'mines',
-          payout,
-          'games',
-          null,
-          `Mines auto-cashout after 5m timeout ($${payout})`,
-        ).catch(() => {});
-      }
-    }
-  }, 300_000);
+  if ((action !== 'cashout' && action !== 'tile') || (action === 'tile' && (tileIndex === undefined || !Number.isInteger(tileIndex) || tileIndex < 0 || tileIndex > 8))) {
+    await interaction.reply({ content: 'Invalid Mines action.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+  if (action === 'cashout' && !session.revealedGems.size) {
+    await interaction.reply({ content: 'Reveal a gem before cashing out.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+  armMinesTimeout(session);
 
   // Handle Cash Out
   if (action === 'cashout') {
     session.active = false;
-    clearTimeout(session.timeoutTimer);
+    if (session.timeoutTimer) clearTimeout(session.timeoutTimer);
     activeMinesGames.delete(gameId);
 
     const payout = Math.floor(session.betAmount * session.currentMultiplier);
@@ -175,7 +194,7 @@ export async function handleMinesButton(interaction: ButtonInteraction): Promise
     // Check Bomb Hit
     if (session.minePositions.has(tileIndex)) {
       session.active = false;
-      clearTimeout(session.timeoutTimer);
+      if (session.timeoutTimer) clearTimeout(session.timeoutTimer);
       activeMinesGames.delete(gameId);
 
       await logTransaction(
@@ -204,7 +223,7 @@ export async function handleMinesButton(interaction: ButtonInteraction): Promise
     // Check All Safe Tiles Cleared -> Automatic Win
     if (session.revealedGems.size >= safeTilesTotal) {
       session.active = false;
-      clearTimeout(session.timeoutTimer);
+      if (session.timeoutTimer) clearTimeout(session.timeoutTimer);
       activeMinesGames.delete(gameId);
 
       const payout = Math.floor(session.betAmount * session.currentMultiplier);

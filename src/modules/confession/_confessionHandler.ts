@@ -128,7 +128,12 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
   setCooldown(user.id, `confession:${guild.id}`, 60);
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+  const lockDeadline = Date.now() + 5000;
   while (confessionPanelLocks.has(channelId)) {
+    if (Date.now() >= lockDeadline) {
+      await interaction.editReply({ content: 'This channel is busy. Please try again shortly.' });
+      return;
+    }
     await new Promise(r => setTimeout(r, 100));
   }
   confessionPanelLocks.add(channelId);

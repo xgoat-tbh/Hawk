@@ -119,7 +119,12 @@ export async function handleSuggestionModal(interaction: ModalSubmitInteraction)
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
+  const lockDeadline = Date.now() + 5000;
   while (suggestionPanelLocks.has(channelId)) {
+    if (Date.now() >= lockDeadline) {
+      await interaction.editReply({ content: 'This channel is busy. Please try again shortly.' });
+      return;
+    }
     await new Promise(r => setTimeout(r, 100));
   }
   suggestionPanelLocks.add(channelId);

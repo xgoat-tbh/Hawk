@@ -67,10 +67,10 @@ Ruling: Native Discord owners/admins/ManageGuild users receive guild-scoped owne
 
 ## Phase 5 — Voice and games
 
-- [ ] 46 Mines inactivity settles winnings and removes the active session.
-- [ ] 47 Suggestion mutex wait is bounded to 5000 ms and released in finally.
-- [ ] 48 Confession mutex wait is bounded to 5000 ms and released in finally.
-- [ ] 49 Drag/remove member moves check destination permissions for bot and member.
+- [x] 46 Mines inactivity settles winnings and removes the active session.
+- [x] 47 Suggestion mutex wait is bounded to 5000 ms and released in finally.
+- [x] 48 Confession mutex wait is bounded to 5000 ms and released in finally.
+- [x] 49 Drag/remove member moves check destination permissions for bot and member.
 
 ## Verification and delivery
 
@@ -83,3 +83,5 @@ Phase 2 verified: both TypeScript checks exit 0; npm test 170/170; production bu
 Phase 3 verified: both TypeScript checks exit 0; npm test 177/177; production build exit 0. Migration 036 applied. Fresh standalone dashboard schema creation verified inside a rolled-back PostgreSQL schema; partial updates and explicit clears verified against persisted rows. Balance mutation and audit transaction commit together. Money is capped at 1e12 per supplied document, below Number.MAX_SAFE_INTEGER. PVC cleanup storage added here because a UI-only payload change would still lose state.
 
 Phase 4 verified: both TypeScript checks exit 0; root tests 177/177; React tests 11/11; production build exit 0. All 46 dark RGB tokens are explicitly defined in light mode. Text and node palette contrast on panel/card surfaces: dark minimum 6.18:1, light minimum 4.83:1. Separate accent text colors preserve the specified accent fill. Canvas uses actual guild roles/channels; API redirects exclude OTP/auth 401 responses.
+
+Phase 5 verified: both TypeScript checks exit 0; npm test 182/182; production build exit 0. Initial and refreshed Mines timers share settlement/pruning, retain failed credits for retry, and reject forged initial cashout/invalid tiles. Panel waiters return busy after 5s without stealing the current lock. Destination access checked for moving member and bot. Full lint: 0 errors, 3 existing warnings. Fresh review underway before final delivery.

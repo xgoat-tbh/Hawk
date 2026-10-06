@@ -110,6 +110,13 @@ export async function handleDragmeInteraction(interaction: ButtonInteraction): P
       return;
     }
 
+    const movingPermissions = destVc.permissionsFor(requesterMember);
+    const botPermissions = destVc.permissionsFor(botMember);
+    if (!movingPermissions?.has(['ViewChannel', 'Connect']) || !botPermissions?.has(['ViewChannel', 'Connect', 'MoveMembers'])) {
+      await interaction.reply({ content: 'The destination channel does not allow this move. Check member access and bot voice permissions.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+
     try {
       await requesterMember.voice.setChannel(destVc);
     } catch (error) {

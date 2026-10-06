@@ -97,14 +97,6 @@ export default defineCommand({
       timeoutTimer: null as any,
     };
 
-    // 5-minute inactivity timeout
-    session.timeoutTimer = setTimeout(async () => {
-      if (session.active) {
-        session.active = false;
-        // Auto cash out if any gems revealed
-      }
-    }, 300_000);
-
     registerMinesSession(session);
 
     const rows = renderMinesGrid(session, false);
