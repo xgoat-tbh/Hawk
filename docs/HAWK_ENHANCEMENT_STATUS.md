@@ -22,24 +22,24 @@ Ruling: Native Discord owners/admins/ManageGuild users receive guild-scoped owne
 
 ## Phase 2 — Bot and economy
 
-- [ ] 10 Reset cash and bank without deleting a balance record.
-- [ ] 11 Preserve all daily/work/income cooldown timestamps on reset.
-- [ ] 12 Work transaction locks balance before cooldown check.
-- [ ] 13 Slut transaction locks balance before cooldown check.
-- [ ] 14 Crime transaction locks balance before cooldown check.
-- [ ] 15 Rob transaction locks attacker/victim in deterministic order.
-- [ ] 16 Role income collection transaction locks before cooldown check.
-- [ ] 17 Welcome buttons require ManageGuild.
-- [ ] 18 Welcome modals require ManageGuild.
-- [ ] 19 PVC creation does not grant ManageChannels.
-- [ ] 20 PVC select handlers do not grant ManageChannels.
-- [ ] 21 Native Discord Administrator is recognized in bot authority.
-- [ ] 22 PVC operations fetch channels after cache eviction.
-- [ ] 23 Confession submission cooldown matches suggestions.
-- [ ] 24 Confession guild blacklist matches suggestions.
-- [ ] 25 Command cooldown is reserved before execution; input errors can release it.
-- [ ] 26 Purge role requires ManageRoles.
-- [ ] 27 AFK nickname restoration only touches a nickname set by the bot, once.
+- [x] 10 Reset cash and bank without deleting a balance record.
+- [x] 11 Preserve all daily/work/income cooldown timestamps on reset.
+- [x] 12 Work transaction locks balance before cooldown check.
+- [x] 13 Slut transaction locks balance before cooldown check.
+- [x] 14 Crime transaction locks balance before cooldown check.
+- [x] 15 Rob transaction locks attacker/victim in deterministic order.
+- [x] 16 Role income collection transaction locks before cooldown check.
+- [x] 17 Welcome buttons require ManageGuild.
+- [x] 18 Welcome modals require ManageGuild.
+- [x] 19 PVC creation does not grant ManageChannels.
+- [x] 20 PVC select handlers do not grant ManageChannels.
+- [x] 21 Native Discord Administrator is recognized in bot authority.
+- [x] 22 PVC operations fetch channels after cache eviction.
+- [x] 23 Confession submission cooldown matches suggestions.
+- [x] 24 Confession guild blacklist matches suggestions.
+- [x] 25 Command cooldown is reserved before execution; input errors can release it.
+- [x] 26 Purge role requires ManageRoles.
+- [x] 27 AFK nickname restoration only touches a nickname set by the bot, once.
 
 ## Phase 3 — API and schema
 
@@ -77,3 +77,5 @@ Ruling: Native Discord owners/admins/ManageGuild users receive guild-scoped owne
 Each phase requires both TypeScript checks with zero errors and relevant regression tests before its Conventional Commit. Final delivery requires the complete bot/component suites, production build, secret scan of staged changes, independent branch review, fast-forward main, and a verified normal push to origin/main. Logs are retained under ignored `.rebuild/enhancement/`.
 
 Phase 1 verified: bot/web TypeScript both exit 0; npm test 155/155; production build exit 0. Migration 034 applied to PostgreSQL; SHA-256 verified. Ruling: underlying permissions service must also stop synthesizing guild overrides from global dashboard grants. Session cookies remain Secure in production and SameSite Strict.
+
+Phase 2 verified: both TypeScript checks exit 0; npm test 170/170; production build exit 0. Migration 035 applied. Live PostgreSQL eight-way work/slut/crime/rob/role-income races and cooldown-preserving resets pass. AFK records store ownership and exact original/assigned nicknames; restoration preserves manual nickname changes. Existing VM tests now use ES2022 to reflect real iterable semantics.

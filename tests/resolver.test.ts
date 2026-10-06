@@ -302,6 +302,7 @@ test('toggleRoleForMember allows self-targeting and performs hybrid role togglin
 
   const mockMember = {
     id: 'user1',
+    permissions: { has: () => false },
     roles: {
       cache: new Map([['role1', mockRole1]]),
       highest: { position: 50 },

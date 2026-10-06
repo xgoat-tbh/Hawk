@@ -35,7 +35,7 @@ export default defineCommand({
     const target = parsed.args[0].toLowerCase();
     const { getAuthorityLevel } = await import('../../core/permissions/PermissionChecker.js');
     const { AuthorityLevel } = await import('../../types/permission.js');
-    const authority = getAuthorityLevel(member.id, guild.ownerId);
+    const authority = getAuthorityLevel(member.id, guild.ownerId, member);
     const isOwner = authority === AuthorityLevel.Owner;
 
     // Case B: Direct Command Lookup

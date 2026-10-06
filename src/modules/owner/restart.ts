@@ -25,7 +25,7 @@ export default defineCommand({
 
   async execute(ctx: CommandContext): Promise<void> {
     const { member, guild, message, respond } = ctx;
-    const authority = getAuthorityLevel(member.id, guild.ownerId);
+    const authority = getAuthorityLevel(member.id, guild.ownerId, member);
 
     if (authority !== AuthorityLevel.Owner) {
       await respond.error('Only **Bot Owners** can restart the bot instance.');

@@ -27,7 +27,7 @@ export async function handlePvcButton(interaction: ButtonInteraction): Promise<v
     return;
   }
 
-  const channel = interaction.guild?.channels.cache.get(session.channelId);
+  const channel = (await interaction.guild?.channels.fetch(session.channelId).catch(() => null));
 
   switch (interaction.customId) {
     case 'pvc_btn_lock':

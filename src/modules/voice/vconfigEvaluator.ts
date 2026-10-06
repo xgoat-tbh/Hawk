@@ -18,7 +18,7 @@ export async function checkVoiceAccess(
   if (!member) return { allowed: true };
 
   const ownerId = member.guild?.ownerId ?? '';
-  const authority = getAuthorityLevel(member.id, ownerId);
+  const authority = getAuthorityLevel(member.id, ownerId, member);
   if (authority >= AuthorityLevel.ServerAdmin) return { allowed: true };
 
   const allRules = await getVConfigRulesForGuild(guildId);

@@ -31,7 +31,7 @@ export async function checkPvcExpirations(client: Client): Promise<void> {
     if (config.pvcCommandChannelId) {
       const guild = client.guilds.cache.get(session.guildId);
       if (guild) {
-        const channel = guild.channels.cache.get(config.pvcCommandChannelId) as TextChannel;
+        const channel = (await guild.channels.fetch(config.pvcCommandChannelId).catch(() => null)) as TextChannel;
         if (channel) {
           // Send warning if we haven't warned recently (this might spam every 30 seconds for 10 minutes, so maybe only warn if strictly within 9.5 to 10 minutes?
           // To avoid complexity just warn if between 9 to 10 mins
@@ -54,7 +54,7 @@ export async function checkPvcExpirations(client: Client): Promise<void> {
     try {
       const guild = client.guilds.cache.get(session.guildId);
       if (guild) {
-        const channel = guild.channels.cache.get(session.channelId);
+        const channel = (await guild.channels.fetch(session.channelId).catch(() => null));
         if (channel && channel.isVoiceBased()) {
           for (const [, member] of channel.members) {
             await member.voice.disconnect('PVC Expired').catch(() => {});

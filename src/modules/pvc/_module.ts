@@ -36,7 +36,7 @@ export default {
       return;
     }
 
-    const channel = interaction.guild?.channels.cache.get(session.channelId);
+    const channel = (await interaction.guild?.channels.fetch(session.channelId).catch(() => null));
 
     if (interaction.customId === 'pvc_modal_rename') {
       const newName = interaction.fields.getTextInputValue('name');

@@ -1,3 +1,4 @@
+import { PermissionFlagsBits } from 'discord.js';
 import type { GuildMember, PermissionResolvable, GuildTextBasedChannel } from 'discord.js';
 import type { CommandDefinition } from '../../types/command.js';
 import type { PermissionCheckResult, PermissionContext } from '../../types/permission.js';
@@ -6,19 +7,20 @@ import { env } from '../config/environment.js';
 import * as permissionRepo from '../database/repositories/permissionRepo.js';
 import { resolvePermitEffect } from './permitEffect.js';
 
-export function getAuthorityLevel(userId: string, guildOwnerId?: string): AuthorityLevel {
+export function getAuthorityLevel(userId: string, guildOwnerId?: string, member?: GuildMember): AuthorityLevel {
   if (env.botOwnerIds.includes(userId) || userId === env.botOwnerId) return AuthorityLevel.Owner;
   if (env.botAdminIds.includes(userId)) return AuthorityLevel.BotAdmin;
   if (guildOwnerId && userId === guildOwnerId) return AuthorityLevel.ServerAdmin;
+  if (member?.permissions.has(PermissionFlagsBits.Administrator)) return AuthorityLevel.ServerAdmin;
   return AuthorityLevel.Normal;
 }
 
 export async function checkPermission(
   command: CommandDefinition,
   ctx: PermissionContext,
-  _member?: GuildMember,
+  member?: GuildMember,
 ): Promise<PermissionCheckResult> {
-  const authority = getAuthorityLevel(ctx.userId, ctx.guildOwnerId);
+  const authority = getAuthorityLevel(ctx.userId, ctx.guildOwnerId, member);
 
   if (command.ownerOnly || command.module === 'owner') {
     const isOwner = authority === AuthorityLevel.Owner;
@@ -89,7 +91,7 @@ export async function getUsableCommandsForMember(
   const { isIgnored } = await import('../ignore/IgnoreChecker.js');
 
   const guild = member.guild;
-  const authority = getAuthorityLevel(member.id, guild.ownerId);
+  const authority = getAuthorityLevel(member.id, guild.ownerId, member);
   const isOwner = authority === AuthorityLevel.Owner;
   const allCommands = getAllCommands(isOwner);
   const categoryId = ('parentId' in channel && channel.parentId) ? channel.parentId : null;

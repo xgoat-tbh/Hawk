@@ -32,7 +32,7 @@ export async function handleAfkMessage(message: Message): Promise<void> {
         if (removed) {
           const targetMember = message.member ?? await message.guild.members.fetch(authorId).catch(() => null);
           if (targetMember) {
-            await removeAfkNickname(targetMember);
+            await removeAfkNickname(targetMember, removed);
           }
 
           const totalDurationMs = Date.now() - removed.startedAt.getTime();
@@ -69,16 +69,6 @@ export async function handleAfkMessage(message: Message): Promise<void> {
               }
             }
           }, 6000);
-        }
-      }
-    } else {
-      // Author is NOT marked as AFK in database.
-      // If they still have a lingering [AFK] nickname tag, strip it.
-      const targetMember = message.member ?? await message.guild.members.fetch(authorId).catch(() => null);
-      if (targetMember) {
-        const currentNick = targetMember.nickname || targetMember.displayName;
-        if (/^\[AFK\]\s*/i.test(currentNick)) {
-          await removeAfkNickname(targetMember);
         }
       }
     }

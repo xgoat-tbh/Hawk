@@ -28,7 +28,7 @@ export default defineCommand({
       // Basic confirmation check could go here if interactive, but for now we execute
       await resetUser(ctx.guild.id, targetId);
       await logAuditAction(ctx.guild.id, ctx.message.author.id, targetId, 'reset', 0, 'Self-reset balance');
-      await ctx.respond.success('Your balance has been reset to starting values.');
+      await ctx.respond.success('Your balance has been reset to zero. Your income cooldowns are unchanged.');
     } else {
       await resetUser(ctx.guild.id, targetId);
       await logAuditAction(ctx.guild.id, ctx.message.author.id, targetId, 'reset', 0, 'Admin reset balance');

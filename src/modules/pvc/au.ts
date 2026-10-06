@@ -25,7 +25,7 @@ export default defineCommand({
       return;
     }
 
-    const channel = ctx.guild.channels.cache.get(session.channelId);
+    const channel = (await ctx.guild.channels.fetch(session.channelId).catch(() => null));
     let count = 0;
 
     for (const user of mentions) {

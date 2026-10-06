@@ -33,7 +33,7 @@ export default defineCommand({
 
     // ── Subcommand: cancel ────────────────────────────────────
     if (firstArg === 'cancel') {
-      const authority = getAuthorityLevel(member.id, guild.ownerId);
+      const authority = getAuthorityLevel(member.id, guild.ownerId, member);
       const isElevated = authority >= AuthorityLevel.ServerAdmin;
 
       let targetId: string | undefined;

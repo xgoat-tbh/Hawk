@@ -1,3 +1,4 @@
+import { getAfk, markAfkNickname, type CachedAfk } from '../../core/database/repositories/afkRepo.js';
 /**
  * Strictly sanitizes an AFK reason to guarantee it can NEVER produce a Discord ping.
  */
@@ -84,7 +85,9 @@ export async function applyAfkNickname(member: GuildMember): Promise<{ success: 
     }
 
     const newName = `[AFK] ${currentName}`.slice(0, 32);
+    const originalNickname = member.nickname;
     await member.setNickname(newName, 'User set AFK status');
+    await markAfkNickname(guild.id, member.id, originalNickname, newName);
     return { success: true };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -93,7 +96,8 @@ export async function applyAfkNickname(member: GuildMember): Promise<{ success: 
   }
 }
 
-export async function removeAfkNickname(member: GuildMember): Promise<{ success: boolean; reason?: string }> {
+export async function removeAfkNickname(member: GuildMember, record: CachedAfk | null = getAfk(member.guild.id, member.id)): Promise<{ success: boolean; reason?: string }> {
+  if (!record?.nicknameSet || !record.afkNickname || member.nickname !== record.afkNickname) return { success: true };
   try {
     const guild = member.guild;
     const botMember = guild.members.me ?? await guild.members.fetchMe().catch(() => null);
@@ -106,32 +110,7 @@ export async function removeAfkNickname(member: GuildMember): Promise<{ success:
       return { success: false, reason: 'hierarchy_restricted' };
     }
 
-    // Check member's current nickname or displayName
-    let targetMember = member;
-    let currentName = targetMember.nickname || targetMember.displayName;
-
-    if (!/^\[AFK\]\s*/i.test(currentName)) {
-      // Refresh member from API in case cache was stale
-      const fetched = await guild.members.fetch(member.id).catch(() => null);
-      if (fetched) {
-        targetMember = fetched;
-        currentName = targetMember.nickname || targetMember.displayName;
-      }
-    }
-
-    if (!/^\[AFK\]\s*/i.test(currentName)) {
-      return { success: true };
-    }
-
-    // Strip [AFK] tags (case-insensitive, handles multiple or missing space)
-    const restoredName = currentName.replace(/^(\[AFK\]\s*)+/i, '').trim();
-
-    // If restoredName matches user's username/globalName or is empty, set null to clear nickname override
-    const targetNick = (!restoredName || restoredName === targetMember.user.username || restoredName === targetMember.user.globalName)
-      ? null
-      : restoredName;
-
-    await targetMember.setNickname(targetNick, 'User returned from AFK / AFK status cleared');
+    await member.setNickname(record.originalNickname ?? null, 'User returned from AFK / AFK status cleared');
     return { success: true };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);

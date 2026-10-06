@@ -40,7 +40,7 @@ export async function handlePvcVoiceStateUpdate(oldState: VoiceState, newState: 
 
     if (existingSession && existingSession.expiresAt > new Date()) {
       // Re-create or move member to existing channel
-      let vc = existingSession.channelId.startsWith('pending-') ? null : guild.channels.cache.get(existingSession.channelId) as VoiceChannel;
+      let vc = existingSession.channelId.startsWith('pending-') ? null : (await guild.channels.fetch(existingSession.channelId).catch(() => null)) as VoiceChannel;
       
       if (!vc) {
         // Create new VC
@@ -56,7 +56,7 @@ export async function handlePvcVoiceStateUpdate(oldState: VoiceState, newState: 
             },
             {
               id: member.id,
-              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ViewChannel],
+              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ViewChannel],
             }
           ],
           userLimit: existingSession.userLimit || 0
@@ -87,7 +87,7 @@ export async function handlePvcVoiceStateUpdate(oldState: VoiceState, newState: 
             },
             {
               id: member.id,
-              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ManageChannels, PermissionFlagsBits.ViewChannel],
+              allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ViewChannel],
             }
           ],
         });
@@ -102,7 +102,7 @@ export async function handlePvcVoiceStateUpdate(oldState: VoiceState, newState: 
         // Insufficient funds
         await member.voice.disconnect('Insufficient funds for PVC').catch(() => {});
         if (config.pvcCommandChannelId) {
-          const channel = guild.channels.cache.get(config.pvcCommandChannelId) as TextChannel;
+          const channel = (await guild.channels.fetch(config.pvcCommandChannelId).catch(() => null)) as TextChannel;
           if (channel) {
             const embed = new EmbedBuilder()
               .setTitle('Insufficient Funds')

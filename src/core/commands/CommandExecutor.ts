@@ -7,12 +7,12 @@ import { resolveCommand, isRegistered } from './CommandRegistry.js';
 import { checkPermission, checkBotPermissions, getAuthorityLevel } from '../permissions/PermissionChecker.js';
 import { checkRestrictions } from '../restrictions/RestrictionChecker.js';
 import { isIgnored } from '../ignore/IgnoreChecker.js';
-import { checkCooldown, setCooldown } from '../cooldowns/CooldownManager.js';
+import { checkCooldown, setCooldown, clearCooldown } from '../cooldowns/CooldownManager.js';
 import { ResponseBuilder } from '../responses/ResponseBuilder.js';
 import { logCommand, logEvent } from '../logging/WebhookLogger.js';
 import { logCommandAudit } from '../logging/AuditLogger.js';
 import type { CommandLogEvent } from '../../types/logging.js';
-import { getUserMessage, getInternalMessage, BotError } from '../errors/BotError.js';
+import { getUserMessage, getInternalMessage, BotError, ValidationError } from '../errors/BotError.js';
 import { getPrefix } from '../database/repositories/guildConfigRepo.js';
 import { getGameTestChannel } from '../database/repositories/gameRepo.js';
 import { AuthorityLevel } from '../../types/permission.js';
@@ -122,7 +122,7 @@ export async function handleMessage(message: Message): Promise<void> {
     respond.enableAutoClean(7000);
   }
 
-  const authority = getAuthorityLevel(message.author.id, message.guild.ownerId);
+  const authority = getAuthorityLevel(message.author.id, message.guild.ownerId, message.member);
 
   // Global Maintenance Mode check: Non-owners are blocked with a maintenance notice
   if (authority < AuthorityLevel.Owner) {
@@ -222,6 +222,8 @@ export async function handleMessage(message: Message): Promise<void> {
     }
   }
 
+  setCooldown(message.author.id, command.name, command.cooldown);
+
   let replyTarget: GuildMember | null = null;
   if (message.reference?.messageId) {
     try {
@@ -259,7 +261,6 @@ export async function handleMessage(message: Message): Promise<void> {
   try {
     presenceManager.recordActivity();
     await command.execute(ctx);
-    setCooldown(message.author.id, command.name, command.cooldown);
 
     const replyType = respond.getLastOutcome();
     const responseSnippet = respond.getLastSnippet() || undefined;
@@ -275,6 +276,7 @@ export async function handleMessage(message: Message): Promise<void> {
       replyType: replyType || undefined, responseSnippet,
     });
   } catch (error) {
+    if (error instanceof ValidationError) clearCooldown(message.author.id, command.name);
     const userMsg = getUserMessage(error);
     const internalMsg = getInternalMessage(error);
     if (error instanceof BotError) { await respond.error(userMsg).catch(() => {}); } else { await respond.error('An unexpected error occurred.').catch(() => {}); }

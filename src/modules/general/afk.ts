@@ -54,11 +54,11 @@ export default defineCommand({
     // ── Subcommand: clear / off / remove (Own AFK) ──
     if (firstWord === 'clear' || firstWord === 'off' || firstWord === 'remove') {
       const removed = await removeAfk(guild.id, member.id);
-      await removeAfkNickname(member);
+      await removeAfkNickname(member, removed);
       if (removed) {
         await respond.success('Your AFK status and nickname tag have been removed.');
       } else {
-        await respond.info('You are not marked as AFK. Any lingering AFK tag has been removed.');
+        await respond.info('You are not marked as AFK. Your nickname has been preserved.');
       }
       return;
     }
@@ -122,7 +122,7 @@ async function handleAfkList(ctx: CommandContext): Promise<void> {
 
 async function handleAfkReset(ctx: CommandContext): Promise<void> {
   const { guild, member, respond } = ctx;
-  const authority = getAuthorityLevel(member.id, guild.ownerId);
+  const authority = getAuthorityLevel(member.id, guild.ownerId, member);
   if (authority !== AuthorityLevel.Owner) {
     await respond.error('Only the **Bot Owner** can reset all server AFK records.');
     return;
@@ -132,7 +132,7 @@ async function handleAfkReset(ctx: CommandContext): Promise<void> {
   for (const e of entries) {
     const m = await guild.members.fetch(e.userId).catch(() => null);
     if (m) {
-      await removeAfkNickname(m);
+      await removeAfkNickname(m, e);
     }
   }
 

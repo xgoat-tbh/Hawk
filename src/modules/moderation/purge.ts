@@ -248,6 +248,11 @@ async function handleMessagePurge(ctx: CommandContext): Promise<void> {
 async function handlePurgeRole(ctx: CommandContext, args: string[]): Promise<void> {
   const { guild, respond, member, channel, message } = ctx;
 
+  if (!member.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+    await respond.error('Manage Roles permission is required to purge a role.');
+    return;
+  }
+
   if (args.length === 0) {
     await respond.error(`Usage: \`${ctx.parsed.prefix}purge role <@role>\``);
     return;

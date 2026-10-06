@@ -74,7 +74,7 @@ export default defineCommand({
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, member, guild, respond } = ctx;
-    const authority = getAuthorityLevel(member.id, guild.ownerId);
+    const authority = getAuthorityLevel(member.id, guild.ownerId, member);
 
     const firstArg = parsed.args[0]?.toLowerCase();
 

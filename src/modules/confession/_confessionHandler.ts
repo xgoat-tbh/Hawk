@@ -1,3 +1,6 @@
+import { isBlacklisted } from '../../core/database/repositories/suggestionRepo.js';
+import { checkCooldown, setCooldown } from '../../core/cooldowns/CooldownManager.js';
+import { AuthorityLevel } from '../../types/permission.js';
 import type {
   ButtonInteraction,
   ModalSubmitInteraction,
@@ -33,7 +36,7 @@ export function registerConfessionPanelChannel(channelId: string): void {
 }
 
 export async function handleConfessionButton(interaction: ButtonInteraction): Promise<void> {
-  const { customId, guild } = interaction;
+  const { customId, guild, user } = interaction;
   if (!guild || interaction.replied || interaction.deferred) return;
 
   if (customId === 'confess_info') {
@@ -49,6 +52,16 @@ export async function handleConfessionButton(interaction: ButtonInteraction): Pr
   }
 
   if (customId === 'confess_open_modal') {
+    if (await isBlacklisted(guild.id, user.id)) {
+      await interaction.reply({ content: 'You are blacklisted from submitting confessions.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+    const remaining = checkCooldown(user.id, `confession:${guild.id}`, 60, AuthorityLevel.Normal);
+    if (remaining) {
+      await interaction.reply({ content: `Please wait ${remaining}s before submitting another confession.`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
     const channelId = await getConfessionChannel(guild.id);
     if (!channelId) {
       await interaction.reply({ content: 'Confessions are not configured for this server yet.', flags: MessageFlags.Ephemeral });
@@ -79,6 +92,16 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
   if (!guild || interaction.replied || interaction.deferred) return;
 
   if (customId !== 'confess_modal_submit') return;
+    if (await isBlacklisted(guild.id, user.id)) {
+      await interaction.reply({ content: 'You are blacklisted from submitting confessions.', flags: MessageFlags.Ephemeral });
+      return;
+    }
+    const remaining = checkCooldown(user.id, `confession:${guild.id}`, 60, AuthorityLevel.Normal);
+    if (remaining) {
+      await interaction.reply({ content: `Please wait ${remaining}s before submitting another confession.`, flags: MessageFlags.Ephemeral });
+      return;
+    }
+
 
   const channelId = await getConfessionChannel(guild.id);
   if (!channelId) {
@@ -98,6 +121,11 @@ export async function handleConfessionModal(interaction: ModalSubmitInteraction)
     return;
   }
 
+  if (checkCooldown(user.id, `confession:${guild.id}`, 60, AuthorityLevel.Normal)) {
+    await interaction.reply({ content: 'A confession was just submitted. Please wait before trying again.', flags: MessageFlags.Ephemeral });
+    return;
+  }
+  setCooldown(user.id, `confession:${guild.id}`, 60);
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   while (confessionPanelLocks.has(channelId)) {

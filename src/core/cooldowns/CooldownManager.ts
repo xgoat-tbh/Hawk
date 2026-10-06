@@ -39,3 +39,5 @@ export function setCooldown(userId: string, commandName: string, cooldownSeconds
 }
 
 export function clearAllCooldowns(): void { cooldowns.clear(); }
+
+export function clearCooldown(userId: string, commandName: string): void { cooldowns.delete(`${userId}:${commandName}`); }

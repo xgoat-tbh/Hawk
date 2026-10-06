@@ -11,6 +11,7 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   MessageFlags,
+  PermissionFlagsBits,
 } from 'discord.js';
 import {
   getWelcomeConfig,
@@ -25,6 +26,11 @@ import { consoleLog } from '../../core/logging/ConsoleLogger.js';
 export async function handleWelcomeButton(interaction: ButtonInteraction): Promise<void> {
   const { customId } = interaction;
   if (!customId.startsWith('welcome_') || interaction.replied || interaction.deferred) return;
+
+  if (!interaction.guild || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.reply({ content: 'Manage Server (ManageGuild) permission is required.', flags: MessageFlags.Ephemeral });
+    return;
+  }
 
   const isGreet = customId.endsWith('_greet');
   const type = isGreet ? 'greet' : 'leave';
@@ -55,6 +61,11 @@ export async function handleWelcomeModal(interaction: ModalSubmitInteraction): P
   const { customId, guild, user } = interaction;
   if (!guild || interaction.replied || interaction.deferred) return;
   if (!customId.startsWith('welcome_modal_')) return;
+
+  if (!interaction.guild || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.reply({ content: 'Manage Server (ManageGuild) permission is required.', flags: MessageFlags.Ephemeral });
+    return;
+  }
 
   const isGreet = customId.endsWith('_greet');
   const isJson = customId.includes('_json_');

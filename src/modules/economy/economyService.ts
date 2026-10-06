@@ -297,7 +297,7 @@ export async function getLeaderboard(
 
 export async function resetUser(guildId: string, userId: string): Promise<void> {
   const db = getDb();
-  await db`DELETE FROM economy_balances WHERE guild_id = ${guildId} AND user_id = ${userId}`;
+  await db`UPDATE economy_balances SET cash = 0, bank = 0 WHERE guild_id = ${guildId} AND user_id = ${userId}`;
 }
 
 export async function resetEconomy(guildId: string): Promise<number> {

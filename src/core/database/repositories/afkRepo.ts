@@ -7,6 +7,9 @@ export interface AfkRecord {
   startedAt: Date;
   channelId?: string | null;
   messageId?: string | null;
+  nicknameSet?: boolean;
+  originalNickname?: string | null;
+  afkNickname?: string | null;
 }
 
 export interface CachedAfk {
@@ -14,6 +17,9 @@ export interface CachedAfk {
   startedAt: Date;
   channelId?: string | null;
   messageId?: string | null;
+  nicknameSet?: boolean;
+  originalNickname?: string | null;
+  afkNickname?: string | null;
 }
 
 // In-memory cache for hot-path AFK checks in messageCreate: guildId -> userId -> CachedAfk
@@ -60,7 +66,7 @@ export async function loadAfkCache(): Promise<number> {
   afkCache.clear();
   try {
     const db = getDb();
-    const rows = await db`SELECT guild_id, user_id, reason, started_at, channel_id, message_id FROM afk_users`;
+    const rows = await db`SELECT guild_id, user_id, reason, started_at, channel_id, message_id, nickname_set, original_nickname, afk_nickname FROM afk_users`;
     for (const row of rows) {
       const guildId = row.guild_id as string;
       const userId = row.user_id as string;
@@ -74,7 +80,7 @@ export async function loadAfkCache(): Promise<number> {
         guildMap = new Map();
         afkCache.set(guildId, guildMap);
       }
-      guildMap.set(userId, { reason, startedAt, channelId, messageId });
+      guildMap.set(userId, { reason, startedAt, channelId, messageId, nicknameSet: Boolean(row.nickname_set), originalNickname: row.original_nickname ?? null, afkNickname: row.afk_nickname ?? null });
     }
     return rows.length;
   } catch {
@@ -108,7 +114,7 @@ export async function setAfk(
     guildMap = new Map();
     afkCache.set(guildId, guildMap);
   }
-  const cached: CachedAfk = { reason, startedAt, channelId: channelId ?? null, messageId: messageId ?? null };
+  const cached: CachedAfk = { ...guildMap.get(userId), reason, startedAt, channelId: channelId ?? null, messageId: messageId ?? null };
   guildMap.set(userId, cached);
 
   return cached;
@@ -152,10 +158,13 @@ export async function removeAfk(guildId: string, userId: string): Promise<Cached
     const rows = await db`
       DELETE FROM afk_users
       WHERE guild_id = ${guildId} AND user_id = ${userId}
-      RETURNING reason, started_at, channel_id, message_id
+      RETURNING reason, started_at, channel_id, message_id, nickname_set, original_nickname, afk_nickname
     `;
     if (rows.length > 0) {
       return {
+        nicknameSet: Boolean(rows[0].nickname_set),
+        originalNickname: rows[0].original_nickname ?? null,
+        afkNickname: rows[0].afk_nickname ?? null,
         reason: rows[0].reason as string,
         startedAt: new Date(rows[0].started_at as Date),
         channelId: (rows[0].channel_id as string) ?? null,
@@ -175,4 +184,11 @@ export function getAfk(guildId: string, userId: string): CachedAfk | null {
 
 export function isAfk(guildId: string, userId: string): boolean {
   return afkCache.get(guildId)?.has(userId) ?? false;
+}
+
+export async function markAfkNickname(guildId: string, userId: string, originalNickname: string | null, afkNickname: string): Promise<void> {
+  const cached = getAfk(guildId, userId);
+  if (!cached) return;
+  Object.assign(cached, { nicknameSet: true, originalNickname, afkNickname });
+  await getDb()`UPDATE afk_users SET nickname_set = TRUE, original_nickname = ${originalNickname}, afk_nickname = ${afkNickname} WHERE guild_id = ${guildId} AND user_id = ${userId}`;
 }

@@ -8,7 +8,7 @@ import { validateFlow, scriptToFlow, flowToScript } from '../src/core/commands/c
 const require = createRequire(import.meta.url);
 function load(file: string, dependencies: Record<string, unknown>, env = {}) {
  const source = readFileSync(new URL('../' + file, import.meta.url), 'utf8'); const exports: Record<string, any> = {};
- vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, { exports, process: { env }, console, require: (key: string) => key in dependencies ? dependencies[key] : require(key) }); return exports;
+ vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, { exports, process: { env }, console, require: (key: string) => key in dependencies ? dependencies[key] : require(key) }); return exports;
 }
 test('Discord administrator and explicit allowlist members can edit within supported guilds', async () => {
  const guild = '1493322410567401722';
@@ -51,6 +51,7 @@ test('game config rejects invalid cooldowns before any writes', async () => {
 });
 test('role income collection honors the configured payout interval', async () => {
  let paid = 0;
- const service = load('src/modules/income/incomeService.ts', { '../../core/database/pool.js': { getDb: () => async () => [{ role_id: 'r', income_amount: 50 }] }, '../../core/database/repositories/economyConfigRepo.js': { getEconomyConfig: async () => ({ incomeReset: '12h' }) }, '../economy/economyService.js': { ensureBalance: async () => {}, getBalance: async () => ({ passiveLast: new Date(Date.now() - 13 * 3600000) }), addCash: async () => paid++ }, '../../core/utils/incomeInterval.js': { incomeIntervalSeconds: () => 43200 } });
+ const sql: any = async (query: any) => !Array.isArray(query) ? query : query.join('').includes('FOR UPDATE') ? [{ user_id: 'u', cash: 0, passive_last: new Date(Date.now() - 13 * 3600000) }] : query.join('').includes('SELECT role_id') ? [{ role_id: 'r', income_amount: 50 }] : query.join('').includes('SET cash') ? (paid++, []) : []; sql.begin = (fn: any) => fn(sql);
+ const service = load('src/modules/income/incomeService.ts', { '../../core/database/pool.js': { getDb: () => sql }, '../../core/database/repositories/economyConfigRepo.js': { getEconomyConfig: async () => ({ incomeReset: '12h', startBalance: 0 }) }, '../economy/economyService.js': {}, '../../core/utils/incomeInterval.js': { incomeIntervalSeconds: () => 43200 } });
  const result = await service.collectIncome('g', 'u', ['r']); assert.equal(result.success, true); assert.equal(paid, 1);
 });

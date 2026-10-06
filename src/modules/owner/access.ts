@@ -350,7 +350,7 @@ export default defineCommand({
 
   async execute(ctx: CommandContext): Promise<void> {
     const { parsed, guild, member, respond } = ctx;
-    const authority = getAuthorityLevel(member.id, guild.ownerId);
+    const authority = getAuthorityLevel(member.id, guild.ownerId, member);
     if (authority !== AuthorityLevel.Owner) {
       await respond.error('Only **Bot Owners** can manage command access and permits.');
       return;

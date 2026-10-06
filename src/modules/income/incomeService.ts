@@ -1,7 +1,8 @@
+import type postgres from 'postgres';
 import { getDb } from '../../core/database/pool.js';
 import { getEconomyConfig } from '../../core/database/repositories/economyConfigRepo.js';
 import { incomeIntervalSeconds } from '../../core/utils/incomeInterval.js';
-import { getBalance, ensureBalance, addCash, removeCash, transferCash } from '../economy/economyService.js';
+import { ensureBalance, addCash } from '../economy/economyService.js';
 
 export function checkCooldown(lastTime: Date | null, cooldownSeconds: number): { onCooldown: boolean; remaining: number } {
   if (!lastTime) return { onCooldown: false, remaining: 0 };
@@ -10,20 +11,37 @@ export function checkCooldown(lastTime: Date | null, cooldownSeconds: number): {
   return { onCooldown: false, remaining: 0 };
 }
 
-async function updateCooldown(guildId: string, userId: string, field: 'work_last' | 'slut_last' | 'crime_last' | 'rob_last' | 'passive_last') {
-    const db = getDb();
-    await db`
-        UPDATE economy_balances 
-        SET ${db(field)} = NOW() 
-        WHERE guild_id = ${guildId} AND user_id = ${userId}
+async function lockBalances(tx: postgres.TransactionSql, guildId: string, ids: string[], startBalance: number) {
+    // Insert and lock in the same order, including first-time users.
+    const sortedIds = [...new Set(ids)].sort();
+    for (const userId of sortedIds) await tx`
+      INSERT INTO economy_balances (guild_id, user_id, cash)
+      VALUES (${guildId}, ${userId}, ${startBalance}) ON CONFLICT (guild_id, user_id) DO NOTHING
     `;
+    const rows = await tx`SELECT * FROM economy_balances WHERE guild_id = ${guildId} AND user_id = ANY(${sortedIds}) ORDER BY user_id FOR UPDATE`;
+    return new Map(rows.map(row => [String(row.user_id), {
+      cash: Number(row.cash), workLast: row.work_last ? new Date(row.work_last) : null,
+      slutLast: row.slut_last ? new Date(row.slut_last) : null,
+      crimeLast: row.crime_last ? new Date(row.crime_last) : null,
+      robLast: row.rob_last ? new Date(row.rob_last) : null,
+      passiveLast: row.passive_last ? new Date(row.passive_last) : null,
+    }]));
+}
+async function updateCooldown(tx: postgres.TransactionSql, guildId: string, userId: string, field: 'work_last' | 'slut_last' | 'crime_last' | 'rob_last' | 'passive_last') {
+    await tx`UPDATE economy_balances SET ${tx(field)} = NOW(), updated_at = NOW() WHERE guild_id = ${guildId} AND user_id = ${userId}`;
+}
+async function changeCash(tx: postgres.TransactionSql, guildId: string, userId: string, amount: number) {
+    await tx`UPDATE economy_balances SET cash = cash + ${amount}, updated_at = NOW() WHERE guild_id = ${guildId} AND user_id = ${userId}`;
+}
+async function transferLocked(tx: postgres.TransactionSql, guildId: string, from: string, to: string, amount: number) {
+    await changeCash(tx, guildId, from, -amount);
+    await changeCash(tx, guildId, to, amount);
 }
 
 export async function executeWork(guildId: string, userId: string): Promise<{ success: boolean; earned: number; message: string; cooldown?: number }> {
-    await ensureBalance(guildId, userId);
-    const balance = await getBalance(guildId, userId);
     const config = await getEconomyConfig(guildId);
-    
+    return getDb().begin(async tx => {
+    const balance = (await lockBalances(tx, guildId, [userId], config.startBalance)).get(userId)!;
     const cooldown = checkCooldown(balance.workLast, config.workCooldown);
     if (cooldown.onCooldown) {
         return { success: false, earned: 0, message: '', cooldown: cooldown.remaining };
@@ -50,23 +68,23 @@ export async function executeWork(guildId: string, userId: string): Promise<{ su
     ];
     const message = messages[Math.floor(Math.random() * messages.length)];
 
-    await addCash(guildId, userId, earned);
-    await updateCooldown(guildId, userId, 'work_last');
+    await changeCash(tx, guildId, userId, earned);
+    await updateCooldown(tx, guildId, userId, 'work_last');
 
     return { success: true, earned, message: `${message} ${earned}` };
+    });
 }
 
 export async function executeSlut(guildId: string, userId: string): Promise<{ success: boolean; amount: number; message: string; cooldown?: number }> {
-    await ensureBalance(guildId, userId);
-    const balance = await getBalance(guildId, userId);
     const config = await getEconomyConfig(guildId);
-    
+    return getDb().begin(async tx => {
+    const balance = (await lockBalances(tx, guildId, [userId], config.startBalance)).get(userId)!;
     const cooldown = checkCooldown(balance.slutLast, config.slutCooldown);
     if (cooldown.onCooldown) {
         return { success: false, amount: 0, message: '', cooldown: cooldown.remaining };
     }
 
-    await updateCooldown(guildId, userId, 'slut_last');
+    await updateCooldown(tx, guildId, userId, 'slut_last');
     
     const isSuccess = Math.random() < 0.60;
     if (isSuccess) {
@@ -79,7 +97,7 @@ export async function executeSlut(guildId: string, userId: string): Promise<{ su
             "A sugar daddy gave you"
         ];
         const message = messages[Math.floor(Math.random() * messages.length)];
-        await addCash(guildId, userId, earned);
+        await changeCash(tx, guildId, userId, earned);
         return { success: true, amount: earned, message: `${message} ${earned}` };
     } else {
         const lost = Math.floor(Math.random() * (200 - 50 + 1)) + 50;
@@ -93,23 +111,23 @@ export async function executeSlut(guildId: string, userId: string): Promise<{ su
         ];
         const message = messages[Math.floor(Math.random() * messages.length)];
         if (actualLost > 0) {
-            await removeCash(guildId, userId, actualLost);
+            await changeCash(tx, guildId, userId, -actualLost);
         }
         return { success: false, amount: actualLost, message: `${message} ${actualLost}` };
     }
+    });
 }
 
 export async function executeCrime(guildId: string, userId: string): Promise<{ success: boolean; amount: number; message: string; cooldown?: number }> {
-    await ensureBalance(guildId, userId);
-    const balance = await getBalance(guildId, userId);
     const config = await getEconomyConfig(guildId);
-    
+    return getDb().begin(async tx => {
+    const balance = (await lockBalances(tx, guildId, [userId], config.startBalance)).get(userId)!;
     const cooldown = checkCooldown(balance.crimeLast, config.crimeCooldown);
     if (cooldown.onCooldown) {
         return { success: false, amount: 0, message: '', cooldown: cooldown.remaining };
     }
 
-    await updateCooldown(guildId, userId, 'crime_last');
+    await updateCooldown(tx, guildId, userId, 'crime_last');
     
     const isSuccess = Math.random() < 0.40;
     if (isSuccess) {
@@ -122,7 +140,7 @@ export async function executeCrime(guildId: string, userId: string): Promise<{ s
             "You pulled off a heist and earned"
         ];
         const message = messages[Math.floor(Math.random() * messages.length)];
-        await addCash(guildId, userId, earned);
+        await changeCash(tx, guildId, userId, earned);
         return { success: true, amount: earned, message: `${message} ${earned}` };
     } else {
         const lost = Math.floor(Math.random() * (500 - 100 + 1)) + 100;
@@ -136,10 +154,11 @@ export async function executeCrime(guildId: string, userId: string): Promise<{ s
         ];
         const message = messages[Math.floor(Math.random() * messages.length)];
         if (actualLost > 0) {
-            await removeCash(guildId, userId, actualLost);
+            await changeCash(tx, guildId, userId, -actualLost);
         }
         return { success: false, amount: actualLost, message: `${message} ${actualLost}` };
     }
+    });
 }
 
 export async function executeRob(guildId: string, attackerId: string, victimId: string): Promise<{ success: boolean; amount: number; message: string; cooldown?: number; error?: string }> {
@@ -147,13 +166,11 @@ export async function executeRob(guildId: string, attackerId: string, victimId: 
         return { success: false, amount: 0, message: '', error: 'You cannot rob yourself.' };
     }
 
-    await ensureBalance(guildId, attackerId);
-    await ensureBalance(guildId, victimId);
-
-    const attackerBalance = await getBalance(guildId, attackerId);
-    const victimBalance = await getBalance(guildId, victimId);
     const config = await getEconomyConfig(guildId);
-    
+    return getDb().begin(async tx => {
+    const balances = await lockBalances(tx, guildId, [attackerId, victimId], config.startBalance);
+    const attackerBalance = balances.get(attackerId)!;
+    const victimBalance = balances.get(victimId)!;
     const cooldown = checkCooldown(attackerBalance.robLast, config.robCooldown);
     if (cooldown.onCooldown) {
         return { success: false, amount: 0, message: '', cooldown: cooldown.remaining };
@@ -163,7 +180,7 @@ export async function executeRob(guildId: string, attackerId: string, victimId: 
         return { success: false, amount: 0, message: '', error: 'Target has no cash to rob.' };
     }
 
-    await updateCooldown(guildId, attackerId, 'rob_last');
+    await updateCooldown(tx, guildId, attackerId, 'rob_last');
 
     const totalCash = attackerBalance.cash + victimBalance.cash;
     let successRate = 0.5;
@@ -180,7 +197,7 @@ export async function executeRob(guildId: string, attackerId: string, victimId: 
         const stealPercent = (Math.floor(Math.random() * (50 - 10 + 1)) + 10) / 100;
         const stealAmount = Math.floor(victimBalance.cash * stealPercent);
         if (stealAmount > 0) {
-            await transferCash(guildId, victimId, attackerId, stealAmount);
+            await transferLocked(tx, guildId, victimId, attackerId, stealAmount);
         }
         return { success: true, amount: stealAmount, message: `You successfully robbed <@${victimId}> and got away with ${stealAmount}!` };
     } else {
@@ -188,10 +205,11 @@ export async function executeRob(guildId: string, attackerId: string, victimId: 
         const failPercent = (Math.floor(Math.random() * (30 - 10 + 1)) + 10) / 100;
         const payAmount = Math.floor(attackerBalance.cash * failPercent);
         if (payAmount > 0) {
-            await transferCash(guildId, attackerId, victimId, payAmount);
+            await transferLocked(tx, guildId, attackerId, victimId, payAmount);
         }
         return { success: false, amount: payAmount, message: `You got caught trying to rob <@${victimId}> and had to pay them ${payAmount} in compensation.` };
     }
+    });
 }
 
 export async function addIncomeRole(guildId: string, roleId: string, amount: number): Promise<void> {
@@ -227,19 +245,19 @@ export async function listIncomeRoles(guildId: string): Promise<Array<{ roleId: 
 }
 
 export async function collectIncome(guildId: string, userId: string, memberRoleIds: string[]): Promise<{ success: boolean; amount: number; cooldown?: number; message?: string }> {
-    await ensureBalance(guildId, userId);
-    const balance = await getBalance(guildId, userId);
-    
     const config = await getEconomyConfig(guildId);
+    return getDb().begin(async tx => {
+    const balance = (await lockBalances(tx, guildId, [userId], config.startBalance)).get(userId)!;
     const cooldown = checkCooldown(balance.passiveLast, incomeIntervalSeconds(config.incomeReset));
     if (cooldown.onCooldown) {
         return { success: false, amount: 0, cooldown: cooldown.remaining };
     }
 
-    const roles = await listIncomeRoles(guildId);
+    const roleRows = await tx`SELECT role_id, income_amount FROM income_roles WHERE guild_id = ${guildId}`;
+    const roles = roleRows.map(r => ({ roleId: r.role_id, incomeAmount: Number(r.income_amount) }));
     let totalIncome = 0;
     
-    for (const roleId of memberRoleIds) {
+    for (const roleId of new Set(memberRoleIds)) {
         const roleConfig = roles.find(r => r.roleId === roleId);
         if (roleConfig) {
             totalIncome += roleConfig.incomeAmount;
@@ -250,10 +268,11 @@ export async function collectIncome(guildId: string, userId: string, memberRoleI
         return { success: false, amount: 0, message: "You don't have any roles that provide income." };
     }
 
-    await addCash(guildId, userId, totalIncome);
-    await updateCooldown(guildId, userId, 'passive_last');
+    await changeCash(tx, guildId, userId, totalIncome);
+    await updateCooldown(tx, guildId, userId, 'passive_last');
 
     return { success: true, amount: totalIncome };
+    });
 }
 
 export async function forceUpdateIncome(guildId: string, roleId: string, memberIds: string[]): Promise<{ amount: number; membersPaid: number }> {

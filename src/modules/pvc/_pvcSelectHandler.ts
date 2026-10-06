@@ -14,7 +14,7 @@ export async function handlePvcSelect(interaction: AnySelectMenuInteraction): Pr
     return;
   }
 
-  const channel = interaction.guild?.channels.cache.get(session.channelId);
+  const channel = (await interaction.guild?.channels.fetch(session.channelId).catch(() => null));
 
   if (interaction.customId === 'pvc_select_add_user' && interaction.isUserSelectMenu()) {
     const users = interaction.users;
@@ -52,7 +52,7 @@ export async function handlePvcSelect(interaction: AnySelectMenuInteraction): Pr
         await channel.permissionOverwrites.edit(newOwnerId, {
             Connect: true,
             Speak: true,
-            ManageChannels: true,
+            ManageChannels: null,
             ViewChannel: true
         });
     }
