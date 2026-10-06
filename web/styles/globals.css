@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 /* ========================================================================= */
-/* Dark Terminal Design System Tokens (Dark-Only)                           */
+/* Hawk Design System Tokens (Dark / Light)                           */
 /* ========================================================================= */
 
 :root, .dark {
+--accent-text: #a5b4fc; --accent-text-rgb: 165 180 252;
 --accent: #6366f1; --background: #0f1117; --foreground: #e2e8f0; --canvas: #0f1117;
 --surface-0: #0f1117; --surface-1: #151821; --surface-2: #1a1e2a; --surface-3: #1f2433; --surface-4: #252a3c; --surface-5: #2b3145;
 --sidebar-bg: var(--surface-1); --sidebar-hover-bg: var(--surface-2); --sidebar-active-bg: var(--surface-4); --sidebar-active-border: var(--accent);
@@ -64,8 +65,19 @@
 --scroll-thumb-rgb: 73 83 106;
 --scroll-thumb-hover-rgb: 104 119 143;
 --scroll-thumb-active-rgb: 135 153 181;
+--flow-trigger: #a5b4fc;
+--flow-reply: #34d399;
+--flow-send: #38bdf8;
+--flow-embed: #c084fc;
+--flow-condition: #fbbf24;
+--flow-channel: #60a5fa;
+--flow-add-role: #2dd4bf;
+--flow-remove-role: #fb7185;
+--flow-wait: #22d3ee;
+--flow-react: #e879f9;
 }
 .light {
+--accent-text: #4338ca; --accent-text-rgb: 67 56 202;
 --background: #f8f9fc; --foreground: #0f172a; --canvas: #f8f9fc;
 --surface-0: #f8f9fc; --surface-1: #ffffff; --surface-2: #f1f3f9; --surface-3: #e8ebf2; --surface-4: #dfe3ed; --surface-5: #d5d9e6;
 --text-primary: #0f172a; --text-secondary: #37445b; --text-muted: #4b5b73;
@@ -100,6 +112,36 @@
 --scroll-thumb-rgb: 155 168 190;
 --scroll-thumb-hover-rgb: 111 127 153;
 --scroll-thumb-active-rgb: 80 97 124;
+--accent-rgb: 99 102 241;
+--sidebar-bg-rgb: var(--surface-1-rgb);
+--sidebar-hover-bg-rgb: var(--surface-2-rgb);
+--sidebar-active-bg-rgb: var(--surface-4-rgb);
+--sidebar-active-border-rgb: var(--accent-rgb);
+--surface-panel-rgb: var(--surface-1-rgb);
+--surface-elevated-rgb: var(--surface-3-rgb);
+--surface-card-rgb: var(--surface-2-rgb);
+--surface-subtle-rgb: var(--surface-4-rgb);
+--console-bg-rgb: var(--surface-1-rgb);
+--status-online-rgb: 34 197 94;
+--status-success-rgb: 34 197 94;
+--status-warning-rgb: 245 158 11;
+--status-critical-rgb: 239 68 68;
+--status-info-rgb: 59 130 246;
+--status-success-border-rgb: 36 102 66;
+--status-warning-border-rgb: 115 90 33;
+--status-critical-border-rgb: 117 64 74;
+--status-info-border-rgb: 52 87 128;
+--accent: #4f46e5; --accent-rgb: 79 70 229;
+--flow-trigger: #4338ca;
+--flow-reply: #047857;
+--flow-send: #0369a1;
+--flow-embed: #7e22ce;
+--flow-condition: #92400e;
+--flow-channel: #1d4ed8;
+--flow-add-role: #0f766e;
+--flow-remove-role: #be123c;
+--flow-wait: #0e7490;
+--flow-react: #a21caf;
 }
 
 body {
@@ -404,7 +446,6 @@ tbody tr:hover { background: #ffffff03; }
 .hawk-tabs button { padding: 12px 16px; white-space: nowrap; color: var(--text-secondary); border-bottom: 2px solid transparent; }
 .hawk-tabs button[aria-selected='true'] { color: var(--text-primary); border-bottom-color: var(--accent); }
 .hawk-save-bar { pointer-events: auto; z-index: var(--z-save); margin: 0 auto; width: min(100%, 640px); }
-.hawk-save-bar > div { background: var(--surface-3); }
 @media (max-width: 1023px) { .hawk-main { padding: 24px 20px 96px; } }
 @media (max-width: 639px) {
   .hawk-main { padding: 20px 16px 96px; }
@@ -465,4 +506,13 @@ tbody tr:hover { background: #ffffff03; }
 
 .react-flow__controls-button:hover {
   background: var(--surface-4) !important;
+}
+
+.hawk-flow {
+  --xy-background-color-default: var(--canvas);
+  --xy-controls-button-background-color-default: var(--surface-2);
+  --xy-controls-button-background-color-hover-default: var(--surface-3);
+  --xy-controls-button-color-default: var(--text-primary);
+  --xy-controls-button-color-hover-default: var(--text-primary);
+  --xy-controls-button-border-color-default: var(--border-panel);
 }

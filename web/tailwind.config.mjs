@@ -15,6 +15,11 @@ export default {
   ],
   theme: {
     extend: {
+      textColor: {
+        accent: 'rgb(var(--accent-text-rgb) / <alpha-value>)',
+        'accent-light': 'rgb(var(--accent-text-rgb) / <alpha-value>)',
+        'accent-dark': 'rgb(var(--accent-text-rgb) / <alpha-value>)',
+      },
       colors: {
         background: 'rgb(var(--background-rgb) / <alpha-value>)',
         foreground: 'rgb(var(--foreground-rgb) / <alpha-value>)',

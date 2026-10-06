@@ -18,6 +18,9 @@ import {
   type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { RolePicker } from '@/components/ui/RolePicker';
+import { ChannelPicker } from '@/components/ui/ChannelPicker';
+import type { DiscordRole, DiscordChannel } from '@/lib/discord';
 import { flowActions, type FlowAction, type CommandFlow } from '@/lib/commandFlow';
 import {
   Zap,
@@ -38,7 +41,6 @@ type HawkNode = Node<{ action: FlowAction; args: Record<string, string | number>
 
 interface ActionTheme {
   label: string;
-  badge: string;
   badgeBg: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }
@@ -46,68 +48,57 @@ interface ActionTheme {
 const ACTION_THEMES: Record<FlowAction, ActionTheme> = {
   trigger: {
     label: 'Trigger',
-    badge: 'text-indigo-400 border-indigo-500/40 bg-indigo-500/10',
-    badgeBg: '#6366f1',
+    badgeBg: 'var(--flow-trigger)',
     icon: Zap,
   },
   reply: {
     label: 'Reply Message',
-    badge: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
-    badgeBg: '#10b981',
+    badgeBg: 'var(--flow-reply)',
     icon: MessageSquare,
   },
   send: {
     label: 'Send To Channel',
-    badge: 'text-sky-400 border-sky-500/40 bg-sky-500/10',
-    badgeBg: '#0ea5e9',
+    badgeBg: 'var(--flow-send)',
     icon: Send,
   },
   embed: {
     label: 'Rich Embed',
-    badge: 'text-purple-400 border-purple-500/40 bg-purple-500/10',
-    badgeBg: '#a855f7',
+    badgeBg: 'var(--flow-embed)',
     icon: Package,
   },
   hasRole: {
     label: 'Check Role',
-    badge: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
-    badgeBg: '#f59e0b',
+    badgeBg: 'var(--flow-condition)',
     icon: ShieldCheck,
   },
   hasPermission: {
     label: 'Check Permission',
-    badge: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
-    badgeBg: '#f59e0b',
+    badgeBg: 'var(--flow-condition)',
     icon: KeyRound,
   },
   inChannel: {
     label: 'Check Channel',
-    badge: 'text-blue-400 border-blue-500/40 bg-blue-500/10',
-    badgeBg: '#3b82f6',
+    badgeBg: 'var(--flow-channel)',
     icon: Hash,
   },
   addRole: {
     label: 'Add Role',
-    badge: 'text-teal-400 border-teal-500/40 bg-teal-500/10',
-    badgeBg: '#14b8a6',
+    badgeBg: 'var(--flow-add-role)',
     icon: UserPlus,
   },
   removeRole: {
     label: 'Remove Role',
-    badge: 'text-rose-400 border-rose-500/40 bg-rose-500/10',
-    badgeBg: '#f43f5e',
+    badgeBg: 'var(--flow-remove-role)',
     icon: UserMinus,
   },
   wait: {
     label: 'Delay / Wait',
-    badge: 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10',
-    badgeBg: '#06b6d4',
+    badgeBg: 'var(--flow-wait)',
     icon: Clock,
   },
   react: {
     label: 'React With Emoji',
-    badge: 'text-fuchsia-400 border-fuchsia-500/40 bg-fuchsia-500/10',
-    badgeBg: '#d946ef',
+    badgeBg: 'var(--flow-react)',
     icon: Sparkles,
   },
 };
@@ -115,8 +106,7 @@ const ACTION_THEMES: Record<FlowAction, ActionTheme> = {
 function ActionNode({ data, selected }: NodeProps<HawkNode>) {
   const theme = ACTION_THEMES[data.action] || {
     label: data.action,
-    badge: 'text-text-primary border-border bg-surface-3',
-    badgeBg: '#64748b',
+    badgeBg: 'var(--text-secondary)',
     icon: Zap,
   };
   const IconComponent = theme.icon;
@@ -146,22 +136,22 @@ function ActionNode({ data, selected }: NodeProps<HawkNode>) {
         selected
           ? 'border-accent shadow-[0_0_20px_rgba(99,102,241,0.35)] ring-1 ring-accent'
           : 'border-border/80 hover:border-text-secondary/50'
-      } bg-[#121622] text-[#e2e8f0]`}
+      } bg-surface-panel text-text-primary`}
     >
       {/* Input Handle */}
       {data.action !== 'trigger' && (
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-3 !h-3 !border-2 !border-[#121622] !bg-[#6366f1] !-left-1.5 shadow-md hover:scale-125 transition-transform"
+          className="!w-3 !h-3 !border-2 !border-surface-panel !bg-accent !-left-1.5 shadow-md hover:scale-125 transition-transform"
         />
       )}
 
       {/* Node Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.08] bg-white/[0.03]">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface-2">
         <div
           className="p-1 rounded-md shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: `${theme.badgeBg}25`, color: theme.badgeBg }}
+          style={{ backgroundColor: `color-mix(in srgb, ${theme.badgeBg} 15%, transparent)`, color: theme.badgeBg }}
         >
           <IconComponent size={13} />
         </div>
@@ -172,30 +162,30 @@ function ActionNode({ data, selected }: NodeProps<HawkNode>) {
 
       {/* Node Content */}
       <div className="p-3">
-        <p className="text-xs text-[#94a3b8] font-mono leading-relaxed line-clamp-2 break-words">
+        <p className="text-xs text-text-secondary font-mono leading-relaxed line-clamp-2 break-words">
           {summary}
         </p>
       </div>
 
       {/* Conditional Branching Output Ports */}
       {isCondition ? (
-        <div className="flex items-center justify-between px-3 py-1.5 border-t border-white/[0.06] bg-black/20 text-[10px] font-semibold tracking-wider uppercase">
-          <span className="text-emerald-400">Yes</span>
+        <div className="flex items-center justify-between px-3 py-1.5 border-t border-border bg-surface-2 text-[10px] font-semibold tracking-wider uppercase">
+          <span className="text-success-text">Yes</span>
           <Handle
             id="yes"
             type="source"
             position={Position.Right}
             style={{ top: '65%' }}
-            className="!w-3 !h-3 !border-2 !border-[#121622] !bg-emerald-400 !-right-1.5 shadow-md hover:scale-125 transition-transform"
+            className="!w-3 !h-3 !border-2 !border-surface-panel !bg-success-text !-right-1.5 shadow-md hover:scale-125 transition-transform"
             aria-label="Yes branch"
           />
-          <span className="text-rose-400 ml-auto mr-1">No</span>
+          <span className="text-critical-text ml-auto mr-1">No</span>
           <Handle
             id="no"
             type="source"
             position={Position.Right}
             style={{ top: '85%' }}
-            className="!w-3 !h-3 !border-2 !border-[#121622] !bg-rose-400 !-right-1.5 shadow-md hover:scale-125 transition-transform"
+            className="!w-3 !h-3 !border-2 !border-surface-panel !bg-critical-text !-right-1.5 shadow-md hover:scale-125 transition-transform"
             aria-label="No branch"
           />
         </div>
@@ -203,7 +193,7 @@ function ActionNode({ data, selected }: NodeProps<HawkNode>) {
         <Handle
           type="source"
           position={Position.Right}
-          className="!w-3 !h-3 !border-2 !border-[#121622] !bg-[#6366f1] !-right-1.5 shadow-md hover:scale-125 transition-transform"
+          className="!w-3 !h-3 !border-2 !border-surface-panel !bg-accent !-right-1.5 shadow-md hover:scale-125 transition-transform"
         />
       )}
     </div>
@@ -216,10 +206,14 @@ export default function FlowCanvas({
   flow,
   onChange,
   disabled,
+  roles = [],
+  channels = [],
 }: {
   flow: CommandFlow;
   onChange: (flow: CommandFlow) => void;
   disabled?: boolean;
+  roles?: DiscordRole[];
+  channels?: DiscordChannel[];
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const node = flow.nodes.find(n => n.id === selected);
@@ -239,10 +233,10 @@ export default function FlowCanvas({
       flow.edges.map(e => ({
         ...e,
         animated: true,
-        style: { stroke: '#6366f1', strokeWidth: 2 },
+        style: { stroke: 'var(--accent)', strokeWidth: 2 },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: '#6366f1',
+          color: 'var(--accent)',
           width: 14,
           height: 14,
         },
@@ -325,6 +319,11 @@ export default function FlowCanvas({
     setSelected(id);
   };
 
+  const setArgument = (key: string, value: string | number) => {
+    if (!node || disabled) return;
+    onChange({ ...flow, nodes: flow.nodes.map(n => n.id === node.id ? { ...n, data: { ...n.data, args: { ...n.data.args, [key]: value } } } : n) });
+  };
+
   const deleteSelectedNode = () => {
     if (!node || node.data.action === 'trigger' || disabled) return;
     onChange({
@@ -337,7 +336,7 @@ export default function FlowCanvas({
   return (
     <div className="grid lg:grid-cols-[1fr_280px] gap-4">
       {/* Visual Graph Viewport */}
-      <div className="h-[540px] border border-border rounded-xl overflow-hidden bg-[#090c14] relative shadow-inner">
+      <div className="h-[540px] border border-border rounded-xl overflow-hidden bg-canvas hawk-flow relative shadow-inner">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -353,7 +352,7 @@ export default function FlowCanvas({
           fitView
           fitViewOptions={{ padding: 0.2 }}
         >
-          <Background color="#1e293b" gap={20} size={1} />
+          <Background color="var(--border-panel)" gap={20} size={1} />
           <Controls className="!bg-surface-2 !border-border !rounded-lg !overflow-hidden !shadow-xl" />
         </ReactFlow>
       </div>
@@ -399,6 +398,7 @@ export default function FlowCanvas({
                   disabled={disabled}
                   className="p-1 rounded text-text-muted hover:text-critical-text hover:bg-critical-soft transition-colors"
                   title="Delete selected node"
+                  aria-label="Delete selected node"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -425,9 +425,13 @@ export default function FlowCanvas({
                 ? ['emoji']
                 : ['text']
               ).map(key => (
-                <label className="block text-xs text-text-secondary" key={key}>
+                <div className="block text-xs text-text-secondary" key={key}>
                   <span className="font-mono text-[11px] capitalize">{key}</span>
-                  {key === 'text' || key === 'description' ? (
+                  {key === 'roleId' ? (
+                    <RolePicker roles={roles} label={`${node.data.action} role`} disabled={disabled} value={String(node.data.args[key] || '') || null} onChange={value => setArgument(key, value || '')}/>
+                  ) : key === 'channelId' ? (
+                    <ChannelPicker channels={channels} label={`${node.data.action} channel`} disabled={disabled} value={String(node.data.args[key] || '') || null} onChange={value => setArgument(key, value || '')} allowedTypes={node.data.action === 'inChannel' ? [0, 2, 5, 10, 11, 12, 13, 15, 16] : [0, 5, 10, 11, 12]}/>
+                  ) : key === 'text' || key === 'description' ? (
                     <textarea
                       aria-label={`${node.data.action} ${key}`}
                       rows={3}
@@ -484,7 +488,7 @@ export default function FlowCanvas({
                       }
                     />
                   )}
-                </label>
+                </div>
               ))}
             </div>
 
@@ -506,7 +510,7 @@ export default function FlowCanvas({
         )}
 
         <div className="mt-auto pt-3 border-t border-border/50 text-[11px] text-text-muted leading-relaxed">
-          Drag handles to connect. Conditions branch into <span className="text-emerald-400 font-medium">Yes</span> and <span className="text-rose-400 font-medium">No</span> paths.
+          Drag handles to connect. Conditions branch into <span className="text-success-text font-medium">Yes</span> and <span className="text-critical-text font-medium">No</span> paths.
         </div>
       </aside>
     </div>

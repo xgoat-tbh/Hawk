@@ -117,12 +117,12 @@ export default function PvcDashboardPage() {
   const initialFormData = useMemo<PvcFormData>(() => {
     const eco = config?.economy || {};
     return {
-      pvcHourlyRate: Number(eco.pvc_hourly_rate) || 100,
+      pvcHourlyRate: Number(eco.pvc_hourly_rate ?? 100),
       pvcJtcChannelId: eco.pvc_jtc_channel_id || null,
       pvcCategoryId: eco.pvc_category_id || null,
       pvcCommandChannelId: eco.pvc_command_channel_id || null,
       pvcPanelChannelId: eco.pvc_panel_channel_id || null,
-      autoCleanup: true,
+      autoCleanup: eco.auto_cleanup ?? true,
     };
   }, [config?.economy]);
 
@@ -143,6 +143,7 @@ export default function PvcDashboardPage() {
         pvc_category_id: formValues.pvcCategoryId,
         pvc_command_channel_id: formValues.pvcCommandChannelId,
         pvc_panel_channel_id: formValues.pvcPanelChannelId,
+        auto_cleanup: formValues.autoCleanup,
       };
 
       const res = await apiFetch(`/api/guilds/${guildId}/config`, {

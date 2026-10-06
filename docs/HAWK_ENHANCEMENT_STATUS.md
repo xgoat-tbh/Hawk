@@ -54,16 +54,16 @@ Ruling: Native Discord owners/admins/ManageGuild users receive guild-scoped owne
 
 ## Phase 4 — UI and theme
 
-- [ ] 36 Simulator selects an available role after asynchronous loading.
-- [ ] 37 PVC save includes auto_cleanup.
-- [ ] 38 Light theme defines every semantic RGB palette token.
-- [ ] 39 SaveBar success/error backgrounds retain precedence.
-- [ ] 40 Canvas surface/background colors use semantic tokens.
-- [ ] 41 Canvas node/edge/inspector colors respect theme tokens.
-- [ ] 42 Role arguments use RolePicker.
-- [ ] 43 Channel arguments use ChannelPicker.
-- [ ] 44 Protected API 401 redirects to session-expired login; OTP failures stay in login.
-- [ ] 45 Welcome simulator receives avatar placeholders unchanged.
+- [x] 36 Simulator selects an available role after asynchronous loading.
+- [x] 37 PVC save includes auto_cleanup.
+- [x] 38 Light theme defines every semantic RGB palette token.
+- [x] 39 SaveBar success/error backgrounds retain precedence.
+- [x] 40 Canvas surface/background colors use semantic tokens.
+- [x] 41 Canvas node/edge/inspector colors respect theme tokens.
+- [x] 42 Role arguments use RolePicker.
+- [x] 43 Channel arguments use ChannelPicker.
+- [x] 44 Protected API 401 redirects to session-expired login; OTP failures stay in login.
+- [x] 45 Welcome simulator receives avatar placeholders unchanged.
 
 ## Phase 5 — Voice and games
 
@@ -81,3 +81,5 @@ Phase 1 verified: bot/web TypeScript both exit 0; npm test 155/155; production b
 Phase 2 verified: both TypeScript checks exit 0; npm test 170/170; production build exit 0. Migration 035 applied. Live PostgreSQL eight-way work/slut/crime/rob/role-income races and cooldown-preserving resets pass. AFK records store ownership and exact original/assigned nicknames; restoration preserves manual nickname changes. Existing VM tests now use ES2022 to reflect real iterable semantics.
 
 Phase 3 verified: both TypeScript checks exit 0; npm test 177/177; production build exit 0. Migration 036 applied. Fresh standalone dashboard schema creation verified inside a rolled-back PostgreSQL schema; partial updates and explicit clears verified against persisted rows. Balance mutation and audit transaction commit together. Money is capped at 1e12 per supplied document, below Number.MAX_SAFE_INTEGER. PVC cleanup storage added here because a UI-only payload change would still lose state.
+
+Phase 4 verified: both TypeScript checks exit 0; root tests 177/177; React tests 11/11; production build exit 0. All 46 dark RGB tokens are explicitly defined in light mode. Text and node palette contrast on panel/card surfaces: dark minimum 6.18:1, light minimum 4.83:1. Separate accent text colors preserve the specified accent fill. Canvas uses actual guild roles/channels; API redirects exclude OTP/auth 401 responses.

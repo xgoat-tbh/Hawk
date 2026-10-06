@@ -75,6 +75,10 @@ export function AccessPreviewer({
     else if (role) { setTargetType('role'); setSelectedRoleId(role); }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!selectedRoleId && roles.length) setSelectedRoleId(roles[0].id);
+  }, [roles, selectedRoleId]);
+
   const targetId = targetType === 'role' ? selectedRoleId || '' : testUserId.trim();
 
   // Fetch simulation data whenever target or simulation settings change

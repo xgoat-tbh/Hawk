@@ -438,7 +438,7 @@ export default function CommandsPage() {
 
           {/* Visual Canvas Content */}
           <Tabs.Content value="visual" className="pt-4 outline-none">
-            <FlowCanvas flow={current.flow_json} onChange={updateFlow} disabled={!editable} />
+            <FlowCanvas roles={roles} channels={channels} flow={current.flow_json} onChange={updateFlow} disabled={!editable} />
           </Tabs.Content>
 
           {/* Multi-Language Script Editor Content */}

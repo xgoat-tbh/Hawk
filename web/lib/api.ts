@@ -13,5 +13,12 @@ export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {})
     headers.set('x-csrf-token', token || '');
     init = { ...init, headers };
   }
-  return fetch(input, { credentials: 'same-origin', ...init });
+  const response = await fetch(input, { credentials: 'same-origin', ...init });
+  if (response.status === 401 && typeof window !== 'undefined') {
+    const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, window.location.href);
+    if (url.origin === window.location.origin && url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/') && window.location.pathname !== '/') {
+      window.location.replace('/?session=expired');
+    }
+  }
+  return response;
 }
