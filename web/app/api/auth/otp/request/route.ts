@@ -67,14 +67,15 @@ export async function POST(req: NextRequest) {
 
     // Generate cryptographically secure 6-digit numeric OTP
     const otpCode = crypto.randomInt(100000, 1000000).toString();
+    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
     const expiresAt = new Date(now.getTime() + 2 * 60 * 1000); // 2 minutes expiry
 
     // Upsert into database
     const issued = await db`
       INSERT INTO dashboard_otps (user_id, otp_code, attempts, created_at, expires_at, locked_until)
-      VALUES (${cleanId}, ${otpCode}, 0, NOW(), ${expiresAt}, NULL)
+      VALUES (${cleanId}, ${otpHash}, 0, NOW(), ${expiresAt}, NULL)
       ON CONFLICT (user_id) DO UPDATE SET
-        otp_code = ${otpCode},
+        otp_code = ${otpHash},
         attempts = 0,
         created_at = NOW(),
         expires_at = ${expiresAt},
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
     const dmResult = await sendDirectMessage(cleanId, dmText);
 
     if (!dmResult.success) {
-      await db`DELETE FROM dashboard_otps WHERE user_id = ${cleanId} AND otp_code = ${otpCode}`;
+      await db`DELETE FROM dashboard_otps WHERE user_id = ${cleanId} AND otp_code = ${otpHash}`;
       return NextResponse.json(
         {
           error:

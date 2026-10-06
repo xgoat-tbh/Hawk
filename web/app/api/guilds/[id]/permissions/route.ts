@@ -114,19 +114,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         );
       }
       const overrides: UserOverride[] = data.userOverrides || [];
-      const updatedUserIds = new Set(overrides.map((uo) => uo.userId));
-
+      if (!Array.isArray(overrides) || overrides.length > 500 || !overrides.every((uo: UserOverride) =>
+        uo && /^\d{17,20}$/.test(uo.userId) && typeof uo.module === 'string' && uo.module.length <= 64 &&
+        ['view', 'manage', 'delete'].includes(uo.action) && ['ALLOW', 'DENY'].includes(uo.effect))) {
+        return NextResponse.json({ error: 'Invalid user overrides' }, { status: 400 });
+      }
+      const updatedUserIds = new Set(overrides.map((uo: UserOverride) => uo.userId));
       await db.begin(async (tx) => {
-        // 1. Fetch previously existing users for this guild to detect deleted/revoked users
-        const prevUsers = await tx`SELECT DISTINCT user_id FROM user_overrides WHERE guild_id = ${guildId}`;
-        const prevUserIds = new Set(prevUsers.map((r: any) => r.user_id));
-
-        // 2. Full revocation: if an owner deleted a user from user_overrides, remove them from dashboard_access
-        const removedUserIds = Array.from(prevUserIds).filter((uid) => !updatedUserIds.has(uid));
-        for (const remUid of removedUserIds) {
-          await tx`DELETE FROM dashboard_access WHERE user_id = ${remUid}`;
-        }
-
+        await tx`SELECT pg_advisory_xact_lock(hashtext(${'overrides:' + guildId}))`;
         // 3. Clear and rewrite user_overrides for this guild
         await tx`DELETE FROM user_overrides WHERE guild_id = ${guildId}`;
         for (const uo of overrides) {
@@ -141,14 +136,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           `;
         }
 
-        // 4. Ensure all active users in updated list are synced to dashboard_access
-        for (const uid of Array.from(updatedUserIds)) {
-          await tx`
-            INSERT INTO dashboard_access (user_id, granted_by, notes)
-            VALUES (${uid}, ${session.id}, 'Granted via Web Dashboard')
-            ON CONFLICT (user_id) DO NOTHING
-          `;
-        }
       });
 
       await logAuditEvent({

@@ -5,18 +5,11 @@ export function validateOrigin(
   expectedOrigin: string,
   host?: string | null
 ): boolean {
-  if (!origin) return true;
+  if (!origin) return false;
   try {
     const originUrl = new URL(origin);
     const expectedUrl = new URL(expectedOrigin);
-    const hostMatches = Boolean(host && (originUrl.host === host || originUrl.hostname === host));
-    const originMatches = originUrl.origin === expectedUrl.origin;
-    const isLoopback = Boolean(
-      ['localhost', '127.0.0.1', '0.0.0.0'].includes(originUrl.hostname) &&
-      (['localhost', '127.0.0.1', '0.0.0.0'].includes(expectedUrl.hostname) || host?.startsWith('localhost') || host?.startsWith('127.0.0.1'))
-    );
-
-    return originMatches || hostMatches || isLoopback;
+    return origin === originUrl.origin && originUrl.origin === expectedUrl.origin;
   } catch {
     return false;
   }

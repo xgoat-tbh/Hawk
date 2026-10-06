@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromToken, canViewGuild, canManageGuild } from '@/lib/auth';
-import { validateCsrf, validateOrigin, CSRF_COOKIE } from '@/lib/csrf';
+import { validateCsrf, CSRF_COOKIE } from '@/lib/csrf';
 import { rateLimiter } from '@/lib/rateLimit';
 import { clientIp } from '@/lib/clientIp';
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  if (path === '/api/health' && ['GET', 'HEAD'].includes(req.method)) return NextResponse.next();
   const api = path.startsWith('/api/');
   const mutation = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
   const origin = process.env.DASHBOARD_ORIGIN || req.nextUrl.origin;
@@ -16,20 +17,8 @@ export async function middleware(req: NextRequest) {
   const tier = path.startsWith('/api/auth/otp/') ? 'auth' : mutation ? 'write' : 'read';
   const limit = tier === 'auth' ? 5 : tier === 'write' ? 30 : 60;
   if (api) {
-    // Standalone Next cannot expose a reliable peer IP. Give unidentified
-    // traffic a separate bounded budget; production uses the integrated server.
-    const result = rateLimiter.check(`${tier}:${tier === 'auth' ? ip || 'unidentified' : token || ip || 'unidentified'}`, ip || token ? limit : 120);
-    if (!result.allowed) return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429, headers: { 'Retry-After': String(result.retryAfter) } });
-    if (mutation) {
-      const reqOrigin = req.headers.get('origin');
-      if (reqOrigin && !validateOrigin(reqOrigin, origin, req.headers.get('host'))) {
-        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
-      }
-      if (!path.startsWith('/api/auth/otp/')) {
-        if (!validateCsrf(reqOrigin, origin, req.cookies.get(CSRF_COOKIE)?.value, req.headers.get('x-csrf-token'), req.headers.get('host'))) {
-          return NextResponse.json({ error: 'Invalid CSRF token or request origin' }, { status: 403 });
-        }
-      }
+    if (mutation && !validateCsrf(req.headers.get('origin'), origin, req.cookies.get(CSRF_COOKIE)?.value, req.headers.get('x-csrf-token'))) {
+      return NextResponse.json({ error: 'Invalid CSRF token or request origin' }, { status: 403 });
     }
     const length = Number(req.headers.get('content-length') || 0);
     if (length > 256_000) return NextResponse.json({ error: 'Request too large' }, { status: 413 });
@@ -43,8 +32,20 @@ export async function middleware(req: NextRequest) {
         }
       } finally { reader.releaseLock(); }
     }
+    let identity = token || ip || 'unidentified';
+    if (tier === 'auth') {
+      if (ip) identity = ip;
+      else {
+        const body = await req.clone().json().catch(() => ({}));
+        const userId = typeof body.userId === 'string' ? body.userId.trim().replace(/[<@!>]/g, '') : '';
+        identity = /^\d{17,20}$/.test(userId) ? `account:${userId}` : `csrf:${req.cookies.get(CSRF_COOKIE)?.value || 'invalid'}`;
+      }
+    }
+    const result = rateLimiter.check(`${tier}:${identity}`, tier === 'auth' || ip || token ? limit : 120);
+    if (!result.allowed) return NextResponse.json({ error: 'Too many requests. Please try again shortly.' }, { status: 429, headers: { 'Retry-After': String(result.retryAfter) } });
+
   }
-  const protectedPath = path.startsWith('/dashboard') || (api && !path.startsWith('/api/auth/'));
+  const protectedPath = path.startsWith('/dashboard') || (api && !path.startsWith('/api/auth/') && path !== '/api/health');
   if (protectedPath) {
     const session = token ? await getSessionFromToken(token) : null;
     if (!session) return api ? NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) : NextResponse.redirect(new URL('/', origin));

@@ -35,13 +35,15 @@ export async function ensureAuthTables(): Promise<void> {
     await db`
       CREATE TABLE IF NOT EXISTS dashboard_otps (
         user_id VARCHAR(32) PRIMARY KEY,
-        otp_code VARCHAR(8) NOT NULL,
+        otp_code VARCHAR(64) NOT NULL,
         attempts INT NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         expires_at TIMESTAMPTZ NOT NULL,
         locked_until TIMESTAMPTZ
       )
     `;
+    await db`ALTER TABLE dashboard_otps ALTER COLUMN otp_code TYPE VARCHAR(64)`;
+    await db`UPDATE dashboard_otps SET otp_code = encode(sha256(convert_to(otp_code, 'UTF8')), 'hex') WHERE otp_code ~ '^[0-9]{6}$'`;
     authSchemaEnsured = true;
   } catch (err) {
     console.warn('Could not auto-ensure auth tables:', err);
@@ -162,14 +164,14 @@ export async function isAuthorizedUser(userId: string): Promise<boolean> {
 
 // In-memory cache for guild authorization checks (30s) with max-size eviction
 const MAX_AUTH_CACHE_SIZE = 500;
-const guildAuthCache = new Map<string, { authorized: boolean; timestamp: number }>();
+const guildAuthCache = new Map<string, { level: AccessLevel; timestamp: number }>();
 
-function setGuildAuthCache(key: string, authorized: boolean): void {
+function setGuildAuthCache(key: string, level: AccessLevel): void {
   if (guildAuthCache.size >= MAX_AUTH_CACHE_SIZE) {
     const firstKey = guildAuthCache.keys().next().value;
     if (firstKey) guildAuthCache.delete(firstKey);
   }
-  guildAuthCache.set(key, { authorized, timestamp: Date.now() });
+  guildAuthCache.set(key, { level, timestamp: Date.now() });
 }
 
 export async function isGuildOwner(userId: string, guildId: string): Promise<boolean> {
@@ -184,27 +186,22 @@ export async function isGuildOwner(userId: string, guildId: string): Promise<boo
   }
 }
 
-async function hasDiscordViewAccess(userId: string, guildId: string): Promise<boolean> {
+async function discordAccessLevel(userId: string, guildId: string): Promise<AccessLevel> {
   const cleanUserId = userId.trim();
   const cleanGuildId = guildId.trim();
-
-  // 1. Bot owner / bot admin / global access
-  if (await isAuthorizedUser(cleanUserId)) {
-    return true;
-  }
 
   const cacheKey = `${cleanGuildId}:${cleanUserId}`;
   const cached = guildAuthCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < 30_000) {
-    return cached.authorized;
+    return cached.level;
   }
 
   try {
     // 2. Check if user is the guild owner in Discord
     const guild = await fetchGuildDetails(cleanGuildId);
     if (guild && guild.owner_id === cleanUserId) {
-      setGuildAuthCache(cacheKey, true);
-      return true;
+      setGuildAuthCache(cacheKey, 'owner');
+      return 'owner';
     }
 
     // 3. Check guild member permissions
@@ -217,21 +214,21 @@ async function hasDiscordViewAccess(userId: string, guildId: string): Promise<bo
       if (member.permissions) {
         const perms = BigInt(member.permissions);
         if ((perms & ADMINISTRATOR) === ADMINISTRATOR || (perms & MANAGE_GUILD) === MANAGE_GUILD) {
-          setGuildAuthCache(cacheKey, true);
-          return true;
+          setGuildAuthCache(cacheKey, 'editor');
+          return 'editor';
         }
       }
 
       // Role-based permissions check using Discord permission bitfields
-      if (member.roles && member.roles.length > 0) {
+      if (member.roles) {
         const roles = await fetchGuildRoles(cleanGuildId);
         const memberRoleIds = new Set([cleanGuildId, ...member.roles]);
         for (const role of roles) {
           if (memberRoleIds.has(role.id) && role.permissions) {
             const rolePerms = BigInt(role.permissions);
             if ((rolePerms & ADMINISTRATOR) === ADMINISTRATOR || (rolePerms & MANAGE_GUILD) === MANAGE_GUILD) {
-              setGuildAuthCache(cacheKey, true);
-              return true;
+              setGuildAuthCache(cacheKey, 'editor');
+              return 'editor';
             }
           }
         }
@@ -242,8 +239,8 @@ async function hasDiscordViewAccess(userId: string, guildId: string): Promise<bo
     console.error(`Error checking guild authorization for user ${cleanUserId} on ${cleanGuildId}:`, error);
   }
 
-  setGuildAuthCache(cacheKey, false);
-  return false;
+  setGuildAuthCache(cacheKey, 'none');
+  return 'none';
 }
 
 export type AccessLevel = 'owner' | 'admin' | 'editor' | 'viewer' | 'none';
@@ -251,8 +248,10 @@ export async function getAccessLevel(userId: string, guildId: string): Promise<A
   if (!supportedGuildIds.includes(guildId)) return 'none';
   if (isBotOwner(userId)) return 'owner';
   if (isBotAdmin(userId)) return 'admin';
+  const nativeLevel = await discordAccessLevel(userId, guildId);
+  if (nativeLevel === 'owner') return 'owner';
   if (await isAuthorizedUser(userId)) return 'editor';
-  return await hasDiscordViewAccess(userId, guildId) ? 'viewer' : 'none';
+  return nativeLevel;
 }
 export async function canManageGuild(userId: string, guildId: string) {
   return ['owner', 'admin', 'editor'].includes(await getAccessLevel(userId, guildId));

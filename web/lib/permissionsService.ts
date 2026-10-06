@@ -50,7 +50,7 @@ export async function fetchGuildPermissions(guildId: string): Promise<{
     console.warn('role_policies query error:', err);
   }
 
-  // 3. Fetch user overrides from PostgreSQL & sync with dashboard_access
+  // 3. Fetch user overrides from PostgreSQL
   let userOverrides: UserOverride[] = [];
   try {
     const overrideRows = await db`SELECT * FROM user_overrides WHERE guild_id = ${guildId} ORDER BY created_at ASC`;
@@ -61,51 +61,6 @@ export async function fetchGuildPermissions(guildId: string): Promise<{
       action: r.action as 'view' | 'manage' | 'delete',
       effect: r.effect as 'ALLOW' | 'DENY',
     }));
-
-    // Fetch users authorized in dashboard_access table
-    const dashRows = await db`SELECT user_id, granted_by, granted_at, notes FROM dashboard_access ORDER BY granted_at ASC`;
-    const userIdsWithOverrides = new Set(userOverrides.map((uo) => uo.userId));
-
-    // For any user who has dashboard_access but doesn't have custom user_overrides saved for this guild yet:
-    for (const d of dashRows) {
-      if (!userIdsWithOverrides.has(d.user_id)) {
-        // Resolve Discord member/user display name and avatar
-        const member = await fetchGuildMember(guildId, d.user_id);
-        const user = member?.user || (await fetchDiscordUser(d.user_id));
-        const resolvedName =
-          member?.user?.global_name ||
-          member?.user?.username ||
-          user?.global_name ||
-          user?.username ||
-          `User ${d.user_id}`;
-
-        const avatarHash = member?.user?.avatar || user?.avatar;
-        const avatarUrl = avatarHash
-          ? `https://cdn.discordapp.com/avatars/${d.user_id}/${avatarHash}.png?size=128`
-          : null;
-
-        // Default to Standard Moderator preset for all dashboard modules except owner-only permissions
-        const standardModules = ['general', 'economy', 'pvc', 'gaming', 'media', 'sticky'];
-        for (const mod of standardModules) {
-          userOverrides.push({
-            userId: d.user_id,
-            userName: resolvedName,
-            avatarUrl,
-            module: mod,
-            action: 'view',
-            effect: 'ALLOW',
-          });
-          userOverrides.push({
-            userId: d.user_id,
-            userName: resolvedName,
-            avatarUrl,
-            module: mod,
-            action: 'manage',
-            effect: 'ALLOW',
-          });
-        }
-      }
-    }
 
     // Enrich all distinct userIds with avatarUrl
     const distinctUserIds = Array.from(new Set(userOverrides.map((uo) => uo.userId)));
@@ -126,7 +81,7 @@ export async function fetchGuildPermissions(guildId: string): Promise<{
       avatarUrl: uo.avatarUrl || avatarMap.get(uo.userId) || null,
     }));
   } catch (err) {
-    console.warn('user_overrides / dashboard_access query error:', err);
+    console.warn('user_overrides query error:', err);
   }
 
   // 4. Construct command ACLs synced with PostgreSQL 'permits' table

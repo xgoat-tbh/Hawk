@@ -10,11 +10,11 @@ function load(file: string, dependencies: Record<string, unknown>, env = {}) {
  const source = readFileSync(new URL('../' + file, import.meta.url), 'utf8'); const exports: Record<string, any> = {};
  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, esModuleInterop: true } }).outputText, { exports, process: { env }, console, require: (key: string) => key in dependencies ? dependencies[key] : require(key) }); return exports;
 }
-test('Discord administrator is a viewer while an explicit allowlist member can edit', async () => {
+test('Discord administrator and explicit allowlist members can edit within supported guilds', async () => {
  const guild = '1493322410567401722';
  const auth = load('web/lib/auth.ts', { 'next/headers': {}, './guilds': { supportedGuildIds: [guild] }, './db': { db: async (_query: unknown, user: string) => user === 'editor' ? [{ user_id: user }] : [] }, './discord': { fetchGuildDetails: async () => ({ owner_id: 'guild-owner' }), fetchGuildMember: async () => ({ roles: ['r'] }), fetchGuildRoles: async () => [{ id: 'r', permissions: '8' }] } });
- assert.equal(await auth.getAccessLevel('viewer',guild),'viewer'); assert.equal(await auth.canViewGuild('viewer',guild),true); assert.equal(await auth.canManageGuild('viewer',guild),false); assert.equal(await auth.getAccessLevel('editor',guild),'editor'); assert.equal(await auth.canManageGuild('editor',guild),true);
- const perms = await auth.getUserModulePermissions('viewer',guild); assert.ok(Object.values(perms.modules).every((p: any) => p.view && !p.manage)); assert.equal(await auth.getAccessLevel('editor','123456789012345678'),'none');
+ assert.equal(await auth.getAccessLevel('viewer',guild),'editor'); assert.equal(await auth.canViewGuild('viewer',guild),true); assert.equal(await auth.canManageGuild('viewer',guild),true); assert.equal(await auth.getAccessLevel('editor',guild),'editor'); assert.equal(await auth.canManageGuild('editor',guild),true);
+ const perms = await auth.getUserModulePermissions('viewer',guild); assert.ok(Object.values(perms.modules).every((p: any) => p.view && p.manage)); assert.equal(await auth.getAccessLevel('editor','123456789012345678'),'none');
 });
 test('config POST independently rejects viewers before database writes', async () => {
  let writes = 0; const route = load('web/app/api/guilds/[id]/config/route.ts', { '@/lib/auth': { getSession: async () => ({ id: 'viewer' }), canManageGuild: async () => false }, '@/lib/db': { ensureDatabaseSchema: async () => writes++, db: async () => writes++ }, '@/lib/auditLogger': {}, './helpers': {}, './dispatcher': { handleConfigModule: async () => writes++ } });

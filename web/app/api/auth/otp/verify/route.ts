@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Timing-safe comparison to prevent timing attacks
-    const userBuffer = Buffer.from(cleanOtp);
+    const userBuffer = Buffer.from(crypto.createHash('sha256').update(cleanOtp).digest('hex'));
     const expectedBuffer = Buffer.from(record.otp_code);
     const isValid =
       userBuffer.length === expectedBuffer.length &&
@@ -139,8 +139,8 @@ export async function POST(req: NextRequest) {
 
     res.cookies.set(COOKIE_NAME, sessionToken, {
       httpOnly: true,
-      secure: isHttps,
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production' || isHttps,
+      sameSite: 'strict',
       maxAge: 60 * 60 * sessionDurationHours(), // 24 hours
       path: '/',
     });
