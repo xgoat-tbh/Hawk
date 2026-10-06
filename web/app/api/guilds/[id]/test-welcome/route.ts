@@ -96,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
         body: JSON.stringify({
           content: description,
-          allowed_mentions: { parse: ['users'] },
+          allowed_mentions: { parse: [] },
         }),
       });
 

@@ -57,23 +57,29 @@ export async function POST(
 
   try {
     const body = await req.json();
-    const { action, userId, cash, bank } = body;
+    const { action, cash, bank } = body;
+    const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
+    if (!['reset_all', 'set_balance', 'reset_user'].includes(action)) return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+    if (action !== 'reset_all' && !/^\d{17,20}$/.test(userId)) return NextResponse.json({ error: 'Invalid Discord User ID' }, { status: 400 });
 
     if (!action) {
       return NextResponse.json({ error: 'Action required' }, { status: 400 });
     }
 
     if (action === 'reset_all') {
-      await db`
+      await db.begin(async tx => {
+      await tx`
         UPDATE economy_balances
         SET cash = 0, bank = 0, updated_at = NOW()
         WHERE guild_id = ${guildId}
       `;
 
-      await db`
+      await tx`
         INSERT INTO economy_transactions (guild_id, user_id, type, amount, source, target_id, note)
         VALUES (${guildId}, ${session.id}, 'admin_reset_all', 0, 'economy', 'all', 'Admin reset all server balances')
       `;
+
+      });
 
       return NextResponse.json({ success: true, message: 'All server balances reset to 0.' });
     }
@@ -83,10 +89,18 @@ export async function POST(
     }
 
     if (action === 'set_balance') {
-      const parsedCash = Math.max(0, parseInt(cash ?? 0, 10));
-      const parsedBank = Math.max(0, parseInt(bank ?? 0, 10));
+      const parseMoney = (value: unknown): number | null => {
+        if (value === undefined) return 0;
+        if ((typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? Math.min(1_000_000_000_000, Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(parsed))) : null;
+      };
+      const parsedCash = parseMoney(cash);
+      const parsedBank = parseMoney(bank);
+      if (parsedCash === null || parsedBank === null) return NextResponse.json({ error: 'Cash and bank must be finite numeric amounts' }, { status: 400 });
 
-      await db`
+      await db.begin(async tx => {
+      await tx`
         INSERT INTO economy_balances (guild_id, user_id, cash, bank, bank_capacity)
         VALUES (${guildId}, ${userId}, ${parsedCash}, ${parsedBank}, 0)
         ON CONFLICT (guild_id, user_id)
@@ -96,25 +110,30 @@ export async function POST(
           updated_at = NOW()
       `;
 
-      await db`
+      await tx`
         INSERT INTO economy_transactions (guild_id, user_id, type, amount, source, target_id, note)
         VALUES (${guildId}, ${userId}, 'admin_set', ${parsedCash + parsedBank}, 'economy', ${session.id}, 'Admin updated balance from dashboard')
       `;
+
+      });
 
       return NextResponse.json({ success: true, message: 'User balance updated successfully.' });
     }
 
     if (action === 'reset_user') {
-      await db`
+      await db.begin(async tx => {
+      await tx`
         UPDATE economy_balances
         SET cash = 0, bank = 0, updated_at = NOW()
         WHERE guild_id = ${guildId} AND user_id = ${userId}
       `;
 
-      await db`
+      await tx`
         INSERT INTO economy_transactions (guild_id, user_id, type, amount, source, target_id, note)
         VALUES (${guildId}, ${userId}, 'admin_reset', 0, 'economy', ${session.id}, 'Admin reset user balance')
       `;
+
+      });
 
       return NextResponse.json({ success: true, message: 'User balance reset to 0.' });
     }
